@@ -1,0 +1,10 @@
+%html
+  %head
+    %title Foo Bar Baz
+  %body
+    %h1 Hello World
+    #content
+      .foo Bar Baz
+      Plain Content
+      %img@foo
+      $bar$
