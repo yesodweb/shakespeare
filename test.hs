@@ -19,6 +19,14 @@ foo = [$hamlet|
     %ul
         $forall getList entry
             %li $entry$
+    $if false
+        ignored
+    $elseif false2
+        also ignored
+    $elseif true
+        this is print out
+    $else
+        ignored again
 |]
 
 getList :: (Monad n) => String -> n (Enumerator Html IO)
@@ -34,3 +42,7 @@ printI () text = do
     --putStrLn "\n\nAnother batch:"
     putStr $ unpack text
     return $ Right ()
+
+false = const $ return False
+false2 = const $ return False
+true = const $ return True

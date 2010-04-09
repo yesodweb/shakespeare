@@ -19,7 +19,7 @@ docsToExp :: [Doc] -> Q Exp
 docsToExp docs = do
     arg <- newName "arg"
     (_, _, stmts) <- foldM docToStmt ([], VarE arg, id) docs
-    --qRunIO $ printStmts $ stmts []
+    qRunIO $ printStmts $ stmts []
     return $ LamE [VarP arg] $ DoE $ stmts []
 
 docToStmt :: Vars -> Doc -> Q Vars
@@ -32,7 +32,17 @@ docToStmt (vars, arg, stmts) (DocForall deref ident@(Ident name) inside) = do
     let dos = LamE [VarP ident'] $ DoE $ inside' []
     let stmt = NoBindS $ mh `AppE` dos `AppE` deref'
     return (vars', arg, stmts . stmts' . (:) stmt)
-docToStmt v (DocCond _ _) = return v -- FIXME
+docToStmt (vars, arg, stmts) (DocCond conds final) = do
+    conds' <- liftConds vars arg conds id
+    final' <- case final of
+                Nothing -> [|Nothing|]
+                Just f -> do
+                    (_, _, f') <- foldM docToStmt (vars, arg, id) f
+                    j <- [|Just|]
+                    return $ j `AppE` (DoE $ f' [])
+    ch <- [|condH|]
+    let stmt = NoBindS $ ch `AppE` conds' `AppE` final'
+    return (vars, arg, stmts . (:) stmt)
 docToStmt v (DocContent c) = foldM contentToStmt v c
 
 contentToStmt :: Vars -> Content -> Q Vars
@@ -52,6 +62,21 @@ contentToStmt (vars, arg, stmts) (ContentUrl d) = do
     let stmt = NoBindS $ ou `AppE` d'
     return (vars', arg, stmts . stmts' . (:) stmt)
 
+derefToExp :: [(Deref, Exp)] -> Exp -> Deref -> Q Exp
+derefToExp vars arg d@(Deref is) =
+    case lookup d vars of
+        Just d' -> return d'
+        Nothing -> do
+            bind <- [|(>>=)|]
+            ret <- [|return|]
+            let arg' = ret `AppE` arg
+            return $ go arg' bind is
+  where
+    go rhs _ [] = rhs
+    go rhs bind (Ident i:is) =
+        let rhs' = bind `AppE` rhs `AppE` VarE (mkName i)
+         in go rhs' bind is
+
 liftDeref :: [(Deref, Exp)] -> Exp -> Deref -> Q ([(Deref, Exp)], Exp, [Stmt] -> [Stmt])
 liftDeref vars arg d@(Deref is) =
     case lookup d vars of
@@ -69,6 +94,20 @@ liftDeref vars arg d@(Deref is) =
     go var rhs bind (Ident i:is) =
         let rhs' = bind `AppE` rhs `AppE` VarE (mkName i)
          in go var rhs' bind is
+
+liftConds :: [(Deref, Exp)] -> Exp -> [(Deref, [Doc])]
+          -> (Exp -> Exp)
+          -> Q Exp
+liftConds _vars _arg [] front = do
+    nil <- [|[]|]
+    return $ front nil
+liftConds vars arg ((bool, doc):conds) front = do
+    bool' <- derefToExp vars arg bool
+    (_, _, doc') <- foldM docToStmt (vars, arg, id) doc
+    let pair = TupE [bool', DoE $ doc' []]
+    cons <- [|(:)|]
+    let front' rest = front (cons `AppE` pair `AppE` rest)
+    liftConds vars arg conds front'
 
 hamlet :: QuasiQuoter
 hamlet = QuasiQuoter go $ error "Cannot quasi-quote Hamlet to patterns"
