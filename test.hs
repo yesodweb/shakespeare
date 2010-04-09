@@ -3,9 +3,9 @@
 
 import Text.Hamlet.Quasi
 import Text.Hamlet.Monad
-import Data.Text
+import Data.Text (pack, unpack)
 
-arg = "arg"
+arg = "argument"
 something = const $ return $ Unencoded $ pack "<something>"
 another = const $ return 8
 
@@ -16,14 +16,21 @@ foo = [$hamlet|
       Hello World!!!
       $something$
       %a!href=@another@ link content
+    %ul
+        $forall getList entry
+            %li $entry$
 |]
 
-main = runHamlet foo showUrl' () printI
+getList :: (Monad n) => String -> n (Enumerator Html IO)
+getList = return . fromList . map go where
+    go = Unencoded . pack . return
+
+main = runHamlet (foo arg) showUrl' () printI
 
 showUrl' :: Int -> String
 showUrl' i = show $ i + 5
 
 printI () text = do
-    putStrLn "\n\nAnother batch:"
-    putStrLn $ unpack text
+    --putStrLn "\n\nAnother batch:"
+    putStr $ unpack text
     return $ Right ()

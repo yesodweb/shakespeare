@@ -14,6 +14,15 @@ newtype Enumerator val m = Enumerator
      -> m (Either seed seed)
     }
 
+fromList :: Monad m => [a] -> Enumerator a m
+fromList l = Enumerator $ go l where
+    go [] _ seed = return $ Right seed
+    go (l:ls) iter seed = do
+        ea <- iter seed l
+        case ea of
+            Left seed' -> return $ Left seed
+            Right seed' -> go ls iter seed'
+
 newtype Hamlet url seed m a = Hamlet
     { runHamlet ::
        (url -> String)
