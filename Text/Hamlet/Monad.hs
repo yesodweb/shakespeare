@@ -5,6 +5,7 @@ module Text.Hamlet.Monad
 import Data.Text (Text, pack)
 import Control.Applicative
 import Control.Monad
+import Web.Encodings
 
 type Iteratee val seed m = seed -> val -> m (Either seed seed)
 newtype Enumerator val m = Enumerator
@@ -14,7 +15,7 @@ newtype Enumerator val m = Enumerator
     }
 
 newtype Hamlet url seed m a = Hamlet
-    { unHamlet ::
+    { runHamlet ::
        (url -> String)
     -> seed
     -> Iteratee Text seed m
@@ -26,7 +27,7 @@ instance Monad m => Monad (Hamlet url seed m) where
     (Hamlet f) >>= g = Hamlet go where
         go a c d = f a c d >>= go' a d
         go' _ _ (Left seed) = return $ Left seed
-        go' a d (Right (v, seed)) = unHamlet (g v) a seed d
+        go' a d (Right (v, seed)) = runHamlet (g v) a seed d
 instance Monad m => Functor (Hamlet url seed m) where
     fmap = liftM
 instance Monad m => Applicative (Hamlet url seed m) where
@@ -41,8 +42,17 @@ output bs = Hamlet go where
             Left seed' -> return $ Left seed'
             Right seed' -> return $ Right ((), seed')
 
+data Html = Encoded Text | Unencoded Text
+
+outputHtml :: Monad m => Html -> Hamlet url seed m ()
+outputHtml (Encoded t) = output t
+outputHtml (Unencoded t) = output $ encodeHtml t
+
 outputString :: Monad m => String -> Hamlet url seed m ()
 outputString = output . pack
+
+outputUrl :: Monad m => url -> Hamlet url seed m ()
+outputUrl u = showUrl u >>= outputString
 
 showUrl :: Monad m => url -> Hamlet url seed m String
 showUrl url = Hamlet $ \s seed _ -> return (Right (s url, seed))
@@ -61,7 +71,17 @@ mapH each (Enumerator e) = Hamlet go where
             Left seed' -> return $ Left seed'
             Right seed' -> return $ Right ((), seed')
     iter' surl iter seed val = do
-        res <- unHamlet (each val) surl seed iter
+        res <- runHamlet (each val) surl seed iter
         case res of
             Left seed' -> return $ Left seed'
             Right ((), seed') -> return $ Right seed'
+
+condH :: Monad m
+      => [(Hamlet url seed m Bool, Hamlet url seed m ())]
+      -> Maybe (Hamlet url seed m ())
+      -> Hamlet url seed m ()
+condH [] Nothing = return ()
+condH [] (Just x) = x
+condH ((x, y):rest) z = do
+    x' <- x
+    if x' then y else condH rest z
