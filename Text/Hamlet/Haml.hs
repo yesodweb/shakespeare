@@ -57,7 +57,12 @@ parseLine ('$':'f':'o':'r':'a':'l':'l':' ':rest) =
 parseLine ('$':'i':'f':' ':rest) = LineIf <$> parseDeref rest
 parseLine ('$':'e':'l':'s':'e':'i':'f':' ':rest) = LineElseIf <$> parseDeref rest
 parseLine "$else" = Ok LineElse
-parseLine x@(c:_) | c `elem` "%#." = undefined
+parseLine x@(c:_) | c `elem` "%#." = do
+    let (begin, rest) = break (== ' ') x
+        rest' = dropWhile (== ' ') rest
+    (tn, attr) <- parseTag begin
+    con <- parseContent rest'
+    return $ LineTag tn attr con
 parseLine s = LineContent <$> parseContent s
 
 #if TEST
@@ -70,13 +75,13 @@ caseParseLine = do
     parseLine "$elseif foo.bar" @?= Ok (LineElseIf fooBar)
     parseLine "$else" @?= Ok LineElse
     parseLine "%img!src=@foo.bar@"
-        @?= Ok (LineTag "img" [("img", [ContentUrl fooBar])] [])
+        @?= Ok (LineTag "img" [("src", [ContentUrl fooBar])] [])
     parseLine ".$foo.bar$"
         @?= Ok (LineTag "div" [("class", [ContentVar fooBar])] [])
     parseLine "%span#foo.bar!baz=bin"
-        @?= Ok (LineTag "span" [ ("id", [ContentRaw "foo"])
+        @?= Ok (LineTag "span" [ ("baz", [ContentRaw "bin"])
                                , ("class", [ContentRaw "bar"])
-                               , ("baz", [ContentRaw "bin"])
+                               , ("id", [ContentRaw "foo"])
                                ] [])
 #endif
 
@@ -146,6 +151,42 @@ caseParseIdent :: Assertion
 caseParseIdent = do
     parseIdent "foo" @?= Ok (Ident "foo")
 #endif
+
+parseTag :: String -> Result (String, [(String, [Content])])
+parseTag s = do
+    pieces <- takePieces s
+    foldM go ("div", []) pieces
+  where
+    go (_, attrs) ('%':tn) = Ok (tn, attrs)
+    go (tn, attrs) ('.':cl) = do
+        con <- parseContent cl
+        Ok (tn, ("class", con) : attrs)
+    go (tn, attrs) ('#':cl) = do
+        con <- parseContent cl
+        Ok (tn, ("id", con) : attrs)
+    go (tn, attrs) ('!':rest) = do
+        let (name, val) = break (== '=') rest
+        val' <-
+            case val of
+                ('=':rest') -> parseContent rest'
+                _ -> Ok []
+        Ok (tn, (name, val') : attrs)
+
+takePieces :: String -> Result [String]
+takePieces "" = Ok []
+takePieces (a:s) = do
+    (x, y) <- takePiece ((:) a) False False s
+    y' <- takePieces y
+    return $ x : y'
+  where
+    takePiece front False False "" = Ok (front "", "")
+    takePiece _ _ _ "" = Error $ "Unterminated URL or var: " ++ s
+    takePiece front False False (c:rest)
+        | c `elem` "#.%!" = Ok (front "", c:rest)
+    takePiece front x y (c:rest)
+        | c == '$' = takePiece (front . (:) c) (not x) y rest
+        | c == '@' = takePiece (front . (:) c) x (not y) rest
+        | otherwise = takePiece (front . (:) c) x y rest
 
 #if TEST
 ---- Testing
