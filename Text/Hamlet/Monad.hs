@@ -15,35 +15,35 @@ newtype Enumerator val m = Enumerator
     }
 
 fromList :: Monad m => [a] -> Enumerator a m
-fromList l = Enumerator $ go l where
+fromList x = Enumerator $ go x where
     go [] _ seed = return $ Right seed
     go (l:ls) iter seed = do
         ea <- iter seed l
         case ea of
-            Left seed' -> return $ Left seed
+            Left seed' -> return $ Left seed'
             Right seed' -> go ls iter seed'
 
-newtype Hamlet url seed m a = Hamlet
-    { runHamlet ::
+newtype Hamlet url m a = Hamlet
+    { runHamlet :: forall seed.
        (url -> String)
     -> seed
     -> Iteratee Text seed m
     -> m (Either seed (a, seed))
     }
 
-instance Monad m => Monad (Hamlet url seed m) where
+instance Monad m => Monad (Hamlet url m) where
     return x = Hamlet $ \_ seed _ -> return (Right (x, seed))
     (Hamlet f) >>= g = Hamlet go where
         go a c d = f a c d >>= go' a d
         go' _ _ (Left seed) = return $ Left seed
         go' a d (Right (v, seed)) = runHamlet (g v) a seed d
-instance Monad m => Functor (Hamlet url seed m) where
+instance Monad m => Functor (Hamlet url m) where
     fmap = liftM
-instance Monad m => Applicative (Hamlet url seed m) where
+instance Monad m => Applicative (Hamlet url m) where
     pure = return
     (<*>) = ap
 
-output :: Monad m => Text -> Hamlet url seed m ()
+output :: Monad m => Text -> Hamlet url m ()
 output bs = Hamlet go where
     go _ seed iter = do
         ea <- iter seed bs
@@ -53,26 +53,26 @@ output bs = Hamlet go where
 
 data Html = Encoded Text | Unencoded Text
 
-outputHtml :: Monad m => Html -> Hamlet url seed m ()
+outputHtml :: Monad m => Html -> Hamlet url m ()
 outputHtml (Encoded t) = output t
 outputHtml (Unencoded t) = output $ encodeHtml t
 
-outputString :: Monad m => String -> Hamlet url seed m ()
+outputString :: Monad m => String -> Hamlet url m ()
 outputString = output . pack
 
-outputUrl :: Monad m => url -> Hamlet url seed m ()
+outputUrl :: Monad m => url -> Hamlet url m ()
 outputUrl u = showUrl u >>= outputString
 
-showUrl :: Monad m => url -> Hamlet url seed m String
+showUrl :: Monad m => url -> Hamlet url m String
 showUrl url = Hamlet $ \s seed _ -> return (Right (s url, seed))
 
-liftHamlet :: Monad m => m a -> Hamlet url seed m a
+liftHamlet :: Monad m => m a -> Hamlet url m a
 liftHamlet m = Hamlet $ \_ c _ -> m >>= \m' -> return (Right (m', c))
 
 mapH :: Monad m
-     => (val -> Hamlet url seed m ())
+     => (val -> Hamlet url m ())
      -> Enumerator val m
-     -> Hamlet url seed m ()
+     -> Hamlet url m ()
 mapH each (Enumerator e) = Hamlet go where
     go surl seed iter = do
         res <- e (iter' surl iter) seed
@@ -86,9 +86,9 @@ mapH each (Enumerator e) = Hamlet go where
             Right ((), seed') -> return $ Right seed'
 
 condH :: Monad m
-      => [(Hamlet url seed m Bool, Hamlet url seed m ())]
-      -> Maybe (Hamlet url seed m ())
-      -> Hamlet url seed m ()
+      => [(Hamlet url m Bool, Hamlet url m ())]
+      -> Maybe (Hamlet url m ())
+      -> Hamlet url m ()
 condH [] Nothing = return ()
 condH [] (Just x) = x
 condH ((x, y):rest) z = do
