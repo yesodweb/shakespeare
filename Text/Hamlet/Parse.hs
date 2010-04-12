@@ -305,11 +305,18 @@ attrToContent :: (String, [Content]) -> [Content]
 attrToContent (k, []) = [ContentRaw $ ' ' : k]
 attrToContent (k, v) = (ContentRaw $ ' ' : k ++ "=\"") : v ++ [ContentRaw "\""]
 
+-- | Settings for parsing of a hamlet document.
 data HamletSettings = HamletSettings
-    { hamletDoctype :: String
+    {
+      -- | The value to replace a \"!!!\" with. Do not include the trailing
+      -- newline.
+      hamletDoctype :: String
+      -- | 'True' means to close empty tags (eg, img) with a trailing slash, ie
+      -- XML-style empty tags. 'False' uses HTML-style.
     , hamletCloseEmpties :: Bool
     }
 
+-- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
 defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False
 

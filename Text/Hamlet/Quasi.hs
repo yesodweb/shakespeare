@@ -107,9 +107,18 @@ liftConds vars arg ((bool, doc):conds) front = do
     let front' rest = front (cons `AppE` pair `AppE` rest)
     liftConds vars arg conds front'
 
+-- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings defaultHamletSettings
 
+-- | A quasi-quoter that converts Hamlet syntax into a function of form:
+--
+-- argument -> Hamlet url m ()
+--
+-- Please see accompanying documentation for a description of Hamlet syntax.
+-- You must ensure that the type of m, url and argument all work properly with
+-- the functions referred to in the template. Of course, worst case scenario is
+-- the compiler will catch your mistakes.
 hamletWithSettings :: HamletSettings -> QuasiQuoter
 hamletWithSettings set =
     QuasiQuoter go $ error "Cannot quasi-quote Hamlet to patterns"
