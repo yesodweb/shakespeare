@@ -6,20 +6,14 @@ import Text.Hamlet.Parse
 import Text.Hamlet.Monad
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Ppr
-import Language.Haskell.TH.PprLib hiding (Doc)
 import Control.Monad
 
 type Vars = ([(Deref, Exp)], Exp, [Stmt] -> [Stmt])
-
-printStmts s = do
-    print $ to_HPJ_Doc $ ppr $ DoE s
 
 docsToExp :: [Doc] -> Q Exp
 docsToExp docs = do
     arg <- newName "arg"
     (_, _, stmts) <- foldM docToStmt ([], VarE arg, id) docs
-    qRunIO $ printStmts $ stmts []
     return $ LamE [VarP arg] $ DoE $ stmts []
 
 docToStmt :: Vars -> Doc -> Q Vars
@@ -73,9 +67,9 @@ derefToExp vars arg d@(Deref is) =
             return $ go arg' bind is
   where
     go rhs _ [] = rhs
-    go rhs bind (Ident i:is) =
+    go rhs bind (Ident i:is') =
         let rhs' = bind `AppE` rhs `AppE` VarE (mkName i)
-         in go rhs' bind is
+         in go rhs' bind is'
 
 liftDeref :: [(Deref, Exp)] -> Exp -> Deref -> Q ([(Deref, Exp)], Exp, [Stmt] -> [Stmt])
 liftDeref vars arg d@(Deref is) =
@@ -91,9 +85,9 @@ liftDeref vars arg d@(Deref is) =
             return ((d, var') : vars, var', (:) stmt)
   where
     go var rhs _ [] = BindS (VarP var) rhs
-    go var rhs bind (Ident i:is) =
+    go var rhs bind (Ident i:is') =
         let rhs' = bind `AppE` rhs `AppE` VarE (mkName i)
-         in go var rhs' bind is
+         in go var rhs' bind is'
 
 liftConds :: [(Deref, Exp)] -> Exp -> [(Deref, [Doc])]
           -> (Exp -> Exp)
@@ -114,5 +108,5 @@ hamlet = QuasiQuoter go $ error "Cannot quasi-quote Hamlet to patterns"
   where
     go s = do
       case parseDoc s of
-        Error s -> error s
+        Error s' -> error s'
         Ok d -> docsToExp d

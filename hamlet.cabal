@@ -1,0 +1,43 @@
+name:            hamlet
+version:         0.0.0
+license:         BSD3
+license-file:    LICENSE
+author:          Michael Snoyman <michael@snoyman.com>
+maintainer:      Michael Snoyman <michael@snoyman.com>
+synopsis:        Haml-like template files that are compile-time checked
+category:        Web
+stability:       unstable
+cabal-version:   >= 1.6
+build-type:      Simple
+homepage:        http://www.yesodweb.com/
+
+flag buildtests
+  description: Build the executable to run unit tests
+  default: False
+
+library
+    build-depends:   base >= 4 && < 5,
+                     web-encodings >= 0.2.4 && < 0.3,
+                     text >= 0.5 && < 0.8,
+                     template-haskell
+    exposed-modules: Text.Hamlet
+                     Text.Hamlet.Monad
+                     Text.Hamlet.Parse
+                     Text.Hamlet.Quasi
+    ghc-options:     -Wall
+
+executable             runtests
+    if flag(buildtests)
+        Buildable: True
+        cpp-options:   -DTEST
+        build-depends: QuickCheck >= 2 && < 3,
+                       HUnit,
+                       test-framework-hunit,
+                       test-framework
+    else
+        Buildable: False
+    main-is:         runtests.hs
+
+source-repository head
+  type:     git
+  location: git://github.com/snoyberg/web-routes-quasi.git
