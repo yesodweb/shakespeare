@@ -27,11 +27,15 @@ foo = [$hamlet|
         this is print out
     $else
         ignored again
+#embed ^embed^
 |]
 
 getList :: (Monad n) => String -> n (Enumerator Html IO)
 getList = return . fromList . map go where
     go = Unencoded . pack . return
+
+embed :: a -> Hamlet Int IO ()
+embed _ = outputString "output from embed"
 
 main = runHamlet (foo arg) showUrl' () printI
 

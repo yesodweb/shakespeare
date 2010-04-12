@@ -45,6 +45,7 @@ newtype Ident = Ident String
 data Content = ContentRaw String
              | ContentVar Deref
              | ContentUrl Deref
+             | ContentEmbed Deref
     deriving (Show, Eq, Read, Data, Typeable)
 
 data Line = LineForall Deref Ident
@@ -111,7 +112,7 @@ caseParseLine = do
 parseContent :: String -> Result [Content]
 parseContent "" = Ok []
 parseContent s =
-    case break (flip elem "@$") s of
+    case break (flip elem "@$^") s of
         (_, "") -> Ok [ContentRaw s]
         (a, delim:a') -> do
             b <-
@@ -124,8 +125,11 @@ parseContent s =
                         let x = case delim of
                                     '$' -> ContentVar
                                     '@' -> ContentUrl
+                                    '^' -> ContentEmbed
+                                    _ -> error $ "Invalid delim in parseContent: " ++ [delim]
                         rest' <- parseContent rest
                         return $ x deref' : rest'
+                    _ -> error "Invalid branch in parseContent"
             case a of
                 "" -> return b
                 _ -> return $ ContentRaw a : b
@@ -143,7 +147,12 @@ caseParseContent = do
                                         , ContentUrl $ Deref [Ident "bar"]
                                         , ContentRaw " baz"
                                         ]
+    parseContent "foo ^bar^ baz" @?= Ok [ ContentRaw "foo "
+                                        , ContentEmbed $ Deref [Ident "bar"]
+                                        , ContentRaw " baz"
+                                        ]
     parseContent "@@" @?= Ok [ContentRaw "@"]
+    parseContent "^^" @?= Ok [ContentRaw "^"]
 #endif
 
 parseDeref :: String -> Result Deref
@@ -156,6 +165,7 @@ parseDeref s = Deref <$> go s where
                     y' <- go y
                     return $ x' : y'
                 (x, "") -> return <$> parseIdent x
+                _ -> error "Invalid branch in Text.Hamlet.Parse.parseDef"
 
 #if TEST
 caseParseDeref :: Assertion
@@ -194,22 +204,24 @@ parseTag s = do
                 ('=':rest') -> parseContent rest'
                 _ -> Ok []
         Ok (tn, (name, val') : attrs)
+    go _ _ = error "Invalid branch in Text.Hamlet.Parse.parseTag"
 
 takePieces :: String -> Result [String]
 takePieces "" = Ok []
 takePieces (a:s) = do
-    (x, y) <- takePiece ((:) a) False False s
+    (x, y) <- takePiece ((:) a) False False False s
     y' <- takePieces y
     return $ x : y'
   where
-    takePiece front False False "" = Ok (front "", "")
-    takePiece _ _ _ "" = Error $ "Unterminated URL or var: " ++ s
-    takePiece front False False (c:rest)
+    takePiece front False False False "" = Ok (front "", "")
+    takePiece _ _ _ _ "" = Error $ "Unterminated URL, var or embed: " ++ s
+    takePiece front False False False (c:rest)
         | c `elem` "#.%!" = Ok (front "", c:rest)
-    takePiece front x y (c:rest)
-        | c == '$' = takePiece (front . (:) c) (not x) y rest
-        | c == '@' = takePiece (front . (:) c) x (not y) rest
-        | otherwise = takePiece (front . (:) c) x y rest
+    takePiece front x y z (c:rest)
+        | c == '$' = takePiece (front . (:) c) (not x) y z rest
+        | c == '@' = takePiece (front . (:) c) x (not y) z rest
+        | c == '^' = takePiece (front . (:) c) x y (not z) rest
+        | otherwise = takePiece (front . (:) c) x y z rest
 
 data Nest = Nest Line [Nest]
 

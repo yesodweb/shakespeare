@@ -55,6 +55,10 @@ contentToStmt (vars, arg, stmts) (ContentUrl d) = do
     ou <- [|outputUrl|]
     let stmt = NoBindS $ ou `AppE` d'
     return (vars', arg, stmts . stmts' . (:) stmt)
+contentToStmt (vars, arg, stmts) (ContentEmbed d) = do
+    d' <- derefToExp vars arg d
+    let stmt = BindS (TupP []) d'
+    return (vars, arg, stmts . (:) stmt)
 
 derefToExp :: [(Deref, Exp)] -> Exp -> Deref -> Q Exp
 derefToExp vars arg d@(Deref is) =
