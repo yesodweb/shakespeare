@@ -51,9 +51,9 @@ output bs = Hamlet go where
             Left seed' -> return $ Left seed'
             Right seed' -> return $ Right ((), seed')
 
-data Html = Encoded Text | Unencoded Text
+data HtmlContent = Encoded Text | Unencoded Text
 
-outputHtml :: Monad m => Html -> Hamlet url m ()
+outputHtml :: Monad m => HtmlContent -> Hamlet url m ()
 outputHtml (Encoded t) = output t
 outputHtml (Unencoded t) = output $ encodeHtml t
 

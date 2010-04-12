@@ -10,6 +10,7 @@ something = const $ return $ Unencoded $ pack "<something>"
 another = const $ return 8
 
 foo = [$hamlet|
+!!!
 #wrapper
   .bar
     %span!baz=bin
@@ -30,7 +31,7 @@ foo = [$hamlet|
 #embed ^embed^
 |]
 
-getList :: (Monad n) => String -> n (Enumerator Html IO)
+getList :: (Monad n) => String -> n (Enumerator HtmlContent IO)
 getList = return . fromList . map go where
     go = Unencoded . pack . return
 

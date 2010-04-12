@@ -7,6 +7,8 @@ module Text.Hamlet.Parse
     , Content (..)
     , Doc (..)
     , parseDoc
+    , HamletSettings (..)
+    , defaultHamletSettings
 #if TEST
     , testSuite
 #endif
@@ -60,34 +62,37 @@ data Line = LineForall Deref Ident
           | LineContent [Content]
     deriving (Eq, Show, Read)
 
-parseLines :: String -> Result [(Int, Line)]
-parseLines = mapM go . lines where
+parseLines :: HamletSettings -> String -> Result [(Int, Line)]
+parseLines set = mapM go . lines where
     go s = do
         let (spaces, s') = countSpaces 0 s
-        l <- parseLine s'
+        l <- parseLine set s'
         Ok (spaces, l)
     countSpaces i (' ':rest) = countSpaces (i + 1) rest
     countSpaces i ('\t':rest) = countSpaces (i + 4) rest
     countSpaces i x = (i, x)
 
-parseLine :: String -> Result Line
-parseLine ('$':'f':'o':'r':'a':'l':'l':' ':rest) =
+parseLine :: HamletSettings -> String -> Result Line
+parseLine set "!!!" =
+    Ok $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
+parseLine _ ('$':'f':'o':'r':'a':'l':'l':' ':rest) =
     case words rest of
         [x, y] -> do
             x' <- parseDeref x
             y' <- parseIdent y
             return $ LineForall x' y'
         _ -> Error $ "Invalid forall: " ++ rest
-parseLine ('$':'i':'f':' ':rest) = LineIf <$> parseDeref rest
-parseLine ('$':'e':'l':'s':'e':'i':'f':' ':rest) = LineElseIf <$> parseDeref rest
-parseLine "$else" = Ok LineElse
-parseLine x@(c:_) | c `elem` "%#." = do
+parseLine _ ('$':'i':'f':' ':rest) = LineIf <$> parseDeref rest
+parseLine _ ('$':'e':'l':'s':'e':'i':'f':' ':rest) =
+    LineElseIf <$> parseDeref rest
+parseLine _ "$else" = Ok LineElse
+parseLine _ x@(c:_) | c `elem` "%#." = do
     let (begin, rest) = break (== ' ') x
         rest' = dropWhile (== ' ') rest
     (tn, attr) <- parseTag begin
     con <- parseContent rest'
     return $ LineTag tn attr con
-parseLine s = LineContent <$> parseContent s
+parseLine _ s = LineContent <$> parseContent s
 
 #if TEST
 fooBar :: Deref
@@ -236,33 +241,40 @@ data Doc = DocForall Deref Ident [Doc]
          | DocContent [Content]
     deriving (Show, Eq, Read, Data, Typeable)
 
-nestToDoc :: [Nest] -> Result [Doc]
-nestToDoc [] = Ok []
-nestToDoc (Nest (LineForall d i) inside:rest) = do
-    inside' <- nestToDoc inside
-    rest' <- nestToDoc rest
+nestToDoc :: HamletSettings -> [Nest] -> Result [Doc]
+nestToDoc _set [] = Ok []
+nestToDoc set (Nest (LineForall d i) inside:rest) = do
+    inside' <- nestToDoc set inside
+    rest' <- nestToDoc set rest
     Ok $ DocForall d i inside' : rest'
-nestToDoc (Nest (LineIf d) inside:rest) = do
-    inside' <- nestToDoc inside
-    (ifs, el, rest') <- parseConds ((:) (d, inside')) rest
-    rest'' <- nestToDoc rest'
+nestToDoc set (Nest (LineIf d) inside:rest) = do
+    inside' <- nestToDoc set inside
+    (ifs, el, rest') <- parseConds set ((:) (d, inside')) rest
+    rest'' <- nestToDoc set rest'
     Ok $ DocCond ifs el : rest''
-nestToDoc (Nest (LineTag tn attrs content) inside:rest) = do
-    let end = if closeTag tn || not (null content) || not (null inside)
-                then [DocContent [ContentRaw $ "</" ++ tn ++ ">"]]
-                else []
+nestToDoc set (Nest (LineTag tn attrs content) inside:rest) = do
+    let closeStyle =
+            if not (null content) || not (null inside)
+                then CloseSeparate
+                else closeTag set tn
+    let end = case closeStyle of
+                CloseSeparate -> [DocContent [ContentRaw $ "</" ++ tn ++ ">"]]
+                _ -> []
+        seal = case closeStyle of
+                 CloseInside -> ContentRaw "/>"
+                 _ -> ContentRaw ">"
         start = ContentRaw $ "<" ++ tn
         attrs' = concatMap attrToContent attrs
-    inside' <- nestToDoc inside
-    rest' <- nestToDoc rest
-    Ok $ DocContent (start : attrs' ++ ContentRaw ">" : content)
+    inside' <- nestToDoc set inside
+    rest' <- nestToDoc set rest
+    Ok $ DocContent (start : attrs' ++ seal : content)
        : inside' ++ end ++ rest'
-nestToDoc (Nest (LineContent content) inside:rest) = do
-    inside' <- nestToDoc inside
-    rest' <- nestToDoc rest
+nestToDoc set (Nest (LineContent content) inside:rest) = do
+    inside' <- nestToDoc set inside
+    rest' <- nestToDoc set rest
     Ok $ DocContent content : inside' ++ rest'
-nestToDoc (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
-nestToDoc (Nest LineElse _:_) = Error "Unexpected else"
+nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
+nestToDoc _set (Nest LineElse _:_) = Error "Unexpected else"
 
 compressDoc :: [Doc] -> [Doc]
 compressDoc [] = []
@@ -282,35 +294,51 @@ compressContent (ContentRaw x:ContentRaw y:rest) = compressContent $ ContentRaw 
 compressContent (x:rest) = x : compressContent rest
 compressContent [] = []
 
-parseDoc :: String -> Result [Doc]
-parseDoc s = do
-    ls <- parseLines s
+parseDoc :: HamletSettings -> String -> Result [Doc]
+parseDoc set s = do
+    ls <- parseLines set s
     let ns = nestLines ls
-    ds <- nestToDoc ns
+    ds <- nestToDoc set ns
     return $ compressDoc ds
 
 attrToContent :: (String, [Content]) -> [Content]
 attrToContent (k, []) = [ContentRaw $ ' ' : k]
 attrToContent (k, v) = (ContentRaw $ ' ' : k ++ "=\"") : v ++ [ContentRaw "\""]
 
-closeTag :: String -> Bool
-closeTag "img" = False
-closeTag "link" = False
-closeTag "meta" = False
-closeTag "br" = False
-closeTag "hr" = False
-closeTag _ = True
+data HamletSettings = HamletSettings
+    { hamletDoctype :: String
+    , hamletCloseEmpties :: Bool
+    }
 
-parseConds :: ([(Deref, [Doc])] -> [(Deref, [Doc])])
+defaultHamletSettings :: HamletSettings
+defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False
+
+data CloseStyle = NoClose | CloseInside | CloseSeparate
+
+closeTag :: HamletSettings -> String -> CloseStyle
+closeTag h s =
+    if canBeEmpty s
+        then (if hamletCloseEmpties h then CloseInside else NoClose)
+        else CloseSeparate
+  where
+    canBeEmpty "img" = False
+    canBeEmpty "link" = False
+    canBeEmpty "meta" = False
+    canBeEmpty "br" = False
+    canBeEmpty "hr" = False
+    canBeEmpty _ = True
+
+parseConds :: HamletSettings
+           -> ([(Deref, [Doc])] -> [(Deref, [Doc])])
            -> [Nest]
            -> Result ([(Deref, [Doc])], Maybe [Doc], [Nest])
-parseConds front (Nest LineElse inside:rest) = do
-    inside' <- nestToDoc inside
+parseConds set front (Nest LineElse inside:rest) = do
+    inside' <- nestToDoc set inside
     Ok $ (front [], Just inside', rest)
-parseConds front (Nest (LineElseIf d) inside:rest) = do
-    inside' <- nestToDoc inside
-    parseConds (front . (:) (d, inside')) rest
-parseConds front rest = Ok (front [], Nothing, rest)
+parseConds set front (Nest (LineElseIf d) inside:rest) = do
+    inside' <- nestToDoc set inside
+    parseConds set (front . (:) (d, inside')) rest
+parseConds _ front rest = Ok (front [], Nothing, rest)
 
 #if TEST
 ---- Testing

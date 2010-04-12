@@ -1,7 +1,10 @@
 module Text.Hamlet
-    ( module Text.Hamlet.Monad
-    , module Text.Hamlet.Parse
-    , module Text.Hamlet.Quasi
+    ( hamlet
+    , hamletWithSettings
+    , HamletSettings (..)
+    , defaultHamletSettings
+    , Hamlet (..)
+    , HtmlContent (..)
     ) where
 
 import Text.Hamlet.Monad

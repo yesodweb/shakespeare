@@ -108,9 +108,13 @@ liftConds vars arg ((bool, doc):conds) front = do
     liftConds vars arg conds front'
 
 hamlet :: QuasiQuoter
-hamlet = QuasiQuoter go $ error "Cannot quasi-quote Hamlet to patterns"
+hamlet = hamletWithSettings defaultHamletSettings
+
+hamletWithSettings :: HamletSettings -> QuasiQuoter
+hamletWithSettings set =
+    QuasiQuoter go $ error "Cannot quasi-quote Hamlet to patterns"
   where
     go s = do
-      case parseDoc s of
+      case parseDoc set s of
         Error s' -> error s'
         Ok d -> docsToExp d
