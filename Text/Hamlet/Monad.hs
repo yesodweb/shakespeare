@@ -17,9 +17,11 @@ module Text.Hamlet.Monad
     , liftHamlet
     , mapH
     , condH
+    , printHamlet
     ) where
 
 import Data.Text (Text, pack)
+import qualified Data.Text.IO as T
 import Control.Applicative
 import Control.Monad
 import Web.Encodings
@@ -148,3 +150,10 @@ condH [] (Just x) = x
 condH ((x, y):rest) z = do
     x' <- x
     if x' then y else condH rest z
+
+-- | Prints a Hamlet to standard out. Good for debugging.
+printHamlet :: (url -> String) -> Hamlet url IO () -> IO ()
+printHamlet render h = runHamlet h render () iter >> return () where
+    iter () text = do
+        T.putStr text
+        return $ Right ()

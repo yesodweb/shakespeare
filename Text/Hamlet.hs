@@ -5,6 +5,9 @@ module Text.Hamlet
     , defaultHamletSettings
     , Hamlet (..)
     , HtmlContent (..)
+    , printHamlet
+    , Enumerator (..)
+    , fromList
     ) where
 
 import Text.Hamlet.Monad
