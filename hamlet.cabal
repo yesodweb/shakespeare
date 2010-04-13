@@ -9,7 +9,7 @@ category:        Web
 stability:       unstable
 cabal-version:   >= 1.6
 build-type:      Simple
-homepage:        http://www.yesodweb.com/
+homepage:        http://docs.yesodweb.com/hamlet/
 
 flag buildtests
   description: Build the executable to run unit tests
@@ -40,4 +40,4 @@ executable             runtests
 
 source-repository head
   type:     git
-  location: git://github.com/snoyberg/web-routes-quasi.git
+  location: git://github.com/snoyberg/hamlet.git
