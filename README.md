@@ -72,7 +72,7 @@ a monad to support efficient generation of textual data. Since the former is
 more usual use case, I will address that first.
 
 Instead of attempting to be a generic templating system, Hamlet attempts to
-excel at a specific niche. In particular, the following design goals are
+excel in a specific niche. In particular, the following design goals are
 central:
 
 * We only care about HTML output.
@@ -116,7 +116,7 @@ Line 6 begins with a pound; this denotes the id. However, you'll note that we ha
 I haven't used it in this example, but a period will give a class name. This coincides very nicely with CSS syntax. For other attributes, we use the exclamation point. Here's a few examples of this:
 
     %span!style=color:red This is red
-    %a!href=http://www.google.com/ Google
+    %a!href=/some/link/ Some Link
     %input!type=checkbox!checked!name=foo
 
 becomes
@@ -155,7 +155,7 @@ becomes
 
     <input type="checkbox" checked>
 
-If there is an equal sign, everything followed it is parsed as content (as per the next section).
+If there is an equal sign, everything following it is parsed as content (as per the next section).
 
 ## Content parsing
 
@@ -167,7 +167,7 @@ becomes
 
     michael@snoyman.com
 
-Otherwise, any text between the pair of delimiters is treated a "reference". References are a series of period-separated identifiers, such as:
+Otherwise, any text between the pair of delimiters is treated as a "reference". References are a series of period-separated identifiers, such as:
 
     family.father.name
 
@@ -190,7 +190,7 @@ There is one exception to the above rule: if a forall binds a value to the first
 
 Here, you do not need a person function to be defined.
 
-Now that we've addressed references, what's the difference between the three delimiters ($@^) mentioned above? The dollar sign outputs HtmlContent; the at sign outputs URLs; and the caret embeds other templates. In other words, they each (respectively) require a type signature of:
+Now that we've addressed references, what's the difference between the three delimiters ($@^) mentioned above? The dollar sign ($) outputs HtmlContent; the at sign (@) outputs URLs; and the caret (^) embeds other templates. In other words, they each (respectively) require a type signature of:
 
     Hamlet url m HtmlContent
     Hamlet url m url
@@ -217,7 +217,7 @@ In this case, person.employed and person.retired are parsed as references (see C
 
 company.employees is parsed as a reference (see Content Parsing above). Each value is bound to the variable employee and then the inner template (line 3) is called.
 
-For efficiency, we use enumerators for the type of employees. See the synopsis section for a full explanation.
+For efficiency, we use enumerators for the type of employees. See the synopsis section for a full example.
 
 # Monadic Interface
 
@@ -233,7 +233,7 @@ However, even if you don't want to use the Hamlet syntax and quasi-quoter, the m
 
 * The HtmlContent type helps you solve the string problem in the escaping of HTML entities.
 
-So let's look at the actually datatype of Hamlet:
+So let's look at the actual datatype of Hamlet:
 
     type Iteratee val seed m = seed -> val -> m (Either seed seed)
 
