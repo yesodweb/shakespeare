@@ -18,6 +18,7 @@ module Text.Hamlet.Monad
     , mapH
     , condH
     , printHamlet
+    , cdata
     ) where
 
 import Data.Text (Text, pack)
@@ -25,6 +26,7 @@ import qualified Data.Text.IO as T
 import Control.Applicative
 import Control.Monad
 import Web.Encodings
+import Data.Monoid
 
 -- | Something to be run for each val. Returns 'Left' when enumeration should
 -- terminate immediately, 'Right' when it can receive more input.
@@ -96,6 +98,23 @@ output bs = Hamlet go where
 -- | Content for an HTML document. 'Encoded' content should not be entity
 -- escaped; 'Unencoded' should be.
 data HtmlContent = Encoded Text | Unencoded Text
+    deriving (Eq, Show, Read)
+instance Monoid HtmlContent where
+    mempty = Encoded mempty
+    mappend (Encoded x)   (Encoded y)   = Encoded   $ mappend x y
+    mappend (Unencoded x) (Unencoded y) = Unencoded $ mappend x y
+    mappend (Encoded x)   (Unencoded y) = Encoded   $ mappend x
+                                                    $ encodeHtml y
+    mappend (Unencoded x) (Encoded y)   = Encoded   $ mappend
+                                                      (encodeHtml x) y
+
+-- | Wrap some 'HtmlContent' for embedding in an XML file.
+cdata :: HtmlContent -> HtmlContent
+cdata h = mconcat
+    [ Encoded $ pack "<![CDATA["
+    , h
+    , Encoded $ pack "]]>"
+    ]
 
 -- | Outputs the given 'HtmlContent', entity encoding any 'Unencoded' data.
 outputHtml :: Monad m => HtmlContent -> Hamlet url m ()
