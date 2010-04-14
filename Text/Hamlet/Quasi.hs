@@ -56,24 +56,28 @@ contentToStmt (vars, arg, stmts) (ContentUrl d) = do
     let stmt = NoBindS $ ou `AppE` d'
     return (vars', arg, stmts . stmts' . (:) stmt)
 contentToStmt (vars, arg, stmts) (ContentEmbed d) = do
-    d' <- derefToExp vars arg d
+    d' <- derefToExp True vars arg d
     let stmt = BindS (TupP []) d'
     return (vars, arg, stmts . (:) stmt)
 
-derefToExp :: [(Deref, Exp)] -> Exp -> Deref -> Q Exp
-derefToExp vars arg d@(Deref is) =
+derefToExp :: Bool -> [(Deref, Exp)] -> Exp -> Deref -> Q Exp
+derefToExp liftToHamlet vars arg d@(Deref is) =
     case lookup d vars of
         Just d' -> return d'
         Nothing -> do
+            lh <- [|liftHamlet|]
             bind <- [|(>>=)|]
             ret <- [|return|]
             let arg' = ret `AppE` arg
-            return $ go arg' bind is
+            return $ go lh arg' bind is
   where
-    go rhs _ [] = rhs
-    go rhs bind (Ident i:is') =
-        let rhs' = bind `AppE` rhs `AppE` VarE (mkName i)
-         in go rhs' bind is'
+    go _lh rhs _ [] = rhs
+    go lh rhs bind (Ident i:is') =
+        let rhs' = InfixE (Just rhs) bind $ Just $ VarE $ mkName i
+            rhs'' = if not (null is') && liftToHamlet
+                        then lh `AppE` rhs'
+                        else rhs'
+         in go lh rhs'' bind is'
 
 liftDeref :: [(Deref, Exp)] -> Exp -> Deref -> Q ([(Deref, Exp)], Exp, [Stmt] -> [Stmt])
 liftDeref vars arg d@(Deref is) =
@@ -101,7 +105,7 @@ liftConds _vars _arg [] front = do
     nil <- [|[]|]
     return $ front nil
 liftConds vars arg ((bool, doc):conds) front = do
-    bool' <- derefToExp vars arg bool
+    bool' <- derefToExp False vars arg bool
     (_, _, doc') <- foldM docToStmt (vars, arg, id) doc
     let pair = TupE [bool', DoE $ doc' []]
     cons <- [|(:)|]
