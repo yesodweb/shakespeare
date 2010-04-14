@@ -142,13 +142,13 @@ mapH each (Enumerator e) = Hamlet go where
 -- first is performed. In there are no true values, then the second argument is
 -- performed, if supplied.
 condH :: Monad m
-      => [(Hamlet url m Bool, Hamlet url m ())]
+      => [(m Bool, Hamlet url m ())]
       -> Maybe (Hamlet url m ())
       -> Hamlet url m ()
 condH [] Nothing = return ()
 condH [] (Just x) = x
 condH ((x, y):rest) z = do
-    x' <- x
+    x' <- liftHamlet x
     if x' then y else condH rest z
 
 -- | Prints a Hamlet to standard out. Good for debugging.

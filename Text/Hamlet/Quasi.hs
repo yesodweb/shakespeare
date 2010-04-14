@@ -84,14 +84,15 @@ liftDeref vars arg d@(Deref is) =
             bind <- [|(>>=)|]
             ret <- [|return|]
             let arg' = ret `AppE` arg
-            let stmt = go var arg' bind is
+            lh <- [|liftHamlet|]
+            let stmt = go lh var arg' bind is
             let var' = VarE var
             return ((d, var') : vars, var', (:) stmt)
   where
-    go var rhs _ [] = BindS (VarP var) rhs
-    go var rhs bind (Ident i:is') =
+    go lh var rhs _ [] = BindS (VarP var) $ lh `AppE` rhs
+    go lh var rhs bind (Ident i:is') =
         let rhs' = bind `AppE` rhs `AppE` VarE (mkName i)
-         in go var rhs' bind is'
+         in go lh var rhs' bind is'
 
 liftConds :: [(Deref, Exp)] -> Exp -> [(Deref, [Doc])]
           -> (Exp -> Exp)
