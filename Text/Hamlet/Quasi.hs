@@ -140,17 +140,20 @@ bindDeref :: [(Deref, Exp)] -- ^ scope
           -> Exp -- ^ argument
           -> Deref
           -> Q ([(Deref, Exp)], Exp, [Stmt] -> [Stmt])
-bindDeref vars arg deref@(Deref idents) = do
-    let (base, rest) = shortestPath vars arg idents
-    case rest of
-        [] -> return (vars, base, id)
-        _ -> do
-            var <- newName "var"
-            rhs <- identsToVal rest base
+bindDeref vars arg (Deref []) = return (vars, arg, id)
+bindDeref vars arg deref@(Deref idents) =
+    case lookup deref vars of
+        Just e -> return (vars, e, id)
+        Nothing -> do
+            let front = init idents
+                Ident final = last idents
+            (vars', base, stmts) <- bindDeref vars arg $ Deref front
             lh <- [|liftHamlet|]
+            let rhs = VarE (mkName final) `AppE` base
+            var <- newName "var"
             let stmt = BindS (VarP var) $ lh `AppE` rhs
-            let vars' = (deref, VarE var) : vars
-            return (vars', VarE var, (:) stmt)
+            let vars'' = (deref, VarE var) : vars'
+            return (vars'', VarE var, stmts . (:) stmt)
 
 -- | Converts a 'Deref' into a Hamlet value.
 hamletDeref :: [(Deref, Exp)] -- ^ scope
