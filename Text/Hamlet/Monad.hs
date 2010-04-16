@@ -18,10 +18,12 @@ module Text.Hamlet.Monad
     , mapH
     , condH
     , printHamlet
+    , hamletToText
     , cdata
     ) where
 
 import Data.Text (Text, pack)
+import qualified Data.Text.Lazy as L
 import qualified Data.Text.IO as T
 import Control.Applicative
 import Control.Monad
@@ -176,3 +178,11 @@ printHamlet render h = runHamlet h render () iter >> return () where
     iter () text = do
         T.putStr text
         return $ Right ()
+
+-- | Converts a 'Hamlet' to lazy text, using strict I/O.
+hamletToText :: Monad m => (url -> String) -> Hamlet url m () -> m L.Text
+hamletToText render h = do
+    Right ((), front) <- runHamlet h render id iter
+    return $ L.fromChunks $ front []
+  where
+    iter front text = return $ Right $ front . (:) text

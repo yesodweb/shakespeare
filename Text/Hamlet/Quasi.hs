@@ -19,7 +19,12 @@ docsToExp :: [Doc] -> Q Exp
 docsToExp docs = do
     arg <- newName "_arg"
     (_, _, stmts) <- foldM docToStmt ([], VarE arg, id) docs
-    return $ LamE [VarP arg] $ DoE $ stmts []
+    stmts' <- case stmts [] of
+                    [] -> do
+                        ret <- [|return ()|]
+                        return [NoBindS ret]
+                    x -> return x
+    return $ LamE [VarP arg] $ DoE stmts'
 
 docToStmt :: Vars -> Doc -> Q Vars
 docToStmt (vars, arg, stmts) (DocForall deref ident@(Ident name) inside) = do
