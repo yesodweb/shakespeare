@@ -27,14 +27,26 @@ docsToExp docs = do
     return $ LamE [VarP arg] $ DoE stmts'
 
 docToStmt :: Vars -> Doc -> Q Vars
-docToStmt (vars, arg, stmts) (DocForall deref ident@(Ident name) inside) = do
-    (vars', deref', stmts') <- bindDeref vars arg deref
+docToStmt (vars, arg, stmts) (DocForall (Deref idents) ident@(Ident name) inside) = do
+    (vars', deref', stmts', isEnum) <-
+        case idents of
+            [] -> error $ "Invalid forall deref: " ++ show idents
+            [(x, Ident i)] -> do
+                let i' = VarE (mkName i) `AppE` arg
+                return (vars, i', id, x)
+            _ -> do
+                let front = Deref $ init idents
+                    (x, Ident i) = last idents
+                (vars', base, stmts') <- bindDeref vars arg front
+                return (vars', VarE (mkName i) `AppE` base, stmts', x)
+    fl <- [|fromList|]
+    let deref'' = if isEnum then deref' else fl `AppE` deref'
     mh <- [|mapH|]
     ident' <- newName name
     let vars'' = ([ident], VarE ident') : vars'
     (_, _, inside') <- foldM docToStmt (vars'', arg, id) inside
     let dos = LamE [VarP ident'] $ DoE $ inside' []
-    let stmt = NoBindS $ mh `AppE` dos `AppE` deref'
+    let stmt = NoBindS $ mh `AppE` dos `AppE` deref''
     return (vars', arg, stmts . stmts' . (:) stmt)
 docToStmt (vars, arg, stmts) (DocCond conds final) = do
     conds' <- liftConds vars arg conds id
@@ -161,7 +173,7 @@ bindDeref :: Scope
           -> Deref
           -> Q (Scope, Exp, [Stmt] -> [Stmt])
 bindDeref vars arg (Deref []) = return (vars, arg, id)
-bindDeref vars arg (Deref idents) =
+bindDeref vars arg deref@(Deref idents) =
     case lookup (map snd idents) vars of
         Just e -> return (vars, e, id)
         Nothing -> do
@@ -170,7 +182,7 @@ bindDeref vars arg (Deref idents) =
             (vars', base, stmts) <- bindDeref vars arg $ Deref front
             lh <- [|liftHamlet|]
             let rhs = VarE (mkName final) `AppE` base
-            var <- newName "var"
+            var <- newName $ derefToName deref
             let stmt =
                   if isMonad
                       then BindS (VarP var) $ lh `AppE` rhs
@@ -179,3 +191,9 @@ bindDeref vars arg (Deref idents) =
                                   ]]
             let vars'' = (map snd idents, VarE var) : vars'
             return (vars'', VarE var, stmts . (:) stmt)
+
+derefToName :: Deref -> String
+derefToName (Deref is') = go is' where
+    go [] = ""
+    go [(_, Ident i)] = i
+    go ((_, Ident i):is) = i ++ "__" ++ go is

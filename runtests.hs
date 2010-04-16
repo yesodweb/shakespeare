@@ -38,6 +38,10 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "elseif" caseElseIf
     , testCase "elseif monad" caseElseIfMonad
     , testCase "elseif chain " caseElseIfChain
+    , testCase "list" caseList
+    , testCase "enum" caseEnum
+    , testCase "list chain" caseListChain
+    , testCase "enum chain" caseEnumChain
     ]
 
 data Url = Home
@@ -57,6 +61,8 @@ data Arg m url = Arg
     , mtrue :: m Bool
     , false :: Bool
     , mfalse :: m Bool
+    , list :: [Arg m url]
+    , enum :: Enumerator (Arg m url) m
     }
 
 arg :: Monad m => Arg m url
@@ -73,6 +79,8 @@ arg = Arg
     , mtrue = return True
     , false = False
     , mfalse = return False
+    , list = [arg, arg, arg]
+    , enum = fromList $ list arg
     }
 
 helper :: String -> (Arg IO Url -> Hamlet Url IO ()) -> Assertion
@@ -188,4 +196,28 @@ $elseif getArg.*getArgM.getArg.*mtrue
     elseif
 $else
     else
+|]
+
+caseList :: Assertion
+caseList = helper "xxx" [$hamlet|
+$forall list x
+    x
+|]
+
+caseListChain :: Assertion
+caseListChain = helper "urlurlurl" [$hamlet|
+$forall getArg.*getArgM.getArg.getArg.*getArgM.list x
+    @x.*murl@
+|]
+
+caseEnum :: Assertion
+caseEnum = helper "xxx" [$hamlet|
+$forall *enum x
+    x
+|]
+
+caseEnumChain :: Assertion
+caseEnumChain = helper "urlurlurl" [$hamlet|
+$forall getArg.*getArgM.getArg.getArg.*getArgM.*enum x
+    @x.*murl@
 |]
