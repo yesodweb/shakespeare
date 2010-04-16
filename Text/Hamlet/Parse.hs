@@ -39,7 +39,7 @@ instance Applicative Result where
     pure = return
     (<*>) = ap
 
-newtype Deref = Deref [Ident]
+newtype Deref = Deref [(Bool, Ident)]
     deriving (Show, Eq, Read, Data, Typeable)
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
@@ -79,7 +79,7 @@ parseLine _ ('$':'f':'o':'r':'a':'l':'l':' ':rest) =
     case words rest of
         [x, y] -> do
             x' <- parseDeref x
-            y' <- parseIdent y
+            (False, y') <- parseIdent' False y
             return $ LineForall x' y'
         _ -> Error $ "Invalid forall: " ++ rest
 parseLine _ ('$':'i':'f':' ':rest) = LineIf <$> parseDeref rest
@@ -178,10 +178,14 @@ caseParseDeref = do
     parseDeref "foo.bar.baz" @?= Ok (Deref [Ident "foo", Ident "bar", Ident "baz"])
 #endif
 
-parseIdent :: String -> Result Ident
-parseIdent s
+parseIdent :: String -> Result (Bool, Ident)
+parseIdent ('*':s) = parseIdent' True s
+parseIdent s = parseIdent' False s
+
+parseIdent' :: Bool -> String -> Result (Bool, Ident)
+parseIdent' b s
     | all (flip elem (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_'")) s
-        = Ok $ Ident s
+        = Ok (b, Ident s)
     | otherwise = Error $ "Invalid identifier: " ++ s
 
 #if TEST

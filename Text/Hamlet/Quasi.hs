@@ -11,7 +11,9 @@ import Language.Haskell.TH.Quote
 import Control.Monad
 import Data.List (sortBy, isPrefixOf)
 
-type Vars = ([(Deref, Exp)], Exp, [Stmt] -> [Stmt])
+type Vars = (Scope, Exp, [Stmt] -> [Stmt])
+
+type Scope = [([Ident], Exp)]
 
 docsToExp :: [Doc] -> Q Exp
 docsToExp docs = do
@@ -24,7 +26,7 @@ docToStmt (vars, arg, stmts) (DocForall deref ident@(Ident name) inside) = do
     (vars', deref', stmts') <- bindDeref vars arg deref
     mh <- [|mapH|]
     ident' <- newName name
-    let vars'' = (Deref [ident], VarE ident') : vars'
+    let vars'' = ([ident], VarE ident') : vars'
     (_, _, inside') <- foldM docToStmt (vars'', arg, id) inside
     let dos = LamE [VarP ident'] $ DoE $ inside' []
     let stmt = NoBindS $ mh `AppE` dos `AppE` deref'
@@ -59,19 +61,21 @@ contentToStmt (vars, arg, stmts) (ContentUrl d) = do
     let stmt = NoBindS $ ou `AppE` d'
     return (vars', arg, stmts . stmts' . (:) stmt)
 contentToStmt (vars, arg, stmts) (ContentEmbed d) = do
-    d' <- hamletDeref vars arg d
+    (vars', d', stmts') <- bindDeref vars arg d
     let stmt = BindS (TupP []) d'
-    return (vars, arg, stmts . (:) stmt)
+    return (vars', arg, stmts . stmts' . (:) stmt)
 
-liftConds :: [(Deref, Exp)] -> Exp -> [(Deref, [Doc])]
+liftConds :: Scope
+          -> Exp
+          -> [(Deref, [Doc])]
           -> (Exp -> Exp)
           -> Q Exp
 liftConds _vars _arg [] front = do
     nil <- [|[]|]
     return $ front nil
-liftConds vars arg ((Deref bool, doc):conds) front = do
+liftConds vars arg ((bool, doc):conds) front = do
     let (base, rest) = shortestPath vars arg bool
-    bool' <- identsToVal rest base
+    bool' <- identsToVal (Deref rest) base
     (_, _, doc') <- foldM docToStmt (vars, arg, id) doc
     let pair = TupE [bool', DoE $ doc' []]
     cons <- [|(:)|]
@@ -100,75 +104,89 @@ hamletWithSettings set =
         Ok d -> docsToExp d
 
 -- deref helper funcs
-shortestPath :: [(Deref, Exp)] -- ^ scope
+shortestPath :: Scope
              -> Exp -- ^ original argument
-             -> [Ident] -- ^ path sought
-             -> (Exp, [Ident]) -- ^ (base, path from base)
-shortestPath vars e is = findMatch' svars is e
+             -> Deref -- ^ path sought
+             -> (Exp, [(Bool, Ident)]) -- ^ (base, path from base)
+shortestPath vars e (Deref is) = findMatch' svars is e
   where
-    svars = sortBy (\(Deref x, _) (Deref y, _)
+    svars = sortBy (\(x, _) (y, _)
                   -> compare (length y) (length x)) vars
     findMatch' [] is' e' = (e', is')
     findMatch' (x:xs) is' e' =
         case checkMatch x is' of
             Just y -> y
             Nothing -> findMatch' xs is' e'
-    checkMatch :: (Deref, Exp) -> [Ident] -> Maybe (Exp, [Ident])
-    checkMatch (Deref a, e') b
-        | a `isPrefixOf` b = Just (e', drop (length a) b)
+    checkMatch :: ([Ident], Exp)
+               -> [(Bool, Ident)]
+               -> Maybe (Exp, [(Bool, Ident)])
+    checkMatch (a, e') b
+        | a `isPrefixOf` map snd b = Just (e', drop (length a) b)
         | otherwise = Nothing
 
 -- | Converts a chain of idents and initial 'Exp' to a monadic value.
-identsToVal :: [Ident] -> Exp -> Q Exp
-identsToVal [] e = do
+identsToVal :: Deref -> Exp -> Q Exp
+identsToVal (Deref []) e = do
     ret <- [|return|]
     return $ ret `AppE` e
-identsToVal (Ident i:is) e = do
+identsToVal (Deref ((isMonad, Ident i):is)) e = do
     let e' = VarE (mkName i) `AppE` e
-    addBinds is e'
+    ret <- [|return|]
+    let e'' = if isMonad then e' else ret `AppE` e'
+    addBinds is e''
 
 -- | Tacks on a series of monadic binds to a monadic 'Exp'.
-addBinds :: [Ident] -> Exp -> Q Exp
+addBinds :: [(Bool, Ident)] -> Exp -> Q Exp
 addBinds [] e = return e
-addBinds (Ident i:is) e = do
+addBinds ((isMonad, Ident i):is) e = do
     bind <- [|(>>=)|]
+    ret <- [|return|]
     let e' = InfixE (Just e) bind $ Just $ VarE $ mkName i
-    addBinds is e'
+    let e'' = if isMonad then e' else ret `AppE` e'
+    addBinds is e''
 
 -- | Add a new binding for a 'Deref'
-bindDeref :: [(Deref, Exp)] -- ^ scope
+bindDeref :: Scope
           -> Exp -- ^ argument
           -> Deref
-          -> Q ([(Deref, Exp)], Exp, [Stmt] -> [Stmt])
+          -> Q (Scope, Exp, [Stmt] -> [Stmt])
 bindDeref vars arg (Deref []) = return (vars, arg, id)
 bindDeref vars arg deref@(Deref idents) =
-    case lookup deref vars of
+    case lookup (map snd idents) vars of
         Just e -> return (vars, e, id)
         Nothing -> do
             let front = init idents
-                Ident final = last idents
+                (isMonad, Ident final) = last idents
             (vars', base, stmts) <- bindDeref vars arg $ Deref front
             lh <- [|liftHamlet|]
             let rhs = VarE (mkName final) `AppE` base
             var <- newName "var"
-            let stmt = BindS (VarP var) $ lh `AppE` rhs
-            let vars'' = (deref, VarE var) : vars'
+            let stmt =
+                  if isMonad
+                      then BindS (VarP var) $ lh `AppE` rhs
+                      else LetS [FunD var
+                                  [ Clause [] (NormalB rhs) []
+                                  ]]
+            let vars'' = (map snd idents, VarE var) : vars'
             return (vars'', VarE var, stmts . (:) stmt)
 
 -- | Converts a 'Deref' into a Hamlet value.
-hamletDeref :: [(Deref, Exp)] -- ^ scope
+hamletDeref :: Scope
             -> Exp -- ^ argument
             -> Deref
             -> Q Exp
-hamletDeref vars arg (Deref idents) = do
-    let (base, rest) = shortestPath vars arg idents
+hamletDeref vars arg deref = do
+    let (base, rest) = shortestPath vars arg deref
     case rest of
         [] -> return base
         _ -> do
             let front = init rest
-                Ident back = last rest
-            front' <- identsToVal front base
+                (isMonad, Ident back) = last rest
+            front' <- identsToVal (Deref front) base
             lh <- [|liftHamlet|]
-            let front'' = lh `AppE` front'
+            ret <- [|return|]
+            let front'' = if isMonad
+                            then lh `AppE` front'
+                            else ret `AppE` front'
             bind <- [|(>>=)|]
             return $ InfixE (Just front'') bind $ Just $ VarE $ mkName back
