@@ -96,18 +96,19 @@ parseLine _ s = LineContent <$> parseContent s
 
 #if TEST
 fooBar :: Deref
-fooBar = Deref [Ident "foo", Ident "bar"]
+fooBar = Deref [(False, Ident "foo"), (False, Ident "bar")]
 
 caseParseLine :: Assertion
 caseParseLine = do
-    parseLine "$if foo.bar" @?= Ok (LineIf fooBar)
-    parseLine "$elseif foo.bar" @?= Ok (LineElseIf fooBar)
-    parseLine "$else" @?= Ok LineElse
-    parseLine "%img!src=@foo.bar@"
+    let parseLine' = parseLine defaultHamletSettings
+    parseLine' "$if foo.bar" @?= Ok (LineIf fooBar)
+    parseLine' "$elseif foo.bar" @?= Ok (LineElseIf fooBar)
+    parseLine' "$else" @?= Ok LineElse
+    parseLine' "%img!src=@foo.bar@"
         @?= Ok (LineTag "img" [("src", [ContentUrl fooBar])] [])
-    parseLine ".$foo.bar$"
+    parseLine' ".$foo.bar$"
         @?= Ok (LineTag "div" [("class", [ContentVar fooBar])] [])
-    parseLine "%span#foo.bar!baz=bin"
+    parseLine' "%span#foo.bar!baz=bin"
         @?= Ok (LineTag "span" [ ("baz", [ContentRaw "bin"])
                                , ("class", [ContentRaw "bar"])
                                , ("id", [ContentRaw "foo"])
@@ -145,15 +146,15 @@ caseParseContent = do
     parseContent "" @?= Ok []
     parseContent "foo" @?= Ok [ContentRaw "foo"]
     parseContent "foo $bar$ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentVar $ Deref [Ident "bar"]
+                                        , ContentVar $ Deref [(False, Ident "bar")]
                                         , ContentRaw " baz"
                                         ]
     parseContent "foo @bar@ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentUrl $ Deref [Ident "bar"]
+                                        , ContentUrl $ Deref [(False, Ident "bar")]
                                         , ContentRaw " baz"
                                         ]
     parseContent "foo ^bar^ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentEmbed $ Deref [Ident "bar"]
+                                        , ContentEmbed $ Deref [(False, Ident "bar")]
                                         , ContentRaw " baz"
                                         ]
     parseContent "@@" @?= Ok [ContentRaw "@"]
@@ -175,7 +176,10 @@ parseDeref s = Deref <$> go s where
 #if TEST
 caseParseDeref :: Assertion
 caseParseDeref = do
-    parseDeref "foo.bar.baz" @?= Ok (Deref [Ident "foo", Ident "bar", Ident "baz"])
+    parseDeref "foo.*bar.baz" @?=
+        Ok (Deref [ (False, Ident "foo")
+                  , (True, Ident "bar")
+                  , (False, Ident "baz")])
 #endif
 
 parseIdent :: String -> Result (Bool, Ident)
@@ -191,7 +195,8 @@ parseIdent' b s
 #if TEST
 caseParseIdent :: Assertion
 caseParseIdent = do
-    parseIdent "foo" @?= Ok (Ident "foo")
+    parseIdent "foo" @?= Ok (False, Ident "foo")
+    parseIdent "*foo" @?= Ok (True, Ident "foo")
 #endif
 
 parseTag :: String -> Result (String, [(String, [Content])])
