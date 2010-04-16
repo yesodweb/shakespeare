@@ -155,23 +155,13 @@ identsToVal isInitMonad (Deref ((isMonad, Ident i):is)) e = do
             let e' = fm `AppE` (VarE $ mkName i) `AppE` e
             identsToVal True (Deref is) e'
 
--- | Tacks on a series of monadic binds to a monadic 'Exp'.
-addBinds :: [(Bool, Ident)] -> Exp -> Q Exp
-addBinds [] e = return e
-addBinds ((isMonad, Ident i):is) e = do
-    bind <- [|(>>=)|]
-    ret <- [|return|]
-    let e' = InfixE (Just e) bind $ Just $ VarE $ mkName i
-    let e'' = if isMonad then e' else ret `AppE` e'
-    addBinds is e''
-
 -- | Add a new binding for a 'Deref'
 bindDeref :: Scope
           -> Exp -- ^ argument
           -> Deref
           -> Q (Scope, Exp, [Stmt] -> [Stmt])
 bindDeref vars arg (Deref []) = return (vars, arg, id)
-bindDeref vars arg deref@(Deref idents) =
+bindDeref vars arg (Deref idents) =
     case lookup (map snd idents) vars of
         Just e -> return (vars, e, id)
         Nothing -> do
@@ -189,24 +179,3 @@ bindDeref vars arg deref@(Deref idents) =
                                   ]]
             let vars'' = (map snd idents, VarE var) : vars'
             return (vars'', VarE var, stmts . (:) stmt)
-
--- | Converts a 'Deref' into a Hamlet value.
-hamletDeref :: Scope
-            -> Exp -- ^ argument
-            -> Deref
-            -> Q Exp
-hamletDeref vars arg deref = do
-    let (base, rest) = shortestPath vars arg deref
-    case rest of
-        [] -> return base
-        _ -> do
-            let front = init rest
-                (isMonad, Ident back) = last rest
-            front' <- identsToVal False (Deref front) base
-            lh <- [|liftHamlet|]
-            ret <- [|return|]
-            let front'' = if isMonad
-                            then lh `AppE` front'
-                            else ret `AppE` front'
-            bind <- [|(>>=)|]
-            return $ InfixE (Just front'') bind $ Just $ VarE $ mkName back
