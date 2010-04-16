@@ -12,6 +12,7 @@ module Text.Hamlet.Monad
     , outputHtml
     , outputString
     , outputUrl
+    , outputEmbed
       -- * Utility functions
     , showUrl
     , liftHamlet
@@ -131,6 +132,10 @@ outputString = output . pack
 -- then calls 'outputString'.
 outputUrl :: Monad m => url -> Hamlet url m ()
 outputUrl u = showUrl u >>= outputString
+
+-- | Only really used to ensure that the argument has the right type.
+outputEmbed :: Monad m => Hamlet url m () -> Hamlet url m ()
+outputEmbed = id
 
 -- | Use the URL to 'String' rendering function to convert a URL to a 'String'.
 showUrl :: Monad m => url -> Hamlet url m String

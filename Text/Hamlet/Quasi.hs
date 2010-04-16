@@ -67,7 +67,8 @@ contentToStmt (vars, arg, stmts) (ContentUrl d) = do
     return (vars', arg, stmts . stmts' . (:) stmt)
 contentToStmt (vars, arg, stmts) (ContentEmbed d) = do
     (vars', d', stmts') <- bindDeref vars arg d
-    let stmt = BindS (TupP []) d'
+    oe <- [|outputEmbed|]
+    let stmt = NoBindS $ oe `AppE` d'
     return (vars', arg, stmts . stmts' . (:) stmt)
 
 liftConds :: Scope
@@ -80,7 +81,7 @@ liftConds _vars _arg [] front = do
     return $ front nil
 liftConds vars arg ((bool, doc):conds) front = do
     let (base, rest) = shortestPath vars arg bool
-    bool' <- identsToVal (Deref rest) base
+    bool' <- identsToVal False (Deref rest) base
     (_, _, doc') <- foldM docToStmt (vars, arg, id) doc
     let pair = TupE [bool', DoE $ doc' []]
     cons <- [|(:)|]
@@ -130,15 +131,29 @@ shortestPath vars e (Deref is) = findMatch' svars is e
         | otherwise = Nothing
 
 -- | Converts a chain of idents and initial 'Exp' to a monadic value.
-identsToVal :: Deref -> Exp -> Q Exp
-identsToVal (Deref []) e = do
-    ret <- [|return|]
-    return $ ret `AppE` e
-identsToVal (Deref ((isMonad, Ident i):is)) e = do
-    let e' = VarE (mkName i) `AppE` e
-    ret <- [|return|]
-    let e'' = if isMonad then e' else ret `AppE` e'
-    addBinds is e''
+identsToVal :: Bool -- ^ is initial monadic?
+            -> Deref
+            -> Exp
+            -> Q Exp
+identsToVal isMonad (Deref []) e =
+    if isMonad
+        then return e
+        else do
+            ret <- [|return|]
+            return $ ret `AppE` e
+identsToVal isInitMonad (Deref ((isMonad, Ident i):is)) e = do
+    case (isInitMonad, isMonad) of
+        (False, _) -> do
+            let e' = VarE (mkName i) `AppE` e
+            identsToVal isMonad (Deref is) e'
+        (True, True) -> do
+            bind <- [|(>>=)|]
+            let e' = InfixE (Just e) bind $ Just $ VarE $ mkName i
+            identsToVal True (Deref is) e'
+        (True, False) -> do
+            fm <- [|fmap|]
+            let e' = fm `AppE` (VarE $ mkName i) `AppE` e
+            identsToVal True (Deref is) e'
 
 -- | Tacks on a series of monadic binds to a monadic 'Exp'.
 addBinds :: [(Bool, Ident)] -> Exp -> Q Exp
@@ -187,7 +202,7 @@ hamletDeref vars arg deref = do
         _ -> do
             let front = init rest
                 (isMonad, Ident back) = last rest
-            front' <- identsToVal (Deref front) base
+            front' <- identsToVal False (Deref front) base
             lh <- [|liftHamlet|]
             ret <- [|return|]
             let front'' = if isMonad
