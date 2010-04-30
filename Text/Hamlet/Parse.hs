@@ -135,7 +135,7 @@ parseContent s =
                                     _ -> error $ "Invalid delim in parseContent: " ++ [delim]
                         rest' <- parseContent rest
                         return $ x deref' : rest'
-                    _ -> error "Invalid branch in parseContent"
+                    (_, "") -> error $ "Missing ending delimiter in " ++ s
             case a of
                 "" -> return b
                 _ -> return $ ContentRaw a : b
