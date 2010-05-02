@@ -334,14 +334,15 @@ data CloseStyle = NoClose | CloseInside | CloseSeparate
 closeTag :: HamletSettings -> String -> CloseStyle
 closeTag h s =
     if canBeEmpty s
-        then (if hamletCloseEmpties h then CloseInside else NoClose)
-        else CloseSeparate
+        then CloseSeparate
+        else (if hamletCloseEmpties h then CloseInside else NoClose)
   where
     canBeEmpty "img" = False
     canBeEmpty "link" = False
     canBeEmpty "meta" = False
     canBeEmpty "br" = False
     canBeEmpty "hr" = False
+    canBeEmpty "input" = False
     canBeEmpty _ = True
 
 parseConds :: HamletSettings

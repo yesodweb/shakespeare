@@ -1,5 +1,6 @@
 module Text.Hamlet
     ( hamlet
+    , xhamlet
     , hamletWithSettings
     , HamletSettings (..)
     , defaultHamletSettings

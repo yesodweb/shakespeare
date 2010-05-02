@@ -42,6 +42,9 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "enum" caseEnum
     , testCase "list chain" caseListChain
     , testCase "enum chain" caseEnumChain
+    , testCase "script not empty" caseScriptNotEmpty
+    , testCase "meta empty" caseMetaEmpty
+    , testCase "input empty" caseInputEmpty
     ]
 
 data Url = Home
@@ -221,3 +224,16 @@ caseEnumChain = helper "urlurlurl" [$hamlet|
 $forall getArg.*getArgM.getArg.getArg.*getArgM.*enum x
     @x.*murl@
 |]
+
+caseScriptNotEmpty :: Assertion
+caseScriptNotEmpty = helper "<script></script>" [$hamlet|%script|]
+
+caseMetaEmpty :: Assertion
+caseMetaEmpty = do
+    helper "<meta>" [$hamlet|%meta|]
+    helper "<meta/>" [$xhamlet|%meta|]
+
+caseInputEmpty :: Assertion
+caseInputEmpty = do
+    helper "<input>" [$hamlet|%input|]
+    helper "<input/>" [$xhamlet|%input|]

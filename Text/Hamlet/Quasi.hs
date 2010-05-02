@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Text.Hamlet.Quasi
     ( hamlet
+    , xhamlet
     , hamletWithSettings
     ) where
 
@@ -103,6 +104,13 @@ liftConds vars arg ((bool, doc):conds) front = do
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings defaultHamletSettings
+
+-- | Calls 'hamletWithSettings' using XHTML 1.0 Strict settings.
+xhamlet :: QuasiQuoter
+xhamlet = hamletWithSettings $ HamletSettings doctype True where
+    doctype =
+      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
+      "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
 
 -- | A quasi-quoter that converts Hamlet syntax into a function of form:
 --
