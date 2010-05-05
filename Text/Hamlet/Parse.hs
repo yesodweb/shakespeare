@@ -111,8 +111,8 @@ caseParseLine = do
     parseLine' ".$foo.bar$"
         @?= Ok (LineTag "div" [] [] [[ContentVar fooBar]])
     parseLine' "%span#foo.bar.bar2!baz=bin"
-        @?= Ok (LineTag "span" [ ("baz", [ContentRaw "bin"])
-                               , ("id", [ContentRaw "foo"])
+        @?= Ok (LineTag "span" [ ("id", [ContentRaw "foo"])
+                               , ("baz", [ContentRaw "bin"])
                                ] []
                                [ [ContentRaw "bar"]
                                , [ContentRaw "bar2"]
@@ -206,8 +206,8 @@ caseParseIdent = do
 parseTag :: String -> Result (String, [(String, [Content])], [[Content]])
 parseTag s = do
     pieces <- takePieces s
-    (a, b, c) <- foldM go ("div", [], id) pieces
-    return (a, b, c []) -- FIXME b
+    (a, b, c) <- foldM go ("div", id, id) pieces
+    return (a, b [], c [])
   where
     go (_, attrs, classes) ('%':tn) = Ok (tn, attrs, classes)
     go (tn, attrs, classes) ('.':cl) = do
@@ -215,14 +215,14 @@ parseTag s = do
         Ok (tn, attrs, classes . (:) con)
     go (tn, attrs, classes) ('#':cl) = do
         con <- parseContent cl
-        Ok (tn, ("id", con) : attrs, classes)
+        Ok (tn, attrs . (:) ("id", con), classes)
     go (tn, attrs, classes) ('!':rest) = do
         let (name, val) = break (== '=') rest
         val' <-
             case val of
                 ('=':rest') -> parseContent rest'
                 _ -> Ok []
-        Ok (tn, (name, val') : attrs, classes)
+        Ok (tn, attrs . (:) (name, val'), classes)
     go _ _ = error "Invalid branch in Text.Hamlet.Parse.parseTag"
 
 takePieces :: String -> Result [String]

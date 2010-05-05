@@ -46,6 +46,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "meta empty" caseMetaEmpty
     , testCase "input empty" caseInputEmpty
     , testCase "multiple classes" caseMultiClass
+    , testCase "attrib order" caseAttribOrder
     ]
 
 data Url = Home
@@ -242,3 +243,6 @@ caseInputEmpty = do
 caseMultiClass :: Assertion
 caseMultiClass = do
     helper "<div class=\"foo bar\"></div>" [$hamlet|.foo.bar|]
+
+caseAttribOrder :: Assertion
+caseAttribOrder = helper "<meta 1 2 3>" [$hamlet|%meta!1!2!3|]
