@@ -19,6 +19,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Arrow
 import Data.Data
+import Data.List (intercalate)
 
 #if TEST
 import Test.Framework (testGroup, Test)
@@ -58,6 +59,7 @@ data Line = LineForall Deref Ident
             { _lineTagName :: String
             , _lineAttr :: [(String, [Content])]
             , _lineContent :: [Content]
+            , _lineClasses :: [[Content]]
             }
           | LineContent [Content]
     deriving (Eq, Show, Read)
@@ -89,9 +91,9 @@ parseLine _ "$else" = Ok LineElse
 parseLine _ x@(c:_) | c `elem` "%#." = do
     let (begin, rest) = break (== ' ') x
         rest' = dropWhile (== ' ') rest
-    (tn, attr) <- parseTag begin
+    (tn, attr, classes) <- parseTag begin
     con <- parseContent rest'
-    return $ LineTag tn attr con
+    return $ LineTag tn attr con classes
 parseLine _ s = LineContent <$> parseContent s
 
 #if TEST
@@ -105,14 +107,16 @@ caseParseLine = do
     parseLine' "$elseif foo.bar" @?= Ok (LineElseIf fooBar)
     parseLine' "$else" @?= Ok LineElse
     parseLine' "%img!src=@foo.bar@"
-        @?= Ok (LineTag "img" [("src", [ContentUrl fooBar])] [])
+        @?= Ok (LineTag "img" [("src", [ContentUrl fooBar])] [] [])
     parseLine' ".$foo.bar$"
-        @?= Ok (LineTag "div" [("class", [ContentVar fooBar])] [])
-    parseLine' "%span#foo.bar!baz=bin"
+        @?= Ok (LineTag "div" [] [] [[ContentVar fooBar]])
+    parseLine' "%span#foo.bar.bar2!baz=bin"
         @?= Ok (LineTag "span" [ ("baz", [ContentRaw "bin"])
-                               , ("class", [ContentRaw "bar"])
                                , ("id", [ContentRaw "foo"])
-                               ] [])
+                               ] []
+                               [ [ContentRaw "bar"]
+                               , [ContentRaw "bar2"]
+                               ])
 #endif
 
 parseContent :: String -> Result [Content]
@@ -199,25 +203,26 @@ caseParseIdent = do
     parseIdent "*foo" @?= Ok (True, Ident "foo")
 #endif
 
-parseTag :: String -> Result (String, [(String, [Content])])
+parseTag :: String -> Result (String, [(String, [Content])], [[Content]])
 parseTag s = do
     pieces <- takePieces s
-    foldM go ("div", []) pieces
+    (a, b, c) <- foldM go ("div", [], id) pieces
+    return (a, b, c []) -- FIXME b
   where
-    go (_, attrs) ('%':tn) = Ok (tn, attrs)
-    go (tn, attrs) ('.':cl) = do
+    go (_, attrs, classes) ('%':tn) = Ok (tn, attrs, classes)
+    go (tn, attrs, classes) ('.':cl) = do
         con <- parseContent cl
-        Ok (tn, ("class", con) : attrs)
-    go (tn, attrs) ('#':cl) = do
+        Ok (tn, attrs, classes . (:) con)
+    go (tn, attrs, classes) ('#':cl) = do
         con <- parseContent cl
-        Ok (tn, ("id", con) : attrs)
-    go (tn, attrs) ('!':rest) = do
+        Ok (tn, ("id", con) : attrs, classes)
+    go (tn, attrs, classes) ('!':rest) = do
         let (name, val) = break (== '=') rest
         val' <-
             case val of
                 ('=':rest') -> parseContent rest'
                 _ -> Ok []
-        Ok (tn, (name, val') : attrs)
+        Ok (tn, (name, val') : attrs, classes)
     go _ _ = error "Invalid branch in Text.Hamlet.Parse.parseTag"
 
 takePieces :: String -> Result [String]
@@ -261,7 +266,11 @@ nestToDoc set (Nest (LineIf d) inside:rest) = do
     (ifs, el, rest') <- parseConds set ((:) (d, inside')) rest
     rest'' <- nestToDoc set rest'
     Ok $ DocCond ifs el : rest''
-nestToDoc set (Nest (LineTag tn attrs content) inside:rest) = do
+nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
+    let attrs' = case classes of
+                    [] -> attrs
+                    _ -> ("class", intercalate [ContentRaw " "] classes)
+                       : attrs
     let closeStyle =
             if not (null content) || not (null inside)
                 then CloseSeparate
@@ -273,10 +282,10 @@ nestToDoc set (Nest (LineTag tn attrs content) inside:rest) = do
                  CloseInside -> ContentRaw "/>"
                  _ -> ContentRaw ">"
         start = ContentRaw $ "<" ++ tn
-        attrs' = concatMap attrToContent attrs
+        attrs'' = concatMap attrToContent attrs'
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
-    Ok $ DocContent (start : attrs' ++ seal : content)
+    Ok $ DocContent (start : attrs'' ++ seal : content)
        : inside' ++ end ++ rest'
 nestToDoc set (Nest (LineContent content) inside:rest) = do
     inside' <- nestToDoc set inside

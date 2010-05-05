@@ -45,6 +45,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "script not empty" caseScriptNotEmpty
     , testCase "meta empty" caseMetaEmpty
     , testCase "input empty" caseInputEmpty
+    , testCase "multiple classes" caseMultiClass
     ]
 
 data Url = Home
@@ -237,3 +238,7 @@ caseInputEmpty :: Assertion
 caseInputEmpty = do
     helper "<input>" [$hamlet|%input|]
     helper "<input/>" [$xhamlet|%input|]
+
+caseMultiClass :: Assertion
+caseMultiClass = do
+    helper "<div class=\"foo bar\"></div>" [$hamlet|.foo.bar|]
