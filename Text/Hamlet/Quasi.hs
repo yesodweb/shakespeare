@@ -49,6 +49,15 @@ docToStmt (vars, arg, stmts) (DocForall (Deref idents) ident@(Ident name) inside
     let dos = LamE [VarP ident'] $ DoE $ inside' []
     let stmt = NoBindS $ mh `AppE` dos `AppE` deref''
     return (vars', arg, stmts . stmts' . (:) stmt)
+docToStmt (vars, arg, stmts) (DocMaybe deref ident@(Ident name) inside) = do
+    (vars', base, stmts') <- bindDeref vars arg deref
+    ident' <- newName name
+    let vars'' = ([ident], VarE ident') : vars'
+    (_, _, inside') <- foldM docToStmt (vars'', arg, id) inside
+    let dos = LamE [VarP ident'] $ DoE $ inside' []
+    mh <- [|maybeH|]
+    let stmt = NoBindS $ mh `AppE` base `AppE` dos
+    return (vars', arg, stmts . stmts' . (:) stmt)
 docToStmt (vars, arg, stmts) (DocCond conds final) = do
     conds' <- liftConds vars arg conds id
     final' <- case final of

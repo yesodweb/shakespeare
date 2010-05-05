@@ -55,6 +55,7 @@ data Line = LineForall Deref Ident
           | LineIf Deref
           | LineElseIf Deref
           | LineElse
+          | LineMaybe Deref Ident
           | LineTag
             { _lineTagName :: String
             , _lineAttr :: [(String, [Content])]
@@ -88,6 +89,13 @@ parseLine _ ('$':'i':'f':' ':rest) = LineIf <$> parseDeref rest
 parseLine _ ('$':'e':'l':'s':'e':'i':'f':' ':rest) =
     LineElseIf <$> parseDeref rest
 parseLine _ "$else" = Ok LineElse
+parseLine _ ('$':'m':'a':'y':'b':'e':' ':rest) =
+    case words rest of
+        [x, y] -> do
+            x' <- parseDeref x
+            (False, y') <- parseIdent' False y
+            return $ LineMaybe x' y'
+        _ -> Error $ "Invalid maybe: " ++ rest
 parseLine _ x@(c:_) | c `elem` "%#." = do
     let (begin, rest) = break (== ' ') x
         rest' = dropWhile (== ' ') rest
@@ -252,6 +260,7 @@ nestLines ((i, l):rest) =
 
 data Doc = DocForall Deref Ident [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
+         | DocMaybe Deref Ident [Doc]
          | DocContent [Content]
     deriving (Show, Eq, Read, Data, Typeable)
 
@@ -266,6 +275,10 @@ nestToDoc set (Nest (LineIf d) inside:rest) = do
     (ifs, el, rest') <- parseConds set ((:) (d, inside')) rest
     rest'' <- nestToDoc set rest'
     Ok $ DocCond ifs el : rest''
+nestToDoc set (Nest (LineMaybe d i) inside:rest) = do
+    inside' <- nestToDoc set inside
+    rest' <- nestToDoc set rest
+    Ok $ DocMaybe d i inside' : rest'
 nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
     let attrs' = case classes of
                     [] -> attrs
@@ -298,6 +311,8 @@ compressDoc :: [Doc] -> [Doc]
 compressDoc [] = []
 compressDoc (DocForall d i doc:rest) =
     DocForall d i (compressDoc doc) : compressDoc rest
+compressDoc (DocMaybe d i doc:rest) =
+    DocMaybe d i (compressDoc doc) : compressDoc rest
 compressDoc (DocCond x y:rest) =
     DocCond (map (second compressDoc) x) (compressDoc `fmap` y)
     : compressDoc rest

@@ -47,6 +47,12 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "input empty" caseInputEmpty
     , testCase "multiple classes" caseMultiClass
     , testCase "attrib order" caseAttribOrder
+    , testCase "nothing" caseNothing
+    , testCase "nothing monad" caseNothingMonad
+    , testCase "nothing chain " caseNothingChain
+    , testCase "just" caseJust
+    , testCase "just monad" caseJustMonad
+    , testCase "just chain " caseJustChain
     ]
 
 data Url = Home
@@ -68,6 +74,10 @@ data Arg m url = Arg
     , mfalse :: m Bool
     , list :: [Arg m url]
     , enum :: Enumerator (Arg m url) m
+    , nothing :: Maybe HtmlContent
+    , mnothing :: m (Maybe HtmlContent)
+    , just :: Maybe HtmlContent
+    , mjust :: m (Maybe HtmlContent)
     }
 
 arg :: Monad m => Arg m url
@@ -86,6 +96,10 @@ arg = Arg
     , mfalse = return False
     , list = [arg, arg, arg]
     , enum = fromList $ list arg
+    , nothing = Nothing
+    , mnothing = return Nothing
+    , just = Just $ Unencoded $ pack "just"
+    , mjust = return $ Just $ Unencoded $ pack "just"
     }
 
 helper :: String -> (Arg IO Url -> Hamlet Url IO ()) -> Assertion
@@ -246,3 +260,39 @@ caseMultiClass = do
 
 caseAttribOrder :: Assertion
 caseAttribOrder = helper "<meta 1 2 3>" [$hamlet|%meta!1!2!3|]
+
+caseNothing :: Assertion
+caseNothing = helper "" [$hamlet|
+$maybe nothing n
+    nothing
+|]
+
+caseNothingMonad :: Assertion
+caseNothingMonad = helper "" [$hamlet|
+$maybe *mnothing n
+    nothing $n$
+|]
+
+caseNothingChain :: Assertion
+caseNothingChain = helper "" [$hamlet|
+$maybe getArg.*getArgM.getArg.*mnothing n
+    nothing $n$
+|]
+
+caseJust :: Assertion
+caseJust = helper "it's just" [$hamlet|
+$maybe just n
+    it's $n$
+|]
+
+caseJustMonad :: Assertion
+caseJustMonad = helper "it's just" [$hamlet|
+$maybe *mjust n
+    it's $n$
+|]
+
+caseJustChain :: Assertion
+caseJustChain = helper "it's just" [$hamlet|
+$maybe getArg.*getArgM.getArg.*mjust n
+    it's $n$
+|]

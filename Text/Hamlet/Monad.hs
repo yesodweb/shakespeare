@@ -18,6 +18,7 @@ module Text.Hamlet.Monad
     , liftHamlet
     , mapH
     , condH
+    , maybeH
     , printHamlet
     , hamletToText
     , cdata
@@ -176,6 +177,14 @@ condH [] (Just x) = x
 condH ((x, y):rest) z = do
     x' <- liftHamlet x
     if x' then y else condH rest z
+
+-- | Runs the second argument with the value in the first, if available.
+maybeH :: Monad m
+       => Maybe v
+       -> (v -> Hamlet url m ())
+       -> Hamlet url m ()
+maybeH Nothing _ = return ()
+maybeH (Just v) f = f v
 
 -- | Prints a Hamlet to standard out. Good for debugging.
 printHamlet :: (url -> String) -> Hamlet url IO () -> IO ()
