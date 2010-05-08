@@ -56,6 +56,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "constructor" caseConstructor
     , testCase "url + params" caseUrlParams
     , testCase "url + params monad" caseUrlParamsMonad
+    , testCase "escape" caseEscape
     ]
 
 data Url = Home
@@ -360,3 +361,11 @@ caseUrlParamsMonad :: Assertion
 caseUrlParamsMonad = do
     helper "url?foo=bar&foo1=bar1" [$hamlet|@?*murlParams.@|]
     helper "url?foo=bar&foo1=bar1" [$hamlet|@?*murlParams.theArg@|]
+
+caseEscape :: Assertion
+caseEscape = do
+    helper "#this is raw\n " [$hamlet|
+\#this is raw
+\
+\ 
+|]

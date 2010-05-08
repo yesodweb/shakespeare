@@ -78,6 +78,8 @@ parseLines set = mapM go . lines where
 parseLine :: HamletSettings -> String -> Result Line
 parseLine set "!!!" =
     Ok $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
+parseLine _ "\\" = Ok $ LineContent [ContentRaw "\n"]
+parseLine _ ('\\':s) = LineContent <$> parseContent s
 parseLine _ ('$':'f':'o':'r':'a':'l':'l':' ':rest) =
     case words rest of
         [x, y] -> do
@@ -127,6 +129,10 @@ caseParseLine = do
                                [ [ContentRaw "bar"]
                                , [ContentRaw "bar2"]
                                ])
+    parseLine' "\\#this is raw"
+        @?= Ok (LineContent [ContentRaw "#this is raw"])
+    parseLine' "\\"
+        @?= Ok (LineContent [ContentRaw "\n"])
 #endif
 
 parseContent :: String -> Result [Content]
