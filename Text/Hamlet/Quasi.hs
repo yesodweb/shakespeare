@@ -143,20 +143,23 @@ shortestPath :: Scope
              -> Exp -- ^ original argument
              -> Deref -- ^ path sought
              -> (Exp, [(Bool, Ident)]) -- ^ (base, path from base)
-shortestPath vars e (Deref is) = findMatch' svars is e
+shortestPath scope arg (Deref is) = findMatch' svars
   where
     svars = sortBy (\(x, _) (y, _)
-                  -> compare (length y) (length x)) vars
-    findMatch' [] is' e' = (e', is')
-    findMatch' (x:xs) is' e' =
-        case checkMatch x is' of
+                  -> compare (length y) (length x)) scope
+    findMatch' [] =
+        case is of
+            ((False, top):rest) -> (getBase scope arg top, rest)
+            ((True, _):_) -> error "shortestPath: first segment is monadic"
+            [] -> error "shortestPath called with null deref"
+    findMatch' (x:xs) =
+        case checkMatch x of
             Just y -> y
-            Nothing -> findMatch' xs is' e'
+            Nothing -> findMatch' xs
     checkMatch :: ([Ident], Exp)
-               -> [(Bool, Ident)]
                -> Maybe (Exp, [(Bool, Ident)])
-    checkMatch (a, e') b
-        | a `isPrefixOf` map snd b = Just (e', drop (length a) b)
+    checkMatch (a, e')
+        | a `isPrefixOf` map snd is = Just (e', drop (length a) is)
         | otherwise = Nothing
 
 -- | Converts a chain of idents and initial 'Exp' to a monadic value.
@@ -184,30 +187,55 @@ identsToVal isInitMonad (Deref ((isMonad, Ident i):is)) e = do
             let e' = fm `AppE` (VarE $ mkName i) `AppE` e
             identsToVal True (Deref is) e'
 
+getBase :: Scope
+        -> Exp -- ^ argument
+        -> Ident
+        -> Exp
+getBase _ arg (Ident "") = arg
+getBase scope _ (Ident top) =
+    case lookup [Ident top] scope of
+        Nothing -> VarE $ mkName top
+        Just e -> e
+
+bindMonadicVar :: String -> Exp -> Q (Exp, [Stmt] -> [Stmt])
+bindMonadicVar name e = do
+    lh <- [|liftHamlet|]
+    name' <- newName name
+    let stmt = BindS (VarP name') $ lh `AppE` e
+    return (VarE name', (:) stmt)
+
 -- | Add a new binding for a 'Deref'
 bindDeref :: Scope
           -> Exp -- ^ argument
           -> Deref
           -> Q (Scope, Exp, [Stmt] -> [Stmt])
-bindDeref vars arg (Deref []) = return (vars, arg, id)
-bindDeref vars arg deref@(Deref idents) =
-    case lookup (map snd idents) vars of
-        Just e -> return (vars, e, id)
-        Nothing -> do
-            let front = init idents
-                (isMonad, Ident final) = last idents
-            (vars', base, stmts) <- bindDeref vars arg $ Deref front
-            lh <- [|liftHamlet|]
-            let rhs = VarE (mkName final) `AppE` base
-            var <- newName $ derefToName deref
-            let stmt =
-                  if isMonad
-                      then BindS (VarP var) $ lh `AppE` rhs
-                      else LetS [FunD var
-                                  [ Clause [] (NormalB rhs) []
-                                  ]]
-            let vars'' = (map snd idents, VarE var) : vars'
-            return (vars'', VarE var, stmts . (:) stmt)
+bindDeref _ _ (Deref []) = error "bindDeref with null deref"
+bindDeref scope arg (Deref ((isMonad, base):rest)) = do
+    let base' = getBase scope arg base
+    (base'', stmts) <-
+        if isMonad
+            then bindMonadicVar "_FIXMEvarName" base'
+            else return (base', id)
+    (x, y, z, _) <- foldM go (scope, base'', stmts, [base]) rest
+    return (x, y, z)
+  where
+    go :: (Scope, Exp, [Stmt] -> [Stmt], [Ident])
+       -> (Bool, Ident)
+       -> Q (Scope, Exp, [Stmt] -> [Stmt], [Ident])
+    go (scope, base, stmts, front) (isMonad, Ident func) = do
+        let rhs = VarE (mkName func) `AppE` base
+        name <- newName func
+        stmt <-
+            if isMonad
+                then do
+                    lh <- [|liftHamlet|]
+                    return $ BindS (VarP name) $ lh `AppE` rhs
+                else return $ LetS [FunD name
+                                    [ Clause [] (NormalB rhs) []
+                                    ]]
+        let front' = front ++ [Ident func]
+        return ((front', VarE name) : scope, VarE name,
+                stmts . (:) stmt, front')
 
 derefToName :: Deref -> String
 derefToName (Deref is') = go is' where

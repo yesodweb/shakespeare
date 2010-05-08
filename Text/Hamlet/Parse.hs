@@ -40,7 +40,7 @@ instance Applicative Result where
     pure = return
     (<*>) = ap
 
-newtype Deref = Deref [(Bool, Ident)]
+newtype Deref = Deref [(Bool, Ident)] -- ^ is monadic, ident
     deriving (Show, Eq, Read, Data, Typeable)
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
