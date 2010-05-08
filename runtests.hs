@@ -53,6 +53,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "just" caseJust
     , testCase "just monad" caseJustMonad
     , testCase "just chain " caseJustChain
+    , testCase "constructor" caseConstructor
     ]
 
 data Url = Home
@@ -342,3 +343,6 @@ caseJustChain = helper "it's just" [$hamlet|
 $maybe .getArg.*getArgM.getArg.*mjust n
     it's $n$
 |]
+
+caseConstructor :: Assertion
+caseConstructor = helper "url" [$hamlet|@Home@|]

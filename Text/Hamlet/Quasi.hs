@@ -11,6 +11,7 @@ import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 import Control.Monad
 import Data.List (sortBy, isPrefixOf)
+import Data.Char (isUpper)
 
 type Vars = (Scope, Exp, [Stmt] -> [Stmt])
 
@@ -192,6 +193,8 @@ getBase :: Scope
         -> Ident
         -> Exp
 getBase _ arg (Ident "") = arg
+getBase _ _ (Ident name@(x:_))
+    | isUpper x = ConE $ mkName name
 getBase scope _ (Ident top) =
     case lookup [Ident top] scope of
         Nothing -> VarE $ mkName top
