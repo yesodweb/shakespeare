@@ -5,6 +5,29 @@ license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
 maintainer:      Michael Snoyman <michael@snoyman.com>
 synopsis:        Haml-like template files that are compile-time checked
+description:
+    Hamlet gives you a type-safe tool for generating HTML code. It works via Quasi-Quoting, and generating extremely efficient output code. The syntax is white-space sensitive, and it helps you avoid cross-site scripting issues and 404 errors. Please see the documentation at <http://docs.yesodweb.com/hamlet/> for more details.
+    .
+    As a quick overview, here is a sample Hamlet template:
+    .
+    > !!!
+    > %html
+    >     %head
+    >         %title Hamlet Demo
+    >     %body
+    >         %h1 Information on $name.person$
+    >         %p $*name.person$ is $age.person$ years old.
+    >         %h2
+    >             $if isMarried.person
+    >                 Married
+    >             $else
+    >                 Not married
+    >         %ul
+    >             $forall children.person child
+    >                 %li $child$
+    >         %p
+    >             %a!href=@page.person@ See the page.
+    >         ^footer^
 category:        Web
 stability:       unstable
 cabal-version:   >= 1.6
