@@ -54,6 +54,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "just monad" caseJustMonad
     , testCase "just chain " caseJustChain
     , testCase "constructor" caseConstructor
+    , testCase "url + params" caseUrlParams
+    , testCase "url + params monad" caseUrlParamsMonad
     ]
 
 data Url = Home
@@ -79,6 +81,8 @@ data Arg m url = Arg
     , mnothing :: m (Maybe HtmlContent)
     , just :: Maybe HtmlContent
     , mjust :: m (Maybe HtmlContent)
+    , urlParams :: (Url, [(String, String)])
+    , murlParams :: m (Url, [(String, String)])
     }
 
 theArg :: Arg IO url
@@ -101,6 +105,8 @@ theArg = Arg
     , mnothing = return Nothing
     , just = Just $ Unencoded $ pack "just"
     , mjust = return $ Just $ Unencoded $ pack "just"
+    , urlParams = (Home, [("foo", "bar"), ("foo1", "bar1")])
+    , murlParams = return $ urlParams theArg
     }
 
 helper :: String -> (Arg IO Url -> Hamlet Url IO ()) -> Assertion
@@ -346,3 +352,13 @@ $maybe .getArg.*getArgM.getArg.*mjust n
 
 caseConstructor :: Assertion
 caseConstructor = helper "url" [$hamlet|@Home@|]
+
+caseUrlParams :: Assertion
+caseUrlParams = do
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?.urlParams@|]
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?theArg.urlParams@|]
+
+caseUrlParamsMonad :: Assertion
+caseUrlParamsMonad = do
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?.*murlParams@|]
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?theArg.*murlParams@|]

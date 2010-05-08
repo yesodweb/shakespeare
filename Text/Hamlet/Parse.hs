@@ -47,7 +47,7 @@ newtype Ident = Ident String
 
 data Content = ContentRaw String
              | ContentVar Deref
-             | ContentUrl Deref
+             | ContentUrl Bool Deref -- ^ bool: does it include params?
              | ContentEmbed Deref
     deriving (Show, Eq, Read, Data, Typeable)
 
@@ -115,7 +115,9 @@ caseParseLine = do
     parseLine' "$elseif foo.bar" @?= Ok (LineElseIf fooBar)
     parseLine' "$else" @?= Ok LineElse
     parseLine' "%img!src=@foo.bar@"
-        @?= Ok (LineTag "img" [("src", [ContentUrl fooBar])] [] [])
+        @?= Ok (LineTag "img" [("src", [ContentUrl False fooBar])] [] [])
+    parseLine' "%img!src=@?foo.bar@"
+        @?= Ok (LineTag "img" [("src", [ContentUrl True fooBar])] [] [])
     parseLine' ".$foo.bar$"
         @?= Ok (LineTag "div" [] [] [[ContentVar fooBar]])
     parseLine' "%span#foo.bar.bar2!baz=bin"
@@ -139,14 +141,17 @@ parseContent s =
                         rest' <- parseContent rest
                         return $ ContentRaw [delim] : rest'
                     (deref, _:rest) -> do
-                        deref' <- parseDeref deref
-                        let x = case delim of
-                                    '$' -> ContentVar
-                                    '@' -> ContentUrl
-                                    '^' -> ContentEmbed
+                        let (x, deref') = case delim of
+                                    '$' -> (ContentVar, deref)
+                                    '@' ->
+                                        case deref of
+                                            '?':deref' -> (ContentUrl True, deref')
+                                            _ -> (ContentUrl False, deref)
+                                    '^' -> (ContentEmbed, deref)
                                     _ -> error $ "Invalid delim in parseContent: " ++ [delim]
+                        deref'' <- parseDeref deref'
                         rest' <- parseContent rest
-                        return $ x deref' : rest'
+                        return $ x deref'' : rest'
                     (_, "") -> error $ "Missing ending delimiter in " ++ s
             case a of
                 "" -> return b
@@ -161,10 +166,16 @@ caseParseContent = do
                                         , ContentVar $ Deref [(False, Ident "bar")]
                                         , ContentRaw " baz"
                                         ]
-    parseContent "foo @bar@ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentUrl $ Deref [(False, Ident "bar")]
-                                        , ContentRaw " baz"
-                                        ]
+    parseContent "foo @bar@ baz" @?=
+        Ok [ ContentRaw "foo "
+           , ContentUrl False (Deref [(False, Ident "bar")])
+           , ContentRaw " baz"
+           ]
+    parseContent "foo @?bar@ baz" @?=
+        Ok [ ContentRaw "foo "
+           , ContentUrl True (Deref [(False, Ident "bar")])
+           , ContentRaw " baz"
+           ]
     parseContent "foo ^bar^ baz" @?= Ok [ ContentRaw "foo "
                                         , ContentEmbed $ Deref [(False, Ident "bar")]
                                         , ContentRaw " baz"

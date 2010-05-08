@@ -83,9 +83,9 @@ contentToStmt (vars, arg, stmts) (ContentVar d) = do
     oh <- [|outputHtml|]
     let stmt = NoBindS $ oh `AppE` d'
     return (vars', arg, stmts . stmts' . (:) stmt)
-contentToStmt (vars, arg, stmts) (ContentUrl d) = do
+contentToStmt (vars, arg, stmts) (ContentUrl hasParams d) = do
     (vars', d', stmts') <- bindDeref vars arg d
-    ou <- [|outputUrl|]
+    ou <- if hasParams then [|outputUrlParams|] else [|outputUrl|]
     let stmt = NoBindS $ ou `AppE` d'
     return (vars', arg, stmts . stmts' . (:) stmt)
 contentToStmt (vars, arg, stmts) (ContentEmbed d) = do

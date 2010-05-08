@@ -12,6 +12,7 @@ module Text.Hamlet.Monad
     , outputHtml
     , outputString
     , outputUrl
+    , outputUrlParams
     , outputEmbed
       -- * Utility functions
     , showUrl
@@ -31,6 +32,7 @@ import Control.Applicative
 import Control.Monad
 import Web.Encodings
 import Data.Monoid
+import Data.List
 
 -- | Something to be run for each val. Returns 'Left' when enumeration should
 -- terminate immediately, 'Right' when it can receive more input.
@@ -133,6 +135,40 @@ outputString = output . pack
 -- then calls 'outputString'.
 outputUrl :: Monad m => url -> Hamlet url m ()
 outputUrl u = showUrl u >>= outputString
+
+-- | Same as 'outputUrl', but appends a query-string with given keys and
+-- values.
+outputUrlParams :: Monad m => (url, [(String, String)]) -> Hamlet url m ()
+outputUrlParams (u, params) = do
+    outputUrl u
+    outputString $ showParams params
+  where
+    showParams x = '?' : intercalate "&" (map go x)
+    go (x, y) = go' x ++ '=' : go' y
+    go' = concatMap encodeUrlChar
+
+-- | Taken straight from web-encodings; reimplemented here to avoid extra
+-- dependencies.
+encodeUrlChar :: Char -> String
+encodeUrlChar c
+    -- List of unreserved characters per RFC 3986
+    -- Gleaned from http://en.wikipedia.org/wiki/Percent-encoding
+    | 'A' <= c && c <= 'Z' = [c]
+    | 'a' <= c && c <= 'z' = [c]
+    | '0' <= c && c <= '9' = [c]
+encodeUrlChar c@'-' = [c]
+encodeUrlChar c@'_' = [c]
+encodeUrlChar c@'.' = [c]
+encodeUrlChar c@'~' = [c]
+encodeUrlChar ' ' = "+"
+encodeUrlChar y =
+    let (a, c) = fromEnum y `divMod` 16
+        b = a `mod` 16
+        showHex' x -- FIXME just use Numeric version?
+            | x < 10 = toEnum $ x + (fromEnum '0')
+            | x < 16 = toEnum $ x - 10 + (fromEnum 'A')
+            | otherwise = error $ "Invalid argument to showHex: " ++ show x
+     in ['%', showHex' b, showHex' c]
 
 -- | Only really used to ensure that the argument has the right type.
 outputEmbed :: Monad m => Hamlet url m () -> Hamlet url m ()
