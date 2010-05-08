@@ -151,7 +151,7 @@ parseContent s =
                                     '$' -> (ContentVar, deref)
                                     '@' ->
                                         case deref of
-                                            '?':deref' -> (ContentUrl True, deref')
+                                            '?':y -> (ContentUrl True, y)
                                             _ -> (ContentUrl False, deref)
                                     '^' -> (ContentEmbed, deref)
                                     _ -> error $ "Invalid delim in parseContent: " ++ [delim]
@@ -208,10 +208,6 @@ caseParseDeref = do
         Ok (Deref [ (False, Ident "foo")
                   , (True, Ident "bar")
                   , (False, Ident "baz")])
-    parseDeref "foo." @?=
-        Ok (Deref [ (False, Ident "")
-                  , (False, Ident "foo")
-                  ])
 #endif
 
 parseIdent :: String -> Result (Bool, Ident)
@@ -219,6 +215,7 @@ parseIdent ('*':s) = parseIdent' True s
 parseIdent s = parseIdent' False s
 
 parseIdent' :: Bool -> String -> Result (Bool, Ident)
+parseIdent' _ "" = Error "Invalid empty ident"
 parseIdent' b s
     | all (flip elem (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_'")) s
         = Ok (b, Ident s)

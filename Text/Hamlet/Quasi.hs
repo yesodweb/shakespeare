@@ -13,103 +13,100 @@ import Control.Monad
 import Data.List (sortBy, isPrefixOf)
 import Data.Char (isUpper)
 
-type Vars = (Scope, Exp, [Stmt] -> [Stmt])
+type Vars = (Scope, [Stmt] -> [Stmt])
 
 type Scope = [([Ident], Exp)]
 
 docsToExp :: [Doc] -> Q Exp
 docsToExp docs = do
-    arg <- newName "_arg"
-    (_, _, stmts) <- foldM docToStmt ([], VarE arg, id) docs
+    (_, stmts) <- foldM docToStmt ([], id) docs
     stmts' <- case stmts [] of
                     [] -> do
                         ret <- [|return ()|]
                         return [NoBindS ret]
                     x -> return x
-    return $ LamE [VarP arg] $ DoE stmts'
+    return $ DoE stmts'
 
 docToStmt :: Vars -> Doc -> Q Vars
-docToStmt (vars, arg, stmts) (DocForall (Deref idents) ident@(Ident name) inside) = do
+docToStmt (vars, stmts) (DocForall (Deref idents) ident@(Ident name) inside) = do
     (vars', deref', stmts', isEnum) <-
         case idents of
             [] -> error $ "Invalid forall deref: " ++ show idents
             [(x, Ident i)] -> do
-                let i' = VarE (mkName i) `AppE` arg
-                return (vars, i', id, x)
+                return (vars, getBase vars $ Ident i, id, x)
             _ -> do
                 let front = Deref $ init idents
                     (x, Ident i) = last idents
-                (vars', base, stmts') <- bindDeref vars arg front
+                (vars', base, stmts') <- bindDeref vars front
                 return (vars', VarE (mkName i) `AppE` base, stmts', x)
     fl <- [|fromList|]
     let deref'' = if isEnum then deref' else fl `AppE` deref'
     mh <- [|mapH|]
     ident' <- newName name
     let vars'' = ([ident], VarE ident') : vars'
-    (_, _, inside') <- foldM docToStmt (vars'', arg, id) inside
+    (_, inside') <- foldM docToStmt (vars'', id) inside
     let dos = LamE [VarP ident'] $ DoE $ inside' []
     let stmt = NoBindS $ mh `AppE` dos `AppE` deref''
-    return (vars', arg, stmts . stmts' . (:) stmt)
-docToStmt (vars, arg, stmts) (DocMaybe deref ident@(Ident name) inside) = do
-    (vars', base, stmts') <- bindDeref vars arg deref
+    return (vars', stmts . stmts' . (:) stmt)
+docToStmt (vars, stmts) (DocMaybe deref ident@(Ident name) inside) = do
+    (vars', base, stmts') <- bindDeref vars deref
     ident' <- newName name
     let vars'' = ([ident], VarE ident') : vars'
-    (_, _, inside') <- foldM docToStmt (vars'', arg, id) inside
+    (_, inside') <- foldM docToStmt (vars'', id) inside
     let dos = LamE [VarP ident'] $ DoE $ inside' []
     mh <- [|maybeH|]
     let stmt = NoBindS $ mh `AppE` base `AppE` dos
-    return (vars', arg, stmts . stmts' . (:) stmt)
-docToStmt (vars, arg, stmts) (DocCond conds final) = do
-    conds' <- liftConds vars arg conds id
+    return (vars', stmts . stmts' . (:) stmt)
+docToStmt (vars, stmts) (DocCond conds final) = do
+    conds' <- liftConds vars conds id
     final' <- case final of
                 Nothing -> [|Nothing|]
                 Just f -> do
-                    (_, _, f') <- foldM docToStmt (vars, arg, id) f
+                    (_, f') <- foldM docToStmt (vars, id) f
                     j <- [|Just|]
                     return $ j `AppE` (DoE $ f' [])
     ch <- [|condH|]
     let stmt = NoBindS $ ch `AppE` conds' `AppE` final'
-    return (vars, arg, stmts . (:) stmt)
+    return (vars, stmts . (:) stmt)
 docToStmt v (DocContent c) = foldM contentToStmt v c
 
 contentToStmt :: Vars -> Content -> Q Vars
-contentToStmt (a, b, c) (ContentRaw s) = do
+contentToStmt (a, b) (ContentRaw s) = do
     os <- [|outputString|]
     s' <- lift s
     let stmt = NoBindS $ os `AppE` s'
-    return (a, b, c . (:) stmt)
-contentToStmt (vars, arg, stmts) (ContentVar d) = do
-    (vars', d', stmts') <- bindDeref vars arg d
+    return (a, b . (:) stmt)
+contentToStmt (vars, stmts) (ContentVar d) = do
+    (vars', d', stmts') <- bindDeref vars d
     oh <- [|outputHtml|]
     let stmt = NoBindS $ oh `AppE` d'
-    return (vars', arg, stmts . stmts' . (:) stmt)
-contentToStmt (vars, arg, stmts) (ContentUrl hasParams d) = do
-    (vars', d', stmts') <- bindDeref vars arg d
+    return (vars', stmts . stmts' . (:) stmt)
+contentToStmt (vars, stmts) (ContentUrl hasParams d) = do
+    (vars', d', stmts') <- bindDeref vars d
     ou <- if hasParams then [|outputUrlParams|] else [|outputUrl|]
     let stmt = NoBindS $ ou `AppE` d'
-    return (vars', arg, stmts . stmts' . (:) stmt)
-contentToStmt (vars, arg, stmts) (ContentEmbed d) = do
-    (vars', d', stmts') <- bindDeref vars arg d
+    return (vars', stmts . stmts' . (:) stmt)
+contentToStmt (vars, stmts) (ContentEmbed d) = do
+    (vars', d', stmts') <- bindDeref vars d
     oe <- [|outputEmbed|]
     let stmt = NoBindS $ oe `AppE` d'
-    return (vars', arg, stmts . stmts' . (:) stmt)
+    return (vars', stmts . stmts' . (:) stmt)
 
 liftConds :: Scope
-          -> Exp
           -> [(Deref, [Doc])]
           -> (Exp -> Exp)
           -> Q Exp
-liftConds _vars _arg [] front = do
+liftConds _vars [] front = do
     nil <- [|[]|]
     return $ front nil
-liftConds vars arg ((bool, doc):conds) front = do
-    let (base, rest) = shortestPath vars arg bool
+liftConds vars ((bool, doc):conds) front = do
+    let (base, rest) = shortestPath vars bool
     bool' <- identsToVal False (Deref rest) base
-    (_, _, doc') <- foldM docToStmt (vars, arg, id) doc
+    (_, doc') <- foldM docToStmt (vars, id) doc
     let pair = TupE [bool', DoE $ doc' []]
     cons <- [|(:)|]
     let front' rest' = front (cons `AppE` pair `AppE` rest')
-    liftConds vars arg conds front'
+    liftConds vars conds front'
 
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
@@ -141,16 +138,15 @@ hamletWithSettings set =
 
 -- deref helper funcs
 shortestPath :: Scope
-             -> Exp -- ^ original argument
              -> Deref -- ^ path sought
              -> (Exp, [(Bool, Ident)]) -- ^ (base, path from base)
-shortestPath scope arg (Deref is) = findMatch' svars
+shortestPath scope (Deref is) = findMatch' svars
   where
     svars = sortBy (\(x, _) (y, _)
                   -> compare (length y) (length x)) scope
     findMatch' [] =
         case is of
-            ((False, top):rest) -> (getBase scope arg top, rest)
+            ((False, top):rest) -> (getBase scope top, rest)
             ((True, _):_) -> error "shortestPath: first segment is monadic"
             [] -> error "shortestPath called with null deref"
     findMatch' (x:xs) =
@@ -189,13 +185,12 @@ identsToVal isInitMonad (Deref ((isMonad, Ident i):is)) e = do
             identsToVal True (Deref is) e'
 
 getBase :: Scope
-        -> Exp -- ^ argument
         -> Ident
         -> Exp
-getBase _ arg (Ident "") = arg
-getBase _ _ (Ident name@(x:_))
+getBase _ (Ident "") = error "Invalid empty ident"
+getBase _ (Ident name@(x:_))
     | isUpper x = ConE $ mkName name
-getBase scope _ (Ident top) =
+getBase scope (Ident top) =
     case lookup [Ident top] scope of
         Nothing -> VarE $ mkName top
         Just e -> e
@@ -209,12 +204,11 @@ bindMonadicVar name e = do
 
 -- | Add a new binding for a 'Deref'
 bindDeref :: Scope
-          -> Exp -- ^ argument
           -> Deref
           -> Q (Scope, Exp, [Stmt] -> [Stmt])
-bindDeref _ _ (Deref []) = error "bindDeref with null deref"
-bindDeref scopeFirst arg (Deref ((isMonadFirst, Ident base):rest)) = do
-    let base' = getBase scopeFirst arg (Ident base)
+bindDeref _ (Deref []) = error "bindDeref with null deref"
+bindDeref scopeFirst (Deref ((isMonadFirst, Ident base):rest)) = do
+    let base' = getBase scopeFirst $ Ident base
     (base'', stmts) <-
         if isMonadFirst
             then bindMonadicVar base base'
