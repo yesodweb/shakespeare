@@ -106,7 +106,7 @@ parseLine _ s = LineContent <$> parseContent s
 
 #if TEST
 fooBar :: Deref
-fooBar = Deref [(False, Ident "foo"), (False, Ident "bar")]
+fooBar = Deref [(False, Ident "bar"), (False, Ident "foo")]
 
 caseParseLine :: Assertion
 caseParseLine = do
@@ -186,23 +186,26 @@ caseParseContent = do
 
 parseDeref :: String -> Result Deref
 parseDeref "" = Error "Invalid empty deref"
-parseDeref s = Deref <$> go s where
-    go "" = return []
+parseDeref s = Deref . reverse <$> go s where
     go a = case break (== '.') a of
                 (x, '.':y) -> do
                     x' <- parseIdent x
                     y' <- go y
                     return $ x' : y'
                 (x, "") -> return <$> parseIdent x
-                _ -> error "Invalid branch in Text.Hamlet.Parse.parseDef"
+                _ -> Error "Invalid branch in Text.Hamlet.Parse.parseDef"
 
 #if TEST
 caseParseDeref :: Assertion
 caseParseDeref = do
-    parseDeref "foo.*bar.baz" @?=
+    parseDeref "baz.*bar.foo" @?=
         Ok (Deref [ (False, Ident "foo")
                   , (True, Ident "bar")
                   , (False, Ident "baz")])
+    parseDeref "foo." @?=
+        Ok (Deref [ (False, Ident "")
+                  , (False, Ident "foo")
+                  ])
 #endif
 
 parseIdent :: String -> Result (Bool, Ident)

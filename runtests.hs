@@ -127,83 +127,81 @@ caseTag = helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [$hamlet|
 
 caseVar :: Assertion
 caseVar = do
-    helper "&lt;var&gt;" [$hamlet|$theArg.var$|]
-    helper "&lt;var&gt;" [$hamlet|$.var$|]
+    helper "&lt;var&gt;" [$hamlet|$var.$|]
+    helper "&lt;var&gt;" [$hamlet|$var.theArg$|]
 
 caseVarMonad :: Assertion
 caseVarMonad = do
-    helper "&lt;var&gt;" [$hamlet|$.*mvar$|]
-    helper "&lt;var&gt;" [$hamlet|$theArg.*mvar$|]
+    helper "&lt;var&gt;" [$hamlet|$*mvar.$|]
+    helper "&lt;var&gt;" [$hamlet|$*mvar.theArg$|]
 
 caseVarChain :: Assertion
-caseVarChain = helper "&lt;var&gt;" [$hamlet|$.getArg.*getArgM.getArg.var$|]
+caseVarChain = do
+    helper "&lt;var&gt;" [$hamlet|$var.getArg.*getArgM.getArg.$|]
+    helper "&lt;var&gt;" [$hamlet|$var.getArg.*getArgM.getArg.theArg$|]
 
 caseUrl :: Assertion
 caseUrl = do
-    helper (render Home) [$hamlet|@.url@|]
-    helper (render Home) [$hamlet|@theArg.url@|]
+    helper (render Home) [$hamlet|@url.@|]
+    helper (render Home) [$hamlet|@url.theArg@|]
 
 caseUrlMonad :: Assertion
 caseUrlMonad = do
-    helper (render Home) [$hamlet|@.*murl@|]
-    helper (render Home) [$hamlet|@theArg.*murl@|]
+    helper (render Home) [$hamlet|@*murl.@|]
+    helper (render Home) [$hamlet|@*murl.theArg@|]
 
 caseUrlChain :: Assertion
 caseUrlChain = do
-    helper (render Home) [$hamlet|@.getArg.*getArgM.getArg.url@|]
-    helper (render Home) [$hamlet|@theArg.getArg.*getArgM.getArg.url@|]
+    helper (render Home) [$hamlet|@url.getArg.*getArgM.getArg.@|]
+    helper (render Home) [$hamlet|@url.getArg.*getArgM.getArg.theArg@|]
 
 caseEmbed :: Assertion
 caseEmbed = do
-    helper "embed" [$hamlet|^.embed^|]
-    helper "embed" [$hamlet|^theArg.embed^|]
+    helper "embed" [$hamlet|^embed.^|]
+    helper "embed" [$hamlet|^embed.theArg^|]
 
 caseEmbedMonad :: Assertion
 caseEmbedMonad = do
-    helper "embed" [$hamlet|^.*membed^|]
-    helper "embed" [$hamlet|^theArg.*membed^|]
+    helper "embed" [$hamlet|^*membed.^|]
+    helper "embed" [$hamlet|^*membed.theArg^|]
 
 caseEmbedChain :: Assertion
 caseEmbedChain = do
-    helper "embed" [$hamlet|^.getArg.*getArgM.getArg.embed^|]
-    helper "embed" [$hamlet|^theArg.getArg.*getArgM.getArg.embed^|]
+    helper "embed" [$hamlet|^embed.getArg.*getArgM.getArg.^|]
+    helper "embed" [$hamlet|^embed.getArg.*getArgM.getArg.theArg^|]
 
 caseIf :: Assertion
 caseIf = do
     helper "if" [$hamlet|
-$if .true
+$if true.
     if
 |]
     helper "if" [$hamlet|
-$if theArg.true
+$if true.theArg
     if
 |]
 
 caseIfMonad :: Assertion
 caseIfMonad = do
     helper "if" [$hamlet|
-$if .*mtrue
+$if *mtrue.
     if
 |]
     helper "if" [$hamlet|
-$if theArg.*mtrue
+$if *mtrue.theArg
     if
 |]
 
 caseIfChain :: Assertion
 caseIfChain = do
     helper "if" [$hamlet|
-$if theArg.getArg.*getArgM.getArg.*mtrue
-    if
-|]
-    helper "if" [$hamlet|
-$if .getArg.*getArgM.getArg.*mtrue
+$if *mtrue.getArg.*getArgM.getArg.
     if
 |]
 
 caseElse :: Assertion
 caseElse = helper "else" [$hamlet|
-$if .false
+$if false.
     if
 $else
     else
@@ -211,7 +209,7 @@ $else
 
 caseElseMonad :: Assertion
 caseElseMonad = helper "else" [$hamlet|
-$if .*mfalse
+$if *mfalse.
     if
 $else
     else
@@ -219,7 +217,7 @@ $else
 
 caseElseChain :: Assertion
 caseElseChain = helper "else" [$hamlet|
-$if .getArg.*getArgM.getArg.*mfalse
+$if *mfalse.getArg.*getArgM.getArg.
     if
 $else
     else
@@ -227,9 +225,9 @@ $else
 
 caseElseIf :: Assertion
 caseElseIf = helper "elseif" [$hamlet|
-$if .false
+$if false.
     if
-$elseif theArg.true
+$elseif true.theArg
     elseif
 $else
     else
@@ -237,9 +235,9 @@ $else
 
 caseElseIfMonad :: Assertion
 caseElseIfMonad = helper "elseif" [$hamlet|
-$if .*mfalse
+$if *mfalse.
     if
-$elseif .*mtrue
+$elseif *mtrue.
     elseif
 $else
     else
@@ -247,9 +245,9 @@ $else
 
 caseElseIfChain :: Assertion
 caseElseIfChain = helper "elseif" [$hamlet|
-$if theArg.getArg.*getArgM.getArg.*mfalse
+$if *mfalse.getArg.*getArgM.getArg.theArg
     if
-$elseif .getArg.*getArgM.getArg.*mtrue
+$elseif *mtrue.getArg.*getArgM.getArg.
     elseif
 $else
     else
@@ -258,40 +256,40 @@ $else
 caseList :: Assertion
 caseList = do
     helper "xxx" [$hamlet|
-$forall .list x
+$forall list. x
     x
 |]
     helper "xxx" [$hamlet|
-$forall theArg.list x
+$forall list.theArg x
     x
 |]
 
 caseListChain :: Assertion
 caseListChain = do
     helper "urlurlurl" [$hamlet|
-$forall .getArg.*getArgM.getArg.getArg.*getArgM.list x
-    @x.*murl@
+$forall list.*getArgM.getArg.getArg.*getArgM.getArg. x
+    @*murl.x@
 |]
     helper "urlurlurl" [$hamlet|
-$forall theArg.getArg.*getArgM.getArg.getArg.*getArgM.list x
-    @x.*murl@
+$forall list.*getArgM.getArg.getArg.*getArgM.getArg.theArg x
+    @*murl.x@
 |]
 
 caseEnum :: Assertion
 caseEnum = do
     helper "xxx" [$hamlet|
-$forall .*enum x
+$forall *enum. x
     x
 |]
     helper "xxx" [$hamlet|
-$forall theArg.*enum x
+$forall *enum.theArg x
     x
 |]
 
 caseEnumChain :: Assertion
 caseEnumChain = helper "urlurlurl" [$hamlet|
-$forall .getArg.*getArgM.getArg.getArg.*getArgM.*enum x
-    @x.*murl@
+$forall *enum.*getArgM.getArg.getArg.*getArgM.getArg.theArg x
+    @*murl.x@
 |]
 
 caseScriptNotEmpty :: Assertion
@@ -316,37 +314,37 @@ caseAttribOrder = helper "<meta 1 2 3>" [$hamlet|%meta!1!2!3|]
 
 caseNothing :: Assertion
 caseNothing = helper "" [$hamlet|
-$maybe .nothing n
+$maybe nothing. n
     nothing
 |]
 
 caseNothingMonad :: Assertion
 caseNothingMonad = helper "" [$hamlet|
-$maybe theArg.*mnothing n
+$maybe *mnothing.theArg n
     nothing $n$
 |]
 
 caseNothingChain :: Assertion
 caseNothingChain = helper "" [$hamlet|
-$maybe .getArg.*getArgM.getArg.*mnothing n
+$maybe *mnothing.getArg.*getArgM.getArg. n
     nothing $n$
 |]
 
 caseJust :: Assertion
 caseJust = helper "it's just" [$hamlet|
-$maybe .just n
+$maybe just. n
     it's $n$
 |]
 
 caseJustMonad :: Assertion
 caseJustMonad = helper "it's just" [$hamlet|
-$maybe .*mjust n
+$maybe *mjust. n
     it's $n$
 |]
 
 caseJustChain :: Assertion
 caseJustChain = helper "it's just" [$hamlet|
-$maybe .getArg.*getArgM.getArg.*mjust n
+$maybe *mjust.getArg.*getArgM.getArg. n
     it's $n$
 |]
 
@@ -355,10 +353,10 @@ caseConstructor = helper "url" [$hamlet|@Home@|]
 
 caseUrlParams :: Assertion
 caseUrlParams = do
-    helper "url?foo=bar&foo1=bar1" [$hamlet|@?.urlParams@|]
-    helper "url?foo=bar&foo1=bar1" [$hamlet|@?theArg.urlParams@|]
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?urlParams.@|]
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?urlParams.theArg@|]
 
 caseUrlParamsMonad :: Assertion
 caseUrlParamsMonad = do
-    helper "url?foo=bar&foo1=bar1" [$hamlet|@?.*murlParams@|]
-    helper "url?foo=bar&foo1=bar1" [$hamlet|@?theArg.*murlParams@|]
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?*murlParams.@|]
+    helper "url?foo=bar&foo1=bar1" [$hamlet|@?*murlParams.theArg@|]
