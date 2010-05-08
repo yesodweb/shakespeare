@@ -57,6 +57,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "url + params" caseUrlParams
     , testCase "url + params monad" caseUrlParamsMonad
     , testCase "escape" caseEscape
+    , testCase "empty statement list" caseEmptyStatementList
     ]
 
 data Url = Home | Sub SubUrl
@@ -348,3 +349,10 @@ caseEscape = do
 \
 \ 
 |]
+
+caseEmptyStatementList :: Assertion
+caseEmptyStatementList = do
+    helper "" [$hamlet|$if True|]
+    helper "" [$hamlet|$maybe Nothing x|]
+    let emptyList = []
+    helper "" [$hamlet|$forall emptyList x|]

@@ -12,6 +12,7 @@ import Language.Haskell.TH.Quote
 import Control.Monad
 import Data.List (sortBy, isPrefixOf)
 import Data.Char (isUpper)
+import Control.Applicative ((<$>))
 
 type Vars = (Scope, [Stmt] -> [Stmt])
 
@@ -20,12 +21,11 @@ type Scope = [([Ident], Exp)]
 docsToExp :: [Doc] -> Q Exp
 docsToExp docs = do
     (_, stmts) <- foldM docToStmt ([], id) docs
-    stmts' <- case stmts [] of
-                    [] -> do
-                        ret <- [|return ()|]
-                        return [NoBindS ret]
-                    x -> return x
-    return $ DoE stmts'
+    safeDoE $ stmts []
+
+safeDoE :: [Stmt] -> Q Exp
+safeDoE [] = [|return ()|]
+safeDoE x = return $ DoE x
 
 docToStmt :: Vars -> Doc -> Q Vars
 docToStmt (vars, stmts) (DocForall (Deref idents) ident@(Ident name) inside) = do
@@ -45,7 +45,7 @@ docToStmt (vars, stmts) (DocForall (Deref idents) ident@(Ident name) inside) = d
     ident' <- newName name
     let vars'' = ([ident], VarE ident') : vars'
     (_, inside') <- foldM docToStmt (vars'', id) inside
-    let dos = LamE [VarP ident'] $ DoE $ inside' []
+    dos <- LamE [VarP ident'] <$> (safeDoE $ inside' [])
     let stmt = NoBindS $ mh `AppE` dos `AppE` deref''
     return (vars', stmts . stmts' . (:) stmt)
 docToStmt (vars, stmts) (DocMaybe deref ident@(Ident name) inside) = do
@@ -53,7 +53,7 @@ docToStmt (vars, stmts) (DocMaybe deref ident@(Ident name) inside) = do
     ident' <- newName name
     let vars'' = ([ident], VarE ident') : vars'
     (_, inside') <- foldM docToStmt (vars'', id) inside
-    let dos = LamE [VarP ident'] $ DoE $ inside' []
+    dos <- LamE [VarP ident'] <$> (safeDoE $ inside' [])
     mh <- [|maybeH|]
     let stmt = NoBindS $ mh `AppE` base `AppE` dos
     return (vars', stmts . stmts' . (:) stmt)
@@ -64,7 +64,7 @@ docToStmt (vars, stmts) (DocCond conds final) = do
                 Just f -> do
                     (_, f') <- foldM docToStmt (vars, id) f
                     j <- [|Just|]
-                    return $ j `AppE` (DoE $ f' [])
+                    AppE j <$> (safeDoE $ f' [])
     ch <- [|condH|]
     let stmt = NoBindS $ ch `AppE` conds' `AppE` final'
     return (vars, stmts . (:) stmt)
@@ -103,7 +103,8 @@ liftConds vars ((bool, doc):conds) front = do
     let (base, rest) = shortestPath vars bool
     bool' <- identsToVal False (Deref rest) base
     (_, doc') <- foldM docToStmt (vars, id) doc
-    let pair = TupE [bool', DoE $ doc' []]
+    doe <- safeDoE $ doc' []
+    let pair = TupE [bool', doe]
     cons <- [|(:)|]
     let front' rest' = front (cons `AppE` pair `AppE` rest')
     liftConds vars conds front'
