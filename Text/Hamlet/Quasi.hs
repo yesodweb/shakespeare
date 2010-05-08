@@ -213,21 +213,25 @@ bindDeref :: Scope
           -> Deref
           -> Q (Scope, Exp, [Stmt] -> [Stmt])
 bindDeref _ _ (Deref []) = error "bindDeref with null deref"
-bindDeref scope arg (Deref ((isMonad, base):rest)) = do
-    let base' = getBase scope arg base
+bindDeref scope arg (Deref ((isMonad, Ident base):rest)) = do
+    let base' = getBase scope arg (Ident base)
     (base'', stmts) <-
         if isMonad
-            then bindMonadicVar "_FIXMEvarName" base'
+            then bindMonadicVar base base'
             else return (base', id)
-    (x, y, z, _) <- foldM go (scope, base'', stmts, [base]) rest
+    (x, y, z, _) <- foldM go (scope, base'', stmts, [Ident base]) rest
     return (x, y, z)
   where
     go :: (Scope, Exp, [Stmt] -> [Stmt], [Ident])
        -> (Bool, Ident)
        -> Q (Scope, Exp, [Stmt] -> [Stmt], [Ident])
     go (scope, base, stmts, front) (isMonad, Ident func) = do
-        let rhs = VarE (mkName func) `AppE` base
-        name <- newName func
+        let (x, func') =
+                if not (null func) && isUpper (head func)
+                    then (ConE, "var" ++ func)
+                    else (VarE, func)
+        let rhs = x (mkName func) `AppE` base
+        name <- newName func'
         stmt <-
             if isMonad
                 then do

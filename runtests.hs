@@ -59,9 +59,11 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "escape" caseEscape
     ]
 
-data Url = Home
+data Url = Home | Sub SubUrl
+data SubUrl = SubUrl
 render :: Url -> String
 render Home = "url"
+render (Sub SubUrl) = "suburl"
 
 data Arg m url = Arg
     { getArg :: Arg m url
@@ -350,7 +352,11 @@ $maybe *mjust.getArg.*getArgM.getArg. n
 |]
 
 caseConstructor :: Assertion
-caseConstructor = helper "url" [$hamlet|@Home@|]
+caseConstructor = do
+    helper "url" [$hamlet|@Home@|]
+    helper "suburl" [$hamlet|@Sub.SubUrl@|]
+    let text = pack "<raw text>"
+    helper "<raw text>" [$hamlet|$Encoded.text$|]
 
 caseUrlParams :: Assertion
 caseUrlParams = do
