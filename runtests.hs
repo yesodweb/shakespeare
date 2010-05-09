@@ -58,6 +58,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "url + params monad" caseUrlParamsMonad
     , testCase "escape" caseEscape
     , testCase "empty statement list" caseEmptyStatementList
+    , testCase "attribute conditionals" caseAttribCond
     ]
 
 data Url = Home | Sub SubUrl
@@ -356,3 +357,8 @@ caseEmptyStatementList = do
     helper "" [$hamlet|$maybe Nothing x|]
     let emptyList = []
     helper "" [$hamlet|$forall emptyList x|]
+
+caseAttribCond :: Assertion
+caseAttribCond = do
+    helper "<select></select>" [$hamlet|%select!False:selected|]
+    helper "<select selected></select>" [$hamlet|%select!True:selected|]

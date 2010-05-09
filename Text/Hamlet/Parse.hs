@@ -58,7 +58,7 @@ data Line = LineForall Deref Ident
           | LineMaybe Deref Ident
           | LineTag
             { _lineTagName :: String
-            , _lineAttr :: [(String, [Content])]
+            , _lineAttr :: [(Maybe Deref, String, [Content])]
             , _lineContent :: [Content]
             , _lineClasses :: [[Content]]
             }
@@ -117,14 +117,14 @@ caseParseLine = do
     parseLine' "$elseif foo.bar" @?= Ok (LineElseIf fooBar)
     parseLine' "$else" @?= Ok LineElse
     parseLine' "%img!src=@foo.bar@"
-        @?= Ok (LineTag "img" [("src", [ContentUrl False fooBar])] [] [])
+        @?= Ok (LineTag "img" [(Nothing, "src", [ContentUrl False fooBar])] [] [])
     parseLine' "%img!src=@?foo.bar@"
-        @?= Ok (LineTag "img" [("src", [ContentUrl True fooBar])] [] [])
+        @?= Ok (LineTag "img" [(Nothing, "src", [ContentUrl True fooBar])] [] [])
     parseLine' ".$foo.bar$"
         @?= Ok (LineTag "div" [] [] [[ContentVar fooBar]])
     parseLine' "%span#foo.bar.bar2!baz=bin"
-        @?= Ok (LineTag "span" [ ("id", [ContentRaw "foo"])
-                               , ("baz", [ContentRaw "bin"])
+        @?= Ok (LineTag "span" [ (Nothing, "id", [ContentRaw "foo"])
+                               , (Nothing, "baz", [ContentRaw "bin"])
                                ] []
                                [ [ContentRaw "bar"]
                                , [ContentRaw "bar2"]
@@ -133,6 +133,11 @@ caseParseLine = do
         @?= Ok (LineContent [ContentRaw "#this is raw"])
     parseLine' "\\"
         @?= Ok (LineContent [ContentRaw "\n"])
+    parseLine' "%img!baz:src=@foo.bar@"
+        @?= Ok (LineTag "img"
+                [(Just $ Deref [(False, Ident "baz")],
+                  "src",
+                  [ContentUrl False fooBar])] [] [])
 #endif
 
 parseContent :: String -> Result [Content]
@@ -228,7 +233,10 @@ caseParseIdent = do
     parseIdent "*foo" @?= Ok (True, Ident "foo")
 #endif
 
-parseTag :: String -> Result (String, [(String, [Content])], [[Content]])
+parseTag :: String -> Result
+                (String,
+                 [(Maybe Deref, String, [Content])],
+                 [[Content]])
 parseTag s = do
     pieces <- takePieces s
     (a, b, c) <- foldM go ("div", id, id) pieces
@@ -240,14 +248,21 @@ parseTag s = do
         Ok (tn, attrs, classes . (:) con)
     go (tn, attrs, classes) ('#':cl) = do
         con <- parseContent cl
-        Ok (tn, attrs . (:) ("id", con), classes)
+        Ok (tn, attrs . (:) (Nothing, "id", con), classes)
     go (tn, attrs, classes) ('!':rest) = do
-        let (name, val) = break (== '=') rest
+        let (cond, rest') = break (== ':') rest
+            (name, val) = break (== '=') $
+                            case rest' of
+                                (':':rest'') -> rest''
+                                _ -> cond
+        cond' <- if null rest'
+                    then return Nothing
+                    else Just <$> parseDeref cond
         val' <-
             case val of
                 ('=':rest') -> parseContent rest'
                 _ -> Ok []
-        Ok (tn, attrs . (:) (name, val'), classes)
+        Ok (tn, attrs . (:) (cond', name, val'), classes)
     go _ _ = error "Invalid branch in Text.Hamlet.Parse.parseTag"
 
 takePieces :: String -> Result [String]
@@ -297,26 +312,33 @@ nestToDoc set (Nest (LineMaybe d i) inside:rest) = do
     rest' <- nestToDoc set rest
     Ok $ DocMaybe d i inside' : rest'
 nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
-    let attrs' = case classes of
-                    [] -> attrs
-                    _ -> ("class", intercalate [ContentRaw " "] classes)
+    let attrs' =
+            case classes of
+              [] -> attrs
+              _ -> (Nothing, "class", intercalate [ContentRaw " "] classes)
                        : attrs
     let closeStyle =
             if not (null content) || not (null inside)
                 then CloseSeparate
                 else closeTag set tn
     let end = case closeStyle of
-                CloseSeparate -> [DocContent [ContentRaw $ "</" ++ tn ++ ">"]]
-                _ -> []
+                CloseSeparate ->
+                    DocContent [ContentRaw $ "</" ++ tn ++ ">"]
+                _ -> DocContent []
         seal = case closeStyle of
-                 CloseInside -> ContentRaw "/>"
-                 _ -> ContentRaw ">"
-        start = ContentRaw $ "<" ++ tn
-        attrs'' = concatMap attrToContent attrs'
+                 CloseInside -> DocContent [ContentRaw "/>"]
+                 _ -> DocContent [ContentRaw ">"]
+        start = DocContent [ContentRaw $ "<" ++ tn]
+        attrs'' = map attrToContent attrs'
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
-    Ok $ DocContent (start : attrs'' ++ seal : content)
-       : inside' ++ end ++ rest'
+    Ok $ start
+       : attrs''
+      ++ seal
+       : DocContent content
+       : inside'
+      ++ end
+       : rest'
 nestToDoc set (Nest (LineContent content) inside:rest) = do
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
@@ -330,19 +352,29 @@ compressDoc (DocForall d i doc:rest) =
     DocForall d i (compressDoc doc) : compressDoc rest
 compressDoc (DocMaybe d i doc:rest) =
     DocMaybe d i (compressDoc doc) : compressDoc rest
+compressDoc (DocCond [(a, x)] Nothing:DocCond [(b, y)] Nothing:rest)
+    | a == b = compressDoc $ DocCond [(a, x ++ y)] Nothing : rest
 compressDoc (DocCond x y:rest) =
     DocCond (map (second compressDoc) x) (compressDoc `fmap` y)
     : compressDoc rest
 compressDoc (DocContent x:DocContent y:rest) =
     compressDoc $ DocContent (x ++ y) : rest
 compressDoc (DocContent x:rest) =
-    DocContent (compressContent x) : compressDoc rest
+    DocContent (compressContent' x) : compressDoc rest
 
-compressContent :: [Content] -> [Content]
-compressContent (ContentRaw "":rest) = compressContent rest
-compressContent (ContentRaw x:ContentRaw y:rest) = compressContent $ ContentRaw (x ++ y) : rest
-compressContent (x:rest) = x : compressContent rest
+compressContent :: [(Maybe Deref, [Content])] -> [(Maybe Deref, [Content])]
 compressContent [] = []
+compressContent ((_, []):rest) = compressContent rest
+compressContent ((a, x):(b, y):rest)
+    | a == b = compressContent $ (a, x ++ y) : rest
+    | otherwise = (a, compressContent' x) : compressContent ((b, y):rest)
+
+compressContent' :: [Content] -> [Content]
+compressContent' [] = []
+compressContent' (ContentRaw "":rest) = compressContent' rest
+compressContent' (ContentRaw x:ContentRaw y:rest) =
+    compressContent' $ ContentRaw (x ++ y) : rest
+compressContent' (x:rest) = x : compressContent' rest
 
 parseDoc :: HamletSettings -> String -> Result [Doc]
 parseDoc set s = do
@@ -351,9 +383,13 @@ parseDoc set s = do
     ds <- nestToDoc set ns
     return $ compressDoc ds
 
-attrToContent :: (String, [Content]) -> [Content]
-attrToContent (k, []) = [ContentRaw $ ' ' : k]
-attrToContent (k, v) = (ContentRaw $ ' ' : k ++ "=\"") : v ++ [ContentRaw "\""]
+attrToContent :: (Maybe Deref, String, [Content]) -> Doc
+attrToContent (Just cond, k, v) =
+    DocCond [(cond, [attrToContent (Nothing, k, v)])] Nothing
+attrToContent (md, k, []) = DocContent [ContentRaw $ ' ' : k]
+attrToContent (md, k, v) = DocContent $
+    ContentRaw (' ' : k ++ "=\"")
+  : v ++ [ContentRaw "\""]
 
 -- | Settings for parsing of a hamlet document.
 data HamletSettings = HamletSettings
