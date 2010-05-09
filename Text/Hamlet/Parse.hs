@@ -250,19 +250,19 @@ parseTag s = do
         con <- parseContent cl
         Ok (tn, attrs . (:) (Nothing, "id", con), classes)
     go (tn, attrs, classes) ('!':rest) = do
-        let (cond, rest') = break (== ':') rest
-            (name, val) = break (== '=') $
-                            case rest' of
-                                (':':rest'') -> rest''
-                                _ -> cond
-        cond' <- if null rest'
+        let (rest', val) = break (== '=') rest
+            (cond, name) = break (== ':') rest'
+        let (cond', name') = case name of
+                                ':':x -> (cond, x)
+                                _ -> ("", cond)
+        cond'' <- if null cond'
                     then return Nothing
-                    else Just <$> parseDeref cond
+                    else Just <$> parseDeref cond'
         val' <-
             case val of
-                ('=':rest') -> parseContent rest'
+                ('=':x) -> parseContent x
                 _ -> Ok []
-        Ok (tn, attrs . (:) (cond', name, val'), classes)
+        Ok (tn, attrs . (:) (cond'', name', val'), classes)
     go _ _ = error "Invalid branch in Text.Hamlet.Parse.parseTag"
 
 takePieces :: String -> Result [String]
@@ -360,21 +360,14 @@ compressDoc (DocCond x y:rest) =
 compressDoc (DocContent x:DocContent y:rest) =
     compressDoc $ DocContent (x ++ y) : rest
 compressDoc (DocContent x:rest) =
-    DocContent (compressContent' x) : compressDoc rest
+    DocContent (compressContent x) : compressDoc rest
 
-compressContent :: [(Maybe Deref, [Content])] -> [(Maybe Deref, [Content])]
+compressContent :: [Content] -> [Content]
 compressContent [] = []
-compressContent ((_, []):rest) = compressContent rest
-compressContent ((a, x):(b, y):rest)
-    | a == b = compressContent $ (a, x ++ y) : rest
-    | otherwise = (a, compressContent' x) : compressContent ((b, y):rest)
-
-compressContent' :: [Content] -> [Content]
-compressContent' [] = []
-compressContent' (ContentRaw "":rest) = compressContent' rest
-compressContent' (ContentRaw x:ContentRaw y:rest) =
-    compressContent' $ ContentRaw (x ++ y) : rest
-compressContent' (x:rest) = x : compressContent' rest
+compressContent (ContentRaw "":rest) = compressContent rest
+compressContent (ContentRaw x:ContentRaw y:rest) =
+    compressContent $ ContentRaw (x ++ y) : rest
+compressContent (x:rest) = x : compressContent rest
 
 parseDoc :: HamletSettings -> String -> Result [Doc]
 parseDoc set s = do
@@ -386,8 +379,8 @@ parseDoc set s = do
 attrToContent :: (Maybe Deref, String, [Content]) -> Doc
 attrToContent (Just cond, k, v) =
     DocCond [(cond, [attrToContent (Nothing, k, v)])] Nothing
-attrToContent (md, k, []) = DocContent [ContentRaw $ ' ' : k]
-attrToContent (md, k, v) = DocContent $
+attrToContent (Nothing, k, []) = DocContent [ContentRaw $ ' ' : k]
+attrToContent (Nothing, k, v) = DocContent $
     ContentRaw (' ' : k ++ "=\"")
   : v ++ [ContentRaw "\""]
 

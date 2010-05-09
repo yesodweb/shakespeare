@@ -362,3 +362,4 @@ caseAttribCond :: Assertion
 caseAttribCond = do
     helper "<select></select>" [$hamlet|%select!False:selected|]
     helper "<select selected></select>" [$hamlet|%select!True:selected|]
+    helper "<meta var=\"foo:bar\">" [$hamlet|%meta!var=foo:bar|]
