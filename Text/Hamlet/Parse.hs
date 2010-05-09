@@ -133,7 +133,7 @@ caseParseLine = do
         @?= Ok (LineContent [ContentRaw "#this is raw"])
     parseLine' "\\"
         @?= Ok (LineContent [ContentRaw "\n"])
-    parseLine' "%img!baz:src=@foo.bar@"
+    parseLine' "%img!:baz:src=@foo.bar@"
         @?= Ok (LineTag "img"
                 [(Just $ Deref [(False, Ident "baz")],
                   "src",
@@ -242,35 +242,37 @@ parseTag s = do
     (a, b, c) <- foldM go ("div", id, id) pieces
     return (a, b [], c [])
   where
-    go (_, attrs, classes) ('%':tn) = Ok (tn, attrs, classes)
-    go (tn, attrs, classes) ('.':cl) = do
+    go (_, attrs, classes) (_, '%':tn) = Ok (tn, attrs, classes)
+    go (tn, attrs, classes) (_, '.':cl) = do
         con <- parseContent cl
         Ok (tn, attrs, classes . (:) con)
-    go (tn, attrs, classes) ('#':cl) = do
+    go (tn, attrs, classes) (_, '#':cl) = do
         con <- parseContent cl
         Ok (tn, attrs . (:) (Nothing, "id", con), classes)
-    go (tn, attrs, classes) ('!':rest) = do
-        let (rest', val) = break (== '=') rest
-            (cond, name) = break (== ':') rest'
-        let (cond', name') = case name of
-                                ':':x -> (cond, x)
-                                _ -> ("", cond)
-        cond'' <- if null cond'
-                    then return Nothing
-                    else Just <$> parseDeref cond'
-        val' <-
-            case val of
-                ('=':x) -> parseContent x
-                _ -> Ok []
-        Ok (tn, attrs . (:) (cond'', name', val'), classes)
+    go (tn, attrs, classes) (cond, '!':rest) = do
+        let (name, val) = break (== '=') rest
+        val' <- case val of
+                    '=':x -> parseContent x
+                    _ -> Ok []
+        cond' <- case cond of
+                    Nothing -> return Nothing
+                    Just x -> Just <$> parseDeref x
+        Ok (tn, attrs . (:) (cond', name, val'), classes)
     go _ _ = error "Invalid branch in Text.Hamlet.Parse.parseTag"
 
-takePieces :: String -> Result [String]
+takePieces :: String -> Result [(Maybe String, String)]
 takePieces "" = Ok []
 takePieces (a:s) = do
-    (x, y) <- takePiece ((:) a) False False False s
+    let (cond, s') =
+            case (a, s) of
+                ('!', ':':rest) ->
+                    case break (== ':') rest of
+                        (x, ':':y) -> (Just x, y)
+                        _ -> (Nothing, s)
+                _ -> (Nothing, s)
+    (x, y) <- takePiece ((:) a) False False False s'
     y' <- takePieces y
-    return $ x : y'
+    return $ (cond, x) : y'
   where
     takePiece front False False False "" = Ok (front "", "")
     takePiece _ _ _ _ "" = Error $ "Unterminated URL, var or embed: " ++ s
