@@ -15,6 +15,7 @@ module Text.Hamlet.Monad
     , outputUrlParams
     , outputEmbed
       -- * Utility functions
+    , htmlContentToText
     , showUrl
     , liftHamlet
     , mapH
@@ -236,3 +237,8 @@ hamletToText render h = do
     return $ L.fromChunks $ front []
   where
     iter front text = return $ Right $ front . (:) text
+
+-- | Returns HTML-ready text (ie, all entities are escaped properly).
+htmlContentToText :: HtmlContent -> Text
+htmlContentToText (Encoded t) = t
+htmlContentToText (Unencoded t) = encodeHtml t
