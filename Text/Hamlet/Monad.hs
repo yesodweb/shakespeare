@@ -21,6 +21,7 @@ module Text.Hamlet.Monad
     , mapH
     , condH
     , maybeH
+    , maybeH'
     , printHamlet
     , hamletToText
     , cdata
@@ -222,6 +223,17 @@ maybeH :: Monad m
        -> Hamlet url m ()
 maybeH Nothing _ = return ()
 maybeH (Just v) f = f v
+
+-- | Runs the second argument with the value in the first, if available.
+-- Otherwise, runs the third argument, if available.
+maybeH' :: Monad m
+        => Maybe v
+        -> (v -> Hamlet url m ())
+        -> Maybe (Hamlet url m ())
+        -> Hamlet url m ()
+maybeH' Nothing _ Nothing = return ()
+maybeH' Nothing _ (Just x) = x
+maybeH' (Just v) f _ = f v
 
 -- | Prints a Hamlet to standard out. Good for debugging.
 printHamlet :: (url -> String) -> Hamlet url IO () -> IO ()

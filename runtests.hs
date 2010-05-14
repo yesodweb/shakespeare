@@ -293,8 +293,15 @@ caseAttribOrder :: Assertion
 caseAttribOrder = helper "<meta 1 2 3>" [$hamlet|%meta!1!2!3|]
 
 caseNothing :: Assertion
-caseNothing = helper "" [$hamlet|
+caseNothing = do
+    helper "" [$hamlet|
 $maybe nothing.theArg n
+    nothing
+|]
+    helper "nothing" [$hamlet|
+$maybe nothing.theArg n
+    something
+$nothing
     nothing
 |]
 

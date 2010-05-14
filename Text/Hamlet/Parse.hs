@@ -56,6 +56,7 @@ data Line = LineForall Deref Ident
           | LineElseIf Deref
           | LineElse
           | LineMaybe Deref Ident
+          | LineNothing
           | LineTag
             { _lineTagName :: String
             , _lineAttr :: [(Maybe Deref, String, [Content])]
@@ -98,6 +99,7 @@ parseLine _ ('$':'m':'a':'y':'b':'e':' ':rest) =
             (False, y') <- parseIdent' False y
             return $ LineMaybe x' y'
         _ -> Error $ "Invalid maybe: " ++ rest
+parseLine _ "$nothing" = Ok LineNothing
 parseLine _ x@(c:_) | c `elem` "%#." = do
     let (begin, rest) = break (== ' ') x
         rest' = dropWhile (== ' ') rest
@@ -294,7 +296,7 @@ nestLines ((i, l):rest) =
 
 data Doc = DocForall Deref Ident [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
-         | DocMaybe Deref Ident [Doc]
+         | DocMaybe Deref Ident [Doc] (Maybe [Doc])
          | DocContent [Content]
     deriving (Show, Eq, Read, Data, Typeable)
 
@@ -311,8 +313,14 @@ nestToDoc set (Nest (LineIf d) inside:rest) = do
     Ok $ DocCond ifs el : rest''
 nestToDoc set (Nest (LineMaybe d i) inside:rest) = do
     inside' <- nestToDoc set inside
-    rest' <- nestToDoc set rest
-    Ok $ DocMaybe d i inside' : rest'
+    (nothing, rest') <-
+        case rest of
+            Nest LineNothing ninside:x -> do
+                ninside' <- nestToDoc set ninside
+                return (Just ninside', x)
+            _ -> return (Nothing, rest)
+    rest'' <- nestToDoc set rest'
+    Ok $ DocMaybe d i inside' nothing : rest''
 nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
     let attrs' =
             case classes of
@@ -347,13 +355,15 @@ nestToDoc set (Nest (LineContent content) inside:rest) = do
     Ok $ DocContent content : inside' ++ rest'
 nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
 nestToDoc _set (Nest LineElse _:_) = Error "Unexpected else"
+nestToDoc _set (Nest LineNothing _:_) = Error "Unexpected nothing"
 
 compressDoc :: [Doc] -> [Doc]
 compressDoc [] = []
 compressDoc (DocForall d i doc:rest) =
     DocForall d i (compressDoc doc) : compressDoc rest
-compressDoc (DocMaybe d i doc:rest) =
-    DocMaybe d i (compressDoc doc) : compressDoc rest
+compressDoc (DocMaybe d i doc mnothing:rest) =
+    DocMaybe d i (compressDoc doc) (fmap compressDoc mnothing)
+  : compressDoc rest
 compressDoc (DocCond [(a, x)] Nothing:DocCond [(b, y)] Nothing:rest)
     | a == b = compressDoc $ DocCond [(a, x ++ y)] Nothing : rest
 compressDoc (DocCond x y:rest) =
