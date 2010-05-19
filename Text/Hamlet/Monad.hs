@@ -28,11 +28,11 @@ module Text.Hamlet.Monad
     ) where
 
 import Data.Text (Text, pack)
+import qualified Data.Text as S
 import qualified Data.Text.Lazy as L
 import qualified Data.Text.IO as T
 import Control.Applicative
 import Control.Monad
-import Web.Encodings
 import Data.Monoid
 import Data.List
 
@@ -109,12 +109,8 @@ data HtmlContent = Encoded Text | Unencoded Text
     deriving (Eq, Show, Read)
 instance Monoid HtmlContent where
     mempty = Encoded mempty
-    mappend (Encoded x)   (Encoded y)   = Encoded   $ mappend x y
-    mappend (Unencoded x) (Unencoded y) = Unencoded $ mappend x y
-    mappend (Encoded x)   (Unencoded y) = Encoded   $ mappend x
-                                                    $ encodeHtml y
-    mappend (Unencoded x) (Encoded y)   = Encoded   $ mappend
-                                                      (encodeHtml x) y
+    mappend x y = Encoded $ mappend (htmlContentToText x)
+                                    (htmlContentToText y)
 
 -- | Wrap some 'HtmlContent' for embedding in an XML file.
 cdata :: HtmlContent -> HtmlContent
@@ -126,8 +122,7 @@ cdata h = mconcat
 
 -- | Outputs the given 'HtmlContent', entity encoding any 'Unencoded' data.
 outputHtml :: Monad m => HtmlContent -> Hamlet url m ()
-outputHtml (Encoded t) = output t
-outputHtml (Unencoded t) = output $ encodeHtml t
+outputHtml = output . htmlContentToText
 
 -- | 'pack' a 'String' and call 'output'; this will not perform any escaping.
 outputString :: Monad m => String -> Hamlet url m ()
@@ -253,4 +248,12 @@ hamletToText render h = do
 -- | Returns HTML-ready text (ie, all entities are escaped properly).
 htmlContentToText :: HtmlContent -> Text
 htmlContentToText (Encoded t) = t
-htmlContentToText (Unencoded t) = encodeHtml t
+htmlContentToText (Unencoded t) = S.concatMap (pack . encodeHtmlChar) t
+
+encodeHtmlChar :: Char -> String
+encodeHtmlChar '<' = "&lt;"
+encodeHtmlChar '>' = "&gt;"
+encodeHtmlChar '&' = "&amp;"
+encodeHtmlChar '"' = "&quot;"
+encodeHtmlChar '\'' = "&#39;"
+encodeHtmlChar c = [c]
