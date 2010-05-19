@@ -67,7 +67,7 @@ data Line = LineForall Deref Ident
     deriving (Eq, Show, Read)
 
 parseLines :: HamletSettings -> String -> Result [(Int, Line)]
-parseLines set = mapM go . lines where
+parseLines set = mapM (go . killCarriage) . lines where
     go s = do
         let (spaces, s') = countSpaces 0 s
         l <- parseLine set s'
@@ -75,6 +75,10 @@ parseLines set = mapM go . lines where
     countSpaces i (' ':rest) = countSpaces (i + 1) rest
     countSpaces i ('\t':rest) = countSpaces (i + 4) rest
     countSpaces i x = (i, x)
+    killCarriage s
+        | null s = s
+        | last s == '\r' = init s
+        | otherwise = s
 
 parseLine :: HamletSettings -> String -> Result Line
 parseLine set "!!!" =
