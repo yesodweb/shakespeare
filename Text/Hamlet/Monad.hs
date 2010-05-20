@@ -136,6 +136,7 @@ outputUrl u = showUrl u >>= outputString
 -- | Same as 'outputUrl', but appends a query-string with given keys and
 -- values.
 outputUrlParams :: Monad m => (url, [(String, String)]) -> Hamlet url m ()
+outputUrlParams (u, []) = outputUrl u
 outputUrlParams (u, params) = do
     outputUrl u
     outputString $ showParams params
