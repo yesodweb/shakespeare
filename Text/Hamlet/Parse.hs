@@ -295,7 +295,7 @@ nestLines ((i, l):rest) =
 data Doc = DocForall Deref Ident [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
          | DocMaybe Deref Ident [Doc] (Maybe [Doc])
-         | DocContent [Content]
+         | DocContent Content
     deriving (Show, Eq, Read, Data, Typeable)
 
 nestToDoc :: HamletSettings -> [Nest] -> Result [Doc]
@@ -331,26 +331,26 @@ nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
                 else closeTag set tn
     let end = case closeStyle of
                 CloseSeparate ->
-                    DocContent [ContentRaw $ "</" ++ tn ++ ">"]
-                _ -> DocContent []
+                    DocContent $ ContentRaw $ "</" ++ tn ++ ">"
+                _ -> DocContent $ ContentRaw ""
         seal = case closeStyle of
-                 CloseInside -> DocContent [ContentRaw "/>"]
-                 _ -> DocContent [ContentRaw ">"]
-        start = DocContent [ContentRaw $ "<" ++ tn]
-        attrs'' = map attrToContent attrs'
+                 CloseInside -> DocContent $ ContentRaw "/>"
+                 _ -> DocContent $ ContentRaw ">"
+        start = DocContent $ ContentRaw $ "<" ++ tn
+        attrs'' = concatMap attrToContent attrs'
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ start
        : attrs''
       ++ seal
-       : DocContent content
-       : inside'
+       : map DocContent content
+      ++ inside'
       ++ end
        : rest'
 nestToDoc set (Nest (LineContent content) inside:rest) = do
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
-    Ok $ DocContent content : inside' ++ rest'
+    Ok $ map DocContent content ++ inside' ++ rest'
 nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
 nestToDoc _set (Nest LineElse _:_) = Error "Unexpected else"
 nestToDoc _set (Nest LineNothing _:_) = Error "Unexpected nothing"
@@ -367,17 +367,12 @@ compressDoc (DocCond [(a, x)] Nothing:DocCond [(b, y)] Nothing:rest)
 compressDoc (DocCond x y:rest) =
     DocCond (map (second compressDoc) x) (compressDoc `fmap` y)
     : compressDoc rest
-compressDoc (DocContent x:DocContent y:rest) =
-    compressDoc $ DocContent (x ++ y) : rest
-compressDoc (DocContent x:rest) =
-    DocContent (compressContent x) : compressDoc rest
-
-compressContent :: [Content] -> [Content]
-compressContent [] = []
-compressContent (ContentRaw "":rest) = compressContent rest
-compressContent (ContentRaw x:ContentRaw y:rest) =
-    compressContent $ ContentRaw (x ++ y) : rest
-compressContent (x:rest) = x : compressContent rest
+compressDoc (DocContent (ContentRaw ""):rest) = compressDoc rest
+compressDoc ( DocContent (ContentRaw x)
+            : DocContent (ContentRaw y)
+            : rest
+            ) = compressDoc $ (DocContent $ ContentRaw $ x ++ y) : rest
+compressDoc (DocContent x:rest) = DocContent x : compressDoc rest
 
 parseDoc :: HamletSettings -> String -> Result [Doc]
 parseDoc set s = do
@@ -386,13 +381,14 @@ parseDoc set s = do
     ds <- nestToDoc set ns
     return $ compressDoc ds
 
-attrToContent :: (Maybe Deref, String, [Content]) -> Doc
+attrToContent :: (Maybe Deref, String, [Content]) -> [Doc]
 attrToContent (Just cond, k, v) =
-    DocCond [(cond, [attrToContent (Nothing, k, v)])] Nothing
-attrToContent (Nothing, k, []) = DocContent [ContentRaw $ ' ' : k]
-attrToContent (Nothing, k, v) = DocContent $
-    ContentRaw (' ' : k ++ "=\"")
-  : v ++ [ContentRaw "\""]
+    [DocCond [(cond, attrToContent (Nothing, k, v))] Nothing]
+attrToContent (Nothing, k, []) = [DocContent $ ContentRaw $ ' ' : k]
+attrToContent (Nothing, k, v) =
+    DocContent (ContentRaw (' ' : k ++ "=\""))
+  : map DocContent v
+  ++ [DocContent $ ContentRaw "\""]
 
 -- | Settings for parsing of a hamlet document.
 data HamletSettings = HamletSettings

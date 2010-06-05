@@ -24,32 +24,9 @@ module Text.Hamlet.Monad
 import Data.ByteString.Char8 (ByteString, pack)
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy as L
-import Control.Applicative
-import Control.Monad
 import Data.Monoid
 import Data.List
 import Data.ByteString.UTF8 (fromString)
-
--- | Something to be run for each val. Returns 'Left' when enumeration should
--- terminate immediately, 'Right' when it can receive more input.
-type Iteratee val seed m = seed -> val -> m (Either seed seed)
-
--- | Generates a stream of values to be passed to an 'Iteratee'.
-newtype Enumerator val m = Enumerator
-    { runEnumerator :: forall seed.
-        Iteratee val seed m -> seed
-     -> m (Either seed seed)
-    }
-
--- | Convert a list into an 'Enumerator'.
-fromList :: Monad m => [a] -> Enumerator a m
-fromList x = Enumerator $ go x where
-    go [] _ seed = return $ Right seed
-    go (l:ls) iter seed = do
-        ea <- iter seed l
-        case ea of
-            Left seed' -> return $ Left seed'
-            Right seed' -> go ls iter seed'
 
 -- | 'Hamlet' is a monad that has two features:
 --
