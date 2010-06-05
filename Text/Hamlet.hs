@@ -7,8 +7,6 @@ module Text.Hamlet
     , Hamlet (..)
     , HtmlContent (..)
     , printHamlet
-    , Enumerator (..)
-    , fromList
     ) where
 
 import Text.Hamlet.Monad

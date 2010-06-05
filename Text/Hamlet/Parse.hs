@@ -40,7 +40,7 @@ instance Applicative Result where
     pure = return
     (<*>) = ap
 
-newtype Deref = Deref [(Bool, Ident)] -- ^ is monadic, ident
+newtype Deref = Deref [Ident] -- ^ is monadic, ident
     deriving (Show, Eq, Read, Data, Typeable)
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
@@ -89,7 +89,7 @@ parseLine _ ('$':'f':'o':'r':'a':'l':'l':' ':rest) =
     case words rest of
         [x, y] -> do
             x' <- parseDeref x
-            (False, y') <- parseIdent' False y
+            y' <- parseIdent y
             return $ LineForall x' y'
         _ -> Error $ "Invalid forall: " ++ rest
 parseLine _ ('$':'i':'f':' ':rest) = LineIf <$> parseDeref rest
@@ -100,7 +100,7 @@ parseLine _ ('$':'m':'a':'y':'b':'e':' ':rest) =
     case words rest of
         [x, y] -> do
             x' <- parseDeref x
-            (False, y') <- parseIdent' False y
+            y' <- parseIdent y
             return $ LineMaybe x' y'
         _ -> Error $ "Invalid maybe: " ++ rest
 parseLine _ "$nothing" = Ok LineNothing
@@ -114,7 +114,7 @@ parseLine _ s = LineContent <$> parseContent s
 
 #if TEST
 fooBar :: Deref
-fooBar = Deref [(False, Ident "bar"), (False, Ident "foo")]
+fooBar = Deref [Ident "bar", Ident "foo"]
 
 caseParseLine :: Assertion
 caseParseLine = do
@@ -141,7 +141,7 @@ caseParseLine = do
         @?= Ok (LineContent [ContentRaw "\n"])
     parseLine' "%img!:baz:src=@foo.bar@"
         @?= Ok (LineTag "img"
-                [(Just $ Deref [(False, Ident "baz")],
+                [(Just $ Deref [Ident "baz"],
                   "src",
                   [ContentUrl False fooBar])] [] [])
 #endif
@@ -180,21 +180,21 @@ caseParseContent = do
     parseContent "" @?= Ok []
     parseContent "foo" @?= Ok [ContentRaw "foo"]
     parseContent "foo $bar$ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentVar $ Deref [(False, Ident "bar")]
+                                        , ContentVar $ Deref [Ident "bar"]
                                         , ContentRaw " baz"
                                         ]
     parseContent "foo @bar@ baz" @?=
         Ok [ ContentRaw "foo "
-           , ContentUrl False (Deref [(False, Ident "bar")])
+           , ContentUrl False (Deref [Ident "bar"])
            , ContentRaw " baz"
            ]
     parseContent "foo @?bar@ baz" @?=
         Ok [ ContentRaw "foo "
-           , ContentUrl True (Deref [(False, Ident "bar")])
+           , ContentUrl True (Deref [Ident "bar"])
            , ContentRaw " baz"
            ]
     parseContent "foo ^bar^ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentEmbed $ Deref [(False, Ident "bar")]
+                                        , ContentEmbed $ Deref [Ident "bar"]
                                         , ContentRaw " baz"
                                         ]
     parseContent "@@" @?= Ok [ContentRaw "@"]
@@ -215,28 +215,22 @@ parseDeref s = Deref . reverse <$> go s where
 #if TEST
 caseParseDeref :: Assertion
 caseParseDeref = do
-    parseDeref "baz.*bar.foo" @?=
-        Ok (Deref [ (False, Ident "foo")
-                  , (True, Ident "bar")
-                  , (False, Ident "baz")])
+    parseDeref "baz.bar.foo" @?=
+        Ok (Deref [ Ident "foo"
+                  , Ident "bar"
+                  , Ident "baz"])
 #endif
 
-parseIdent :: String -> Result (Bool, Ident)
-parseIdent ('*':s) = parseIdent' True s
-parseIdent s = parseIdent' False s
-
-parseIdent' :: Bool -> String -> Result (Bool, Ident)
-parseIdent' _ "" = Error "Invalid empty ident"
-parseIdent' b s
+parseIdent :: String -> Result Ident
+parseIdent "" = Error "Invalid empty ident"
+parseIdent s
     | all (flip elem (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_'")) s
-        = Ok (b, Ident s)
+        = Ok $ Ident s
     | otherwise = Error $ "Invalid identifier: " ++ s
 
 #if TEST
 caseParseIdent :: Assertion
-caseParseIdent = do
-    parseIdent "foo" @?= Ok (False, Ident "foo")
-    parseIdent "*foo" @?= Ok (True, Ident "foo")
+caseParseIdent = parseIdent "foo" @?= Ok (Ident "foo")
 #endif
 
 parseTag :: String -> Result

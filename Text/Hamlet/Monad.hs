@@ -1,27 +1,21 @@
 {-# LANGUAGE RankNTypes #-}
 module Text.Hamlet.Monad
-    ( -- * Generalized enumerator
-      Iteratee
-    , Enumerator (..)
-    , fromList
-      -- * Datatypes
-    , Hamlet (..)
+    ( -- * Datatypes
+      Hamlet (..)
     , HtmlContent (..)
       -- * Output
     , output
     , outputHtml
     , outputString
+    , outputOctets
     , outputUrl
     , outputUrlParams
     , outputEmbed
       -- * Utility functions
     , htmlContentToByteString
-    , showUrl
-    , liftHamlet
     , mapH
     , condH
     , maybeH
-    , maybeH'
     , printHamlet
     , hamletToByteString
     , cdata
@@ -34,6 +28,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Monoid
 import Data.List
+import Data.ByteString.UTF8 (fromString)
 
 -- | Something to be run for each val. Returns 'Left' when enumeration should
 -- terminate immediately, 'Right' when it can receive more input.
@@ -73,37 +68,19 @@ fromList x = Enumerator $ go x where
 -- action. However, it is not recommended to rely on side-effects. Though a
 -- 'Hamlet' monad may perform IO actions, this should only be used for
 -- read-only behavior for efficiency.
-newtype Hamlet url m a = Hamlet
-    { runHamlet :: forall seed.
-       (url -> String)
-    -> seed
-    -> Iteratee ByteString seed m
-    -> m (Either seed (a, seed))
+newtype Hamlet url = Hamlet
+    { runHamlet :: (url -> String) -> [ByteString] -> [ByteString]
     }
+instance Monoid (Hamlet url) where
+    mempty = Hamlet $ const id
+    mappend (Hamlet x) (Hamlet y) = Hamlet $ \r -> x r . y r
 
-instance Monad m => Monad (Hamlet url m) where
-    return x = Hamlet $ \_ seed _ -> return (Right (x, seed))
-    (Hamlet f) >>= g = Hamlet go where
-        go a c d = f a c d >>= go' a d
-        go' _ _ (Left seed) = return $ Left seed
-        go' a d (Right (v, seed)) = runHamlet (g v) a seed d
-instance Monad m => Functor (Hamlet url m) where
-    fmap = liftM
-instance Monad m => Applicative (Hamlet url m) where
-    pure = return
-    (<*>) = ap
-
--- | Directly output strict 'Text' without any escaping.
-output :: Monad m => ByteString -> Hamlet url m ()
-output bs = Hamlet go where
-    go _ seed iter = do
-        ea <- iter seed bs
-        case ea of
-            Left seed' -> return $ Left seed'
-            Right seed' -> return $ Right ((), seed')
+-- | Directly output strict 'ByteString' without any escaping.
+output :: ByteString -> Hamlet url
+output = Hamlet . const . (:)
 
 -- | Content for an HTML document. 'Encoded' content should not be entity
--- escaped; 'Unencoded' should be.
+-- escaped; 'Unencoded' should be. All content must be UTF-8 encoded.
 data HtmlContent = Encoded ByteString | Unencoded ByteString
     deriving (Eq, Show, Read)
 instance Monoid HtmlContent where
@@ -120,25 +97,28 @@ cdata h = mconcat
     ]
 
 -- | Outputs the given 'HtmlContent', entity encoding any 'Unencoded' data.
-outputHtml :: Monad m => HtmlContent -> Hamlet url m ()
+outputHtml :: HtmlContent -> Hamlet url
 outputHtml = output . htmlContentToByteString
 
--- | 'pack' a 'String' and call 'output'; this will not perform any escaping.
-outputString :: Monad m => String -> Hamlet url m ()
-outputString = output . pack
+-- | 'pack' a 'String' and call 'output'; this will not perform any escaping. The String must be UTF8-octets.
+outputString :: String -> Hamlet url
+outputString = output . fromString
+
+outputOctets :: String -> Hamlet url
+outputOctets = output . pack
 
 -- | Uses the URL rendering function to convert the given URL to a 'String' and
 -- then calls 'outputString'.
-outputUrl :: Monad m => url -> Hamlet url m ()
-outputUrl u = showUrl u >>= outputString
+outputUrl :: url -> Hamlet url
+outputUrl u = Hamlet $ \render -> (:) (fromString $ render u)
 
 -- | Same as 'outputUrl', but appends a query-string with given keys and
 -- values.
-outputUrlParams :: Monad m => (url, [(String, String)]) -> Hamlet url m ()
+outputUrlParams :: (url, [(String, String)]) -> Hamlet url
 outputUrlParams (u, []) = outputUrl u
-outputUrlParams (u, params) = do
-    outputUrl u
-    outputString $ showParams params
+outputUrlParams (u, params) = mappend
+    (outputUrl u)
+    (outputString $ showParams params)
   where
     showParams x = '?' : intercalate "&" (map go x)
     go (x, y) = go' x ++ '=' : go' y
@@ -168,82 +148,45 @@ encodeUrlChar y =
      in ['%', showHex' b, showHex' c]
 
 -- | Only really used to ensure that the argument has the right type.
-outputEmbed :: Monad m => Hamlet url m () -> Hamlet url m ()
+outputEmbed :: Hamlet url -> Hamlet url
 outputEmbed = id
-
--- | Use the URL to 'String' rendering function to convert a URL to a 'String'.
-showUrl :: Monad m => url -> Hamlet url m String
-showUrl url = Hamlet $ \s seed _ -> return (Right (s url, seed))
-
--- | Lift a monadic action into the 'Hamlet' monad.
-liftHamlet :: Monad m => m a -> Hamlet url m a
-liftHamlet m = Hamlet $ \_ c _ -> m >>= \m' -> return (Right (m', c))
 
 -- | Perform the given 'Hamlet' action for all values generated by the given
 -- 'Enumerator'.
-mapH :: Monad m
-     => (val -> Hamlet url m ())
-     -> Enumerator val m
-     -> Hamlet url m ()
-mapH each (Enumerator e) = Hamlet go where
-    go surl seed iter = do
-        res <- e (iter' surl iter) seed
-        case res of
-            Left seed' -> return $ Left seed'
-            Right seed' -> return $ Right ((), seed')
-    iter' surl iter seed val = do
-        res <- runHamlet (each val) surl seed iter
-        case res of
-            Left seed' -> return $ Left seed'
-            Right ((), seed') -> return $ Right seed'
+mapH :: (val -> Hamlet url)
+     -> [val]
+     -> Hamlet url
+mapH each vals = mconcat $ map each vals
 
 -- | Checks for truth in the left value in each pair in the first argument. If
 -- a true exists, then the corresponding right action is performed. Only the
 -- first is performed. In there are no true values, then the second argument is
 -- performed, if supplied.
-condH :: Monad m
-      => [(m Bool, Hamlet url m ())]
-      -> Maybe (Hamlet url m ())
-      -> Hamlet url m ()
-condH [] Nothing = return ()
+condH :: [(Bool, Hamlet url)] -- FIXME could probably just be a foldr
+      -> Maybe (Hamlet url)
+      -> Hamlet url
+condH [] Nothing = mempty
 condH [] (Just x) = x
-condH ((x, y):rest) z = do
-    x' <- liftHamlet x
-    if x' then y else condH rest z
-
--- | Runs the second argument with the value in the first, if available.
-maybeH :: Monad m
-       => Maybe v
-       -> (v -> Hamlet url m ())
-       -> Hamlet url m ()
-maybeH Nothing _ = return ()
-maybeH (Just v) f = f v
+condH ((True, y):_) _ = y
+condH ((False, _):rest) z = condH rest z
 
 -- | Runs the second argument with the value in the first, if available.
 -- Otherwise, runs the third argument, if available.
-maybeH' :: Monad m
-        => Maybe v
-        -> (v -> Hamlet url m ())
-        -> Maybe (Hamlet url m ())
-        -> Hamlet url m ()
-maybeH' Nothing _ Nothing = return ()
-maybeH' Nothing _ (Just x) = x
-maybeH' (Just v) f _ = f v
+maybeH :: Maybe v
+       -> (v -> Hamlet url)
+       -> Maybe (Hamlet url)
+       -> Hamlet url
+maybeH Nothing _ Nothing = mempty
+maybeH Nothing _ (Just x) = x
+maybeH (Just v) f _ = f v
 
 -- | Prints a Hamlet to standard out. Good for debugging.
-printHamlet :: (url -> String) -> Hamlet url IO () -> IO ()
-printHamlet render h = runHamlet h render () iter >> return () where
-    iter () text = do
-        S.putStr text
-        return $ Right ()
+printHamlet :: (url -> String) -> Hamlet url -> IO ()
+printHamlet render h = L.putStr $ hamletToByteString render h
 
 -- | Converts a 'Hamlet' to lazy text, using strict I/O.
-hamletToByteString :: Monad m => (url -> String) -> Hamlet url m () -> m L.ByteString
-hamletToByteString render h = do
-    Right ((), front) <- runHamlet h render id iter
-    return $ L.fromChunks $ front []
-  where
-    iter front text = return $ Right $ front . (:) text
+hamletToByteString :: (url -> String) -> Hamlet url -> L.ByteString
+hamletToByteString render h = L.fromChunks $ runHamlet h render []
 
 -- | Returns HTML-ready text (ie, all entities are escaped properly).
 htmlContentToByteString :: HtmlContent -> ByteString

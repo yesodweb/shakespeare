@@ -31,18 +31,17 @@ safeDoE x = return $ DoE x
 
 docToStmt :: Vars -> Doc -> Q Vars
 docToStmt (vars, stmts) (DocForall (Deref idents) ident@(Ident name) inside) = do
-    (vars', deref', stmts', isEnum) <-
+    (vars', deref', stmts') <-
         case idents of
             [] -> error $ "Invalid forall deref: " ++ show idents
-            [(x, Ident i)] -> do
-                return (vars, getBase vars $ Ident i, id, x)
+            [(Ident i)] -> do
+                return (vars, getBase vars $ Ident i, id)
             _ -> do
                 let front = Deref $ init idents
-                    (x, Ident i) = last idents
+                    Ident i = last idents
                 (vars', base, stmts') <- bindDeref vars front
-                return (vars', VarE (mkName i) `AppE` base, stmts', x)
-    fl <- [|fromList|]
-    let deref'' = if isEnum then deref' else fl `AppE` deref'
+                return (vars', VarE (mkName i) `AppE` base, stmts')
+    let deref'' = deref'
     mh <- [|mapH|]
     ident' <- newName name
     let vars'' = ([ident], VarE ident') : vars'
@@ -63,7 +62,7 @@ docToStmt (vars, stmts) (DocMaybe deref ident@(Ident name) inside mno) = do
                     j <- [|Just|]
                     x <- safeDoE $ ninside' []
                     return $ j `AppE` x
-    mh <- [|maybeH'|]
+    mh <- [|maybeH|]
     let stmt = NoBindS $ mh `AppE` base `AppE` dos `AppE` ninside
     return (vars', stmts . stmts' . (:) stmt)
 docToStmt (vars, stmts) (DocCond conds final) = do
@@ -81,7 +80,7 @@ docToStmt v (DocContent c) = foldM contentToStmt v c
 
 contentToStmt :: Vars -> Content -> Q Vars
 contentToStmt (a, b) (ContentRaw s) = do
-    os <- [|outputString|]
+    os <- [|outputOctets|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     let stmt = NoBindS $ os `AppE` s'
     return (a, b . (:) stmt)
@@ -149,24 +148,22 @@ hamletWithSettings set =
 -- deref helper funcs
 shortestPath :: Scope
              -> Deref -- ^ path sought
-             -> (Exp, [(Bool, Ident)]) -- ^ (base, path from base)
+             -> (Exp, [Ident]) -- ^ (base, path from base)
 shortestPath scope (Deref is) = findMatch' svars
   where
     svars = sortBy (\(x, _) (y, _)
                   -> compare (length y) (length x)) scope
     findMatch' [] =
         case is of
-            ((False, top):rest) -> (getBase scope top, rest)
-            ((True, _):_) -> error "shortestPath: first segment is monadic"
+            (top:rest) -> (getBase scope top, rest)
             [] -> error "shortestPath called with null deref"
     findMatch' (x:xs) =
         case checkMatch x of
             Just y -> y
             Nothing -> findMatch' xs
-    checkMatch :: ([Ident], Exp)
-               -> Maybe (Exp, [(Bool, Ident)])
+    checkMatch :: ([Ident], Exp) -> Maybe (Exp, [Ident])
     checkMatch (a, e')
-        | a `isPrefixOf` map snd is = Just (e', drop (length a) is)
+        | a `isPrefixOf` is = Just (e', drop (length a) is)
         | otherwise = Nothing
 
 -- | Converts a chain of idents and initial 'Exp' to a monadic value.
@@ -180,19 +177,9 @@ identsToVal isMonad (Deref []) e =
         else do
             ret <- [|return|]
             return $ ret `AppE` e
-identsToVal isInitMonad (Deref ((isMonad, Ident i):is)) e = do
-    case (isInitMonad, isMonad) of
-        (False, _) -> do
+identsToVal isInitMonad (Deref (Ident i:is)) e = do
             let e' = VarE (mkName i) `AppE` e
-            identsToVal isMonad (Deref is) e'
-        (True, True) -> do
-            bind <- [|(>>=)|]
-            let e' = InfixE (Just e) bind $ Just $ VarE $ mkName i
-            identsToVal True (Deref is) e'
-        (True, False) -> do
-            fm <- [|fmap|]
-            let e' = fm `AppE` (VarE $ mkName i) `AppE` e
-            identsToVal True (Deref is) e'
+             in identsToVal False (Deref is) e'
 
 getBase :: Scope
         -> Ident
@@ -207,7 +194,7 @@ getBase scope (Ident top) =
 
 bindMonadicVar :: String -> Exp -> Q (Exp, [Stmt] -> [Stmt])
 bindMonadicVar name e = do
-    lh <- [|liftHamlet|]
+    lh <- error "FIXME" -- [|liftHamlet|]
     name' <- newName name
     let stmt = BindS (VarP name') $ lh `AppE` e
     return (VarE name', (:) stmt)
@@ -217,33 +204,24 @@ bindDeref :: Scope
           -> Deref
           -> Q (Scope, Exp, [Stmt] -> [Stmt])
 bindDeref _ (Deref []) = error "bindDeref with null deref"
-bindDeref scopeFirst (Deref ((isMonadFirst, Ident base):rest)) = do
+bindDeref scopeFirst (Deref ((Ident base):rest)) = do
     let base' = getBase scopeFirst $ Ident base
-    (base'', stmts) <-
-        if isMonadFirst
-            then bindMonadicVar base base'
-            else return (base', id)
+    (base'', stmts) <- return (base', id) -- FIXME
     (x, y, z, _) <- foldM go (scopeFirst, base'', stmts, [Ident base]) rest
     return (x, y, z)
   where
     go :: (Scope, Exp, [Stmt] -> [Stmt], [Ident])
-       -> (Bool, Ident)
+       -> Ident
        -> Q (Scope, Exp, [Stmt] -> [Stmt], [Ident])
-    go (scope, base', stmts, front) (isMonad, Ident func) = do
+    go (scope, base', stmts, front) (Ident func) = do
         let (x, func') =
                 if not (null func) && isUpper (head func)
                     then (ConE, "var" ++ func)
                     else (VarE, func)
         let rhs = x (mkName func) `AppE` base'
         name <- newName func'
-        stmt <-
-            if isMonad
-                then do
-                    lh <- [|liftHamlet|]
-                    return $ BindS (VarP name) $ lh `AppE` rhs
-                else return $ LetS [FunD name
-                                    [ Clause [] (NormalB rhs) []
-                                    ]]
+        let stmt = LetS [FunD name [ Clause [] (NormalB rhs) []
+                                   ]]
         let front' = front ++ [Ident func]
         return ((front', VarE name) : scope, VarE name,
                 stmts . (:) stmt, front')
