@@ -15,7 +15,7 @@ module Text.Hamlet.Monad
     , outputUrlParams
     , outputEmbed
       -- * Utility functions
-    , htmlContentToText
+    , htmlContentToByteString
     , showUrl
     , liftHamlet
     , mapH
@@ -23,14 +23,13 @@ module Text.Hamlet.Monad
     , maybeH
     , maybeH'
     , printHamlet
-    , hamletToText
+    , hamletToByteString
     , cdata
     ) where
 
-import Data.Text (Text, pack)
-import qualified Data.Text as S
-import qualified Data.Text.Lazy as L
-import qualified Data.Text.IO as T
+import Data.ByteString.Char8 (ByteString, pack)
+import qualified Data.ByteString.Char8 as S
+import qualified Data.ByteString.Lazy as L
 import Control.Applicative
 import Control.Monad
 import Data.Monoid
@@ -78,7 +77,7 @@ newtype Hamlet url m a = Hamlet
     { runHamlet :: forall seed.
        (url -> String)
     -> seed
-    -> Iteratee Text seed m
+    -> Iteratee ByteString seed m
     -> m (Either seed (a, seed))
     }
 
@@ -95,7 +94,7 @@ instance Monad m => Applicative (Hamlet url m) where
     (<*>) = ap
 
 -- | Directly output strict 'Text' without any escaping.
-output :: Monad m => Text -> Hamlet url m ()
+output :: Monad m => ByteString -> Hamlet url m ()
 output bs = Hamlet go where
     go _ seed iter = do
         ea <- iter seed bs
@@ -105,12 +104,12 @@ output bs = Hamlet go where
 
 -- | Content for an HTML document. 'Encoded' content should not be entity
 -- escaped; 'Unencoded' should be.
-data HtmlContent = Encoded Text | Unencoded Text
+data HtmlContent = Encoded ByteString | Unencoded ByteString
     deriving (Eq, Show, Read)
 instance Monoid HtmlContent where
     mempty = Encoded mempty
-    mappend x y = Encoded $ mappend (htmlContentToText x)
-                                    (htmlContentToText y)
+    mappend x y = Encoded $ mappend (htmlContentToByteString x)
+                                    (htmlContentToByteString y)
 
 -- | Wrap some 'HtmlContent' for embedding in an XML file.
 cdata :: HtmlContent -> HtmlContent
@@ -122,7 +121,7 @@ cdata h = mconcat
 
 -- | Outputs the given 'HtmlContent', entity encoding any 'Unencoded' data.
 outputHtml :: Monad m => HtmlContent -> Hamlet url m ()
-outputHtml = output . htmlContentToText
+outputHtml = output . htmlContentToByteString
 
 -- | 'pack' a 'String' and call 'output'; this will not perform any escaping.
 outputString :: Monad m => String -> Hamlet url m ()
@@ -235,21 +234,21 @@ maybeH' (Just v) f _ = f v
 printHamlet :: (url -> String) -> Hamlet url IO () -> IO ()
 printHamlet render h = runHamlet h render () iter >> return () where
     iter () text = do
-        T.putStr text
+        S.putStr text
         return $ Right ()
 
 -- | Converts a 'Hamlet' to lazy text, using strict I/O.
-hamletToText :: Monad m => (url -> String) -> Hamlet url m () -> m L.Text
-hamletToText render h = do
+hamletToByteString :: Monad m => (url -> String) -> Hamlet url m () -> m L.ByteString
+hamletToByteString render h = do
     Right ((), front) <- runHamlet h render id iter
     return $ L.fromChunks $ front []
   where
     iter front text = return $ Right $ front . (:) text
 
 -- | Returns HTML-ready text (ie, all entities are escaped properly).
-htmlContentToText :: HtmlContent -> Text
-htmlContentToText (Encoded t) = t
-htmlContentToText (Unencoded t) = S.concatMap (pack . encodeHtmlChar) t
+htmlContentToByteString :: HtmlContent -> ByteString
+htmlContentToByteString (Encoded t) = t
+htmlContentToByteString (Unencoded t) = S.concatMap (pack . encodeHtmlChar) t
 
 encodeHtmlChar :: Char -> String
 encodeHtmlChar '<' = "&lt;"

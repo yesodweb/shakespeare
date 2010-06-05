@@ -13,6 +13,8 @@ import Control.Monad
 import Data.List (sortBy, isPrefixOf)
 import Data.Char (isUpper)
 import Control.Applicative ((<$>))
+import qualified Data.ByteString.UTF8 as BSU
+import qualified Data.ByteString.Char8 as S8
 
 type Vars = (Scope, [Stmt] -> [Stmt])
 
@@ -80,7 +82,7 @@ docToStmt v (DocContent c) = foldM contentToStmt v c
 contentToStmt :: Vars -> Content -> Q Vars
 contentToStmt (a, b) (ContentRaw s) = do
     os <- [|outputString|]
-    s' <- lift s
+    let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     let stmt = NoBindS $ os `AppE` s'
     return (a, b . (:) stmt)
 contentToStmt (vars, stmts) (ContentVar d) = do

@@ -5,9 +5,9 @@ import Test.HUnit hiding (Test)
 
 import qualified Text.Hamlet.Parse
 import Text.Hamlet
-import Text.Hamlet.Monad (hamletToText)
-import Data.Text (pack)
-import Data.Text.Lazy (unpack)
+import Text.Hamlet.Monad (hamletToByteString)
+import Data.ByteString.UTF8 (fromString)
+import Data.ByteString.Lazy.UTF8 (toString)
 
 main :: IO ()
 main = defaultMain
@@ -95,8 +95,8 @@ theArg :: Arg IO url
 theArg = Arg
     { getArg = theArg
     , getArgM = return theArg
-    , var = Unencoded $ pack "<var>"
-    , mvar = return $ Unencoded $ pack "<var>"
+    , var = Unencoded $ fromString "<var>"
+    , mvar = return $ Unencoded $ fromString "<var>"
     , url = Home
     , murl = return Home
     , embed = [$hamlet|embed|]
@@ -109,16 +109,16 @@ theArg = Arg
     , enum = fromList $ list theArg
     , nothing = Nothing
     , mnothing = return Nothing
-    , just = Just $ Unencoded $ pack "just"
-    , mjust = return $ Just $ Unencoded $ pack "just"
+    , just = Just $ Unencoded $ fromString "just"
+    , mjust = return $ Just $ Unencoded $ fromString "just"
     , urlParams = (Home, [("foo", "bar"), ("foo1", "bar1")])
     , murlParams = return $ urlParams theArg
     }
 
 helper :: String -> Hamlet Url IO () -> Assertion
 helper res h = do
-    x <- hamletToText render h
-    res @=? unpack x
+    x <- hamletToByteString render h
+    res @=? toString x
 
 caseEmpty :: Assertion
 caseEmpty = helper "" [$hamlet||]
@@ -340,7 +340,7 @@ caseConstructor :: Assertion
 caseConstructor = do
     helper "url" [$hamlet|@Home@|]
     helper "suburl" [$hamlet|@Sub.SubUrl@|]
-    let text = pack "<raw text>"
+    let text = fromString "<raw text>"
     helper "<raw text>" [$hamlet|$Encoded.text$|]
 
 caseUrlParams :: Assertion
