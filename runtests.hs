@@ -59,6 +59,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "escape" caseEscape
     , testCase "empty statement list" caseEmptyStatementList
     , testCase "attribute conditionals" caseAttribCond
+    , testCase "non-ascii" caseNonAscii
     ]
 
 data Url = Home | Sub SubUrl
@@ -372,3 +373,7 @@ caseAttribCond = do
     helper "<meta var=\"foo:bar\">" [$hamlet|%meta!var=foo:bar|]
     helper "<select selected></select>"
         [$hamlet|%select!:true.theArg:selected|]
+
+caseNonAscii :: Assertion
+caseNonAscii = do
+    helper "עִבְרִי" [$hamlet|עִבְרִי|]
