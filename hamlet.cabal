@@ -45,8 +45,7 @@ library
                      template-haskell,
                      BlazeHtml >= 0.1 && < 0.2
     exposed-modules: Text.Hamlet
-                     Text.Hamlet.Monad
-                     Text.Hamlet.Parse
+    other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
     ghc-options:     -Wall
 

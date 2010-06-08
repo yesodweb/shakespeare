@@ -6,14 +6,14 @@ module Text.Hamlet.Quasi
     ) where
 
 import Text.Hamlet.Parse
-import Text.Hamlet.Monad
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper)
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (mconcat, mappend, mempty)
-import Text.Blaze (unsafeBytestring)
+import Text.Blaze (unsafeBytestring, Html, string)
+import Data.List (intercalate)
 
 type Scope = [(Ident, Exp)]
 
@@ -94,12 +94,9 @@ xhamlet = hamletWithSettings $ HamletSettings doctype True where
 
 -- | A quasi-quoter that converts Hamlet syntax into a function of form:
 --
--- argument -> Hamlet url m ()
+-- > (url -> String) -> Html
 --
 -- Please see accompanying documentation for a description of Hamlet syntax.
--- You must ensure that the type of m, url and argument all work properly with
--- the functions referred to in the template. Of course, worst case scenario is
--- the compiler will catch your mistakes.
 hamletWithSettings :: HamletSettings -> QuasiQuoter
 hamletWithSettings set =
     QuasiQuoter go $ error "Cannot quasi-quote Hamlet to patterns"
@@ -129,3 +126,60 @@ deref scope (Deref (z@(Ident zName):y)) =
                     then ConE $ mkName v
                     else VarE $ mkName v
     go (Ident func) z' = varName func `AppE` z'
+
+-- | Checks for truth in the left value in each pair in the first argument. If
+-- a true exists, then the corresponding right action is performed. Only the
+-- first is performed. In there are no true values, then the second argument is
+-- performed, if supplied.
+condH :: [(Bool, Html)] -> Maybe Html -> Html
+condH [] Nothing = mempty
+condH [] (Just x) = x
+condH ((True, y):_) _ = y
+condH ((False, _):rest) z = condH rest z
+
+-- | Runs the second argument with the value in the first, if available.
+-- Otherwise, runs the third argument, if available.
+maybeH :: Maybe v -> (v -> Html) -> Maybe Html -> Html
+maybeH Nothing _ Nothing = mempty
+maybeH Nothing _ (Just x) = x
+maybeH (Just v) f _ = f v
+
+-- | Uses the URL rendering function to convert the given URL to a 'String' and
+-- then calls 'outputString'.
+outputUrl :: (url -> String) -> url -> Html
+outputUrl render u = string $ render u
+
+-- | Same as 'outputUrl', but appends a query-string with given keys and
+-- values.
+outputUrlParams :: (url -> String) -> (url, [(String, String)]) -> Html
+outputUrlParams render (u, []) = outputUrl render u
+outputUrlParams render (u, params) = mappend
+    (outputUrl render u)
+    (string $ showParams params)
+  where
+    showParams x = '?' : intercalate "&" (map go x)
+    go (x, y) = go' x ++ '=' : go' y
+    go' = concatMap encodeUrlChar
+
+-- | Taken straight from web-encodings; reimplemented here to avoid extra
+-- dependencies.
+encodeUrlChar :: Char -> String
+encodeUrlChar c
+    -- List of unreserved characters per RFC 3986
+    -- Gleaned from http://en.wikipedia.org/wiki/Percent-encoding
+    | 'A' <= c && c <= 'Z' = [c]
+    | 'a' <= c && c <= 'z' = [c]
+    | '0' <= c && c <= '9' = [c]
+encodeUrlChar c@'-' = [c]
+encodeUrlChar c@'_' = [c]
+encodeUrlChar c@'.' = [c]
+encodeUrlChar c@'~' = [c]
+encodeUrlChar ' ' = "+"
+encodeUrlChar y =
+    let (a, c) = fromEnum y `divMod` 16
+        b = a `mod` 16
+        showHex' x
+            | x < 10 = toEnum $ x + (fromEnum '0')
+            | x < 16 = toEnum $ x - 10 + (fromEnum 'A')
+            | otherwise = error $ "Invalid argument to showHex: " ++ show x
+     in ['%', showHex' b, showHex' c]
