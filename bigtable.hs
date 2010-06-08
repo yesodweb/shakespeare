@@ -6,22 +6,20 @@ import Text.Hamlet
 import Text.Hamlet.Monad
 import Data.ByteString.Char8 (pack)
 
-bigTable :: [[Int]] -> L.ByteString
-bigTable t = hamletToByteString undefined $ [$hamlet|
+bigTable :: ([Int], [Int]) -> L.ByteString
+bigTable (rows, cols) = hamletToByteString undefined $ [$hamlet|
 %table
-    $forall t row
+    $forall rows _row
         %tr
-            $forall row col
+            $forall cols col
                 %td $Encoded.pack.show.col$
 |]
 
 main :: IO ()
 main = defaultMain
-    [ bench "bigTable" $ nf (L.length . bigTable) myTable ]
+    [ bench "bigTable" $ nf (L.length . bigTable) (rows, cols)]
   where
-    rows :: Int
-    rows = 1000
-
-    myTable :: [[Int]]
-    myTable = replicate rows [1..10]
-    {-# NOINLINE myTable #-}
+    rows = [1..1000] :: [Int]
+    {-# NOINLINE rows #-}
+    cols = [1..10] :: [Int]
+    {-# NOINLINE cols #-}
