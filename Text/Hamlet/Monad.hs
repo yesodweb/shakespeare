@@ -1,10 +1,10 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Text.Hamlet.Monad
     ( -- * Datatypes
       Hamlet (..)
     , HtmlContent (..)
       -- * Output
-    , output
     , outputHtml
     , outputString
     , outputOctets
@@ -12,7 +12,8 @@ module Text.Hamlet.Monad
     , outputUrlParams
     , outputEmbed
       -- * Utility functions
-    , htmlContentToByteString
+    , hconcat
+    , happend
     , mapH
     , condH
     , maybeH
@@ -27,6 +28,7 @@ import qualified Data.ByteString.Lazy as L
 import Data.Monoid
 import Data.List
 import Data.ByteString.UTF8 (fromString)
+import Text.Blaze
 
 -- | 'Hamlet' is a monad that has two features:
 --
@@ -45,56 +47,54 @@ import Data.ByteString.UTF8 (fromString)
 -- action. However, it is not recommended to rely on side-effects. Though a
 -- 'Hamlet' monad may perform IO actions, this should only be used for
 -- read-only behavior for efficiency.
-newtype Hamlet url = Hamlet
-    { runHamlet :: (url -> String) -> [ByteString] -> [ByteString]
-    }
-instance Monoid (Hamlet url) where
-    mempty = Hamlet $ const id
-    mappend (Hamlet x) (Hamlet y) = Hamlet $ \r -> x r . y r
+type Hamlet url = Html
 
--- | Directly output strict 'ByteString' without any escaping.
-output :: ByteString -> Hamlet url
-output = Hamlet . const . (:)
+hconcat :: [Hamlet url] -> Hamlet url
+hconcat = mconcat
+
+happend :: Hamlet url -> Hamlet url -> Hamlet url
+happend = mappend
 
 -- | Content for an HTML document. 'Encoded' content should not be entity
 -- escaped; 'Unencoded' should be. All content must be UTF-8 encoded.
-data HtmlContent = Encoded ByteString | Unencoded ByteString
+data HtmlContent = Encoded String | Unencoded String
     deriving (Eq, Show, Read)
 instance Monoid HtmlContent where
     mempty = Encoded mempty
-    mappend x y = Encoded $ mappend (htmlContentToByteString x)
-                                    (htmlContentToByteString y)
+    mappend x y = Encoded $ mappend (htmlContentToString x)
+                                    (htmlContentToString y)
 
 -- | Wrap some 'HtmlContent' for embedding in an XML file.
 cdata :: HtmlContent -> HtmlContent
 cdata h = mconcat
-    [ Encoded $ pack "<![CDATA["
+    [ Encoded "<![CDATA["
     , h
-    , Encoded $ pack "]]>"
+    , Encoded "]]>"
     ]
 
 -- | Outputs the given 'HtmlContent', entity encoding any 'Unencoded' data.
 outputHtml :: HtmlContent -> Hamlet url
-outputHtml = output . htmlContentToByteString
+outputHtml (Encoded s) = outputOctets s
+outputHtml (Unencoded s) = outputString s
 
 -- | 'pack' a 'String' and call 'output'; this will not perform any escaping. The String must be UTF8-octets.
 outputString :: String -> Hamlet url
-outputString = output . fromString
+outputString = string'
 
 outputOctets :: String -> Hamlet url
-outputOctets = output . pack
+outputOctets = preEscapedString'
 
 -- | Uses the URL rendering function to convert the given URL to a 'String' and
 -- then calls 'outputString'.
-outputUrl :: url -> Hamlet url
-outputUrl u = Hamlet $ \render -> (:) (fromString $ render u)
+outputUrl :: (url -> String) -> url -> Hamlet url
+outputUrl render u = outputString $ render u
 
 -- | Same as 'outputUrl', but appends a query-string with given keys and
 -- values.
-outputUrlParams :: (url, [(String, String)]) -> Hamlet url
-outputUrlParams (u, []) = outputUrl u
-outputUrlParams (u, params) = mappend
-    (outputUrl u)
+outputUrlParams :: (url -> String) -> (url, [(String, String)]) -> Hamlet url
+outputUrlParams render (u, []) = outputUrl render u
+outputUrlParams render (u, params) = mappend
+    (outputUrl render u)
     (outputString $ showParams params)
   where
     showParams x = '?' : intercalate "&" (map go x)
@@ -158,17 +158,17 @@ maybeH Nothing _ (Just x) = x
 maybeH (Just v) f _ = f v
 
 -- | Prints a Hamlet to standard out. Good for debugging.
-printHamlet :: (url -> String) -> Hamlet url -> IO ()
+printHamlet :: (url -> String) -> ((url -> String) -> Hamlet url) -> IO ()
 printHamlet render h = L.putStr $ hamletToByteString render h
 
 -- | Converts a 'Hamlet' to lazy text, using strict I/O.
-hamletToByteString :: (url -> String) -> Hamlet url -> L.ByteString
-hamletToByteString render h = L.fromChunks $ runHamlet h render []
+hamletToByteString :: (url -> String) -> ((url -> String) -> Hamlet url) -> L.ByteString
+hamletToByteString render h = renderHtml $ h render
 
 -- | Returns HTML-ready text (ie, all entities are escaped properly).
-htmlContentToByteString :: HtmlContent -> ByteString
-htmlContentToByteString (Encoded t) = t
-htmlContentToByteString (Unencoded t) = S.concatMap (pack . encodeHtmlChar) t
+htmlContentToString :: HtmlContent -> String
+htmlContentToString (Encoded t) = t
+htmlContentToString (Unencoded t) = concatMap encodeHtmlChar t
 
 encodeHtmlChar :: Char -> String
 encodeHtmlChar '<' = "&lt;"

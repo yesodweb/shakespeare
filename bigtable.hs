@@ -12,7 +12,7 @@ bigTable (rows, cols) = hamletToByteString undefined $ [$hamlet|
     $forall rows _row
         %tr
             $forall cols col
-                %td $Encoded.pack.show.col$
+                %td $Encoded.show.col$
 |]
 
 main :: IO ()

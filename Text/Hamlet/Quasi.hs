@@ -12,45 +12,48 @@ import Language.Haskell.TH.Quote
 import Data.Char (isUpper)
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Char8 as S8
-import Data.Monoid (mconcat)
+import Data.Monoid (mconcat, mappend, mempty)
 
 type Scope = [(Ident, Exp)]
 
-docsToExp :: Scope -> [Doc] -> Q Exp
-docsToExp scope docs = do
-    exps <- mapM (docToExp scope) docs
-    mc <- [|mconcat|]
-    return $ mc `AppE` ListE exps
+docsToExp :: Exp -> Scope -> [Doc] -> Q Exp
+docsToExp render scope docs = do
+    exps <- mapM (docToExp render scope) docs
+    ma <- [|mappend|]
+    me <- [|mempty|]
+    return $ if null exps then me else foldr1 (go ma) exps
+  where
+    go ma x y = ma `AppE` x `AppE` y
 
-docToExp :: Scope -> Doc -> Q Exp
-docToExp scope (DocForall list ident@(Ident name) inside) = do
+docToExp :: Exp -> Scope -> Doc -> Q Exp
+docToExp render scope (DocForall list ident@(Ident name) inside) = do
     let list' = deref scope list
     name' <- newName name
     let scope' = (ident, VarE name') : scope
-    mh <- [|mapH|]
-    inside' <- docsToExp scope' inside
+    mh <- [|\a -> mconcat . map a|]
+    inside' <- docsToExp render scope' inside
     let lam = LamE [VarP name'] inside'
     return $ mh `AppE` lam `AppE` list'
-docToExp scope (DocMaybe val ident@(Ident name) inside mno) = do
+docToExp render scope (DocMaybe val ident@(Ident name) inside mno) = do
     let val' = deref scope val
     name' <- newName name
     let scope' = (ident, VarE name') : scope
-    inside' <- docsToExp scope' inside
+    inside' <- docsToExp render scope' inside
     let inside'' = LamE [VarP name'] inside'
     ninside' <- case mno of
                     Nothing -> [|Nothing|]
                     Just no -> do
-                        no' <- docsToExp scope no
+                        no' <- docsToExp render scope no
                         j <- [|Just|]
                         return $ j `AppE` no'
     mh <- [|maybeH|]
     return $ mh `AppE` val' `AppE` inside'' `AppE` ninside'
-docToExp scope (DocCond conds final) = do
+docToExp render scope (DocCond conds final) = do
     conds' <- mapM go conds
     final' <- case final of
                 Nothing -> [|Nothing|]
                 Just f -> do
-                    f' <- docsToExp scope f
+                    f' <- docsToExp render scope f
                     j <- [|Just|]
                     return $ j `AppE` f'
     ch <- [|condH|]
@@ -59,27 +62,27 @@ docToExp scope (DocCond conds final) = do
     go :: (Deref, [Doc]) -> Q Exp
     go (d, docs) = do
         let d' = deref scope d
-        docs' <- docsToExp scope docs
+        docs' <- docsToExp render scope docs
         return $ TupE [d', docs']
-docToExp v (DocContent c) = contentToExp v c
+docToExp render v (DocContent c) = contentToExp render v c
 
-contentToExp :: Scope -> Content -> Q Exp
-contentToExp _ (ContentRaw s) = do
+contentToExp :: Exp -> Scope -> Content -> Q Exp
+contentToExp _ _ (ContentRaw s) = do
     os <- [|outputOctets|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
-contentToExp scope (ContentVar d) = do
+contentToExp _ scope (ContentVar d) = do
     oh <- [|outputHtml|]
     let d' = deref scope d
     return $ oh `AppE` d'
-contentToExp scope (ContentUrl hasParams d) = do
+contentToExp render scope (ContentUrl hasParams d) = do
     ou <- if hasParams then [|outputUrlParams|] else [|outputUrl|]
     let d' = deref scope d
-    return $ ou `AppE` d'
-contentToExp scope (ContentEmbed d) = do
+    return $ ou `AppE` render `AppE` d'
+contentToExp render scope (ContentEmbed d) = do
     oe <- [|outputEmbed|]
     let d' = deref scope d
-    return $ oe `AppE` d'
+    return $ oe `AppE` (d' `AppE` render)
 
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
@@ -107,7 +110,10 @@ hamletWithSettings set =
     go s = do
       case parseDoc set s of
         Error s' -> error s'
-        Ok d -> docsToExp [] d
+        Ok d -> do
+            render <- newName "render"
+            func <- docsToExp (VarE render) [] d
+            return $ LamE [VarP render] func
 
 deref :: Scope -> Deref -> Exp
 deref _ (Deref []) = error "Invalid empty deref"

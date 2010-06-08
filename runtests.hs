@@ -62,7 +62,7 @@ data Arg url = Arg
     { getArg :: Arg url
     , var :: HtmlContent
     , url :: Url
-    , embed :: Hamlet url
+    , embed :: (url -> String) -> Hamlet url
     , true :: Bool
     , false :: Bool
     , list :: [Arg url]
@@ -74,18 +74,18 @@ data Arg url = Arg
 theArg :: Arg url
 theArg = Arg
     { getArg = theArg
-    , var = Unencoded $ fromString "<var>"
+    , var = Unencoded "<var>"
     , url = Home
     , embed = [$hamlet|embed|]
     , true = True
     , false = False
     , list = [theArg, theArg, theArg]
     , nothing = Nothing
-    , just = Just $ Unencoded $ fromString "just"
+    , just = Just $ Unencoded "just"
     , urlParams = (Home, [("foo", "bar"), ("foo1", "bar1")])
     }
 
-helper :: String -> Hamlet Url -> Assertion
+helper :: String -> ((Url -> String) -> Hamlet Url) -> Assertion
 helper res h = do
     let x = hamletToByteString render h
     res @=? toString x
@@ -244,12 +244,12 @@ caseConstructor :: Assertion
 caseConstructor = do
     helper "url" [$hamlet|@Home@|]
     helper "suburl" [$hamlet|@Sub.SubUrl@|]
-    let text = fromString "<raw text>"
+    let text = "<raw text>"
     helper "<raw text>" [$hamlet|$Encoded.text$|]
 
 caseUrlParams :: Assertion
 caseUrlParams = do
-    helper "url?foo=bar&foo1=bar1" [$hamlet|@?urlParams.theArg@|]
+    helper "url?foo=bar&amp;foo1=bar1" [$hamlet|@?urlParams.theArg@|]
 
 caseEscape :: Assertion
 caseEscape = do
