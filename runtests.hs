@@ -59,28 +59,28 @@ render (Sub SubUrl) = "suburl"
 
 data Arg url = Arg
     { getArg :: Arg url
-    , var :: HtmlContent
+    , var :: Html
     , url :: Url
     , embed :: Hamlet url
     , true :: Bool
     , false :: Bool
     , list :: [Arg url]
-    , nothing :: Maybe HtmlContent
-    , just :: Maybe HtmlContent
+    , nothing :: Maybe Html
+    , just :: Maybe Html
     , urlParams :: (Url, [(String, String)])
     }
 
 theArg :: Arg url
 theArg = Arg
     { getArg = theArg
-    , var = Unencoded "<var>"
+    , var = string "<var>"
     , url = Home
     , embed = [$hamlet|embed|]
     , true = True
     , false = False
     , list = [theArg, theArg, theArg]
     , nothing = Nothing
-    , just = Just $ Unencoded "just"
+    , just = Just $ string "just"
     , urlParams = (Home, [("foo", "bar"), ("foo1", "bar1")])
     }
 
@@ -244,7 +244,7 @@ caseConstructor = do
     helper "url" [$hamlet|@Home@|]
     helper "suburl" [$hamlet|@Sub.SubUrl@|]
     let text = "<raw text>"
-    helper "<raw text>" [$hamlet|$Encoded.text$|]
+    helper "<raw text>" [$hamlet|$preEscapedString.text$|]
 
 caseUrlParams :: Assertion
 caseUrlParams = do

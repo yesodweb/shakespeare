@@ -3,9 +3,7 @@
 module Text.Hamlet.Monad
     ( -- * Datatypes
       Hamlet (..)
-    , HtmlContent (..)
       -- * Output
-    , outputHtml
     , outputString
     , outputOctets
     , outputUrl
@@ -27,27 +25,13 @@ import Text.Blaze
 
 type Hamlet url = (url -> String) -> Html
 
--- | Content for an HTML document. 'Encoded' content should not be entity
--- escaped; 'Unencoded' should be. All content must be UTF-8 encoded.
-data HtmlContent = Encoded String | Unencoded String
-    deriving (Eq, Show, Read)
-instance Monoid HtmlContent where
-    mempty = Encoded mempty
-    mappend x y = Encoded $ mappend (htmlContentToString x)
-                                    (htmlContentToString y)
-
 -- | Wrap some 'HtmlContent' for embedding in an XML file.
-cdata :: HtmlContent -> HtmlContent
+cdata :: Html -> Html
 cdata h = mconcat
-    [ Encoded "<![CDATA["
+    [ preEscapedString "<![CDATA["
     , h
-    , Encoded "]]>"
+    , preEscapedString "]]>"
     ]
-
--- | Outputs the given 'HtmlContent', entity encoding any 'Unencoded' data.
-outputHtml :: HtmlContent -> Html
-outputHtml (Encoded s) = outputOctets s
-outputHtml (Unencoded s) = outputString s
 
 -- | 'pack' a 'String' and call 'output'; this will not perform any escaping. The String must be UTF8-octets.
 outputString :: String -> Html
@@ -121,11 +105,6 @@ maybeH (Just v) f _ = f v
 -- | Converts a 'Hamlet' to lazy text, using strict I/O.
 renderHamlet :: (url -> String) -> Hamlet url -> L.ByteString
 renderHamlet render h = renderHtml $ h render
-
--- | Returns HTML-ready text (ie, all entities are escaped properly).
-htmlContentToString :: HtmlContent -> String
-htmlContentToString (Encoded t) = t
-htmlContentToString (Unencoded t) = concatMap encodeHtmlChar t
 
 encodeHtmlChar :: Char -> String
 encodeHtmlChar '<' = "&lt;"

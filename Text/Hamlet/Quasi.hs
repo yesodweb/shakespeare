@@ -71,10 +71,7 @@ contentToExp _ _ (ContentRaw s) = do
     os <- [|outputOctets|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
-contentToExp _ scope (ContentVar d) = do
-    oh <- [|outputHtml|]
-    let d' = deref scope d
-    return $ oh `AppE` d'
+contentToExp _ scope (ContentVar d) = return $ deref scope d
 contentToExp render scope (ContentUrl hasParams d) = do
     ou <- if hasParams then [|outputUrlParams|] else [|outputUrl|]
     let d' = deref scope d

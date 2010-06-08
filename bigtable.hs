@@ -12,7 +12,7 @@ bigTable (rows, cols) = renderHamlet undefined $ [$hamlet|
     $forall rows _row
         %tr
             $forall cols col
-                %td $Encoded.show.col$
+                %td $preEscapedString.show.col$
 |]
 
 main :: IO ()
