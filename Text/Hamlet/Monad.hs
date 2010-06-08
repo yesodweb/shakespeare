@@ -34,7 +34,7 @@ cdata h = mconcat
 -- | Uses the URL rendering function to convert the given URL to a 'String' and
 -- then calls 'outputString'.
 outputUrl :: (url -> String) -> url -> Html
-outputUrl render u = outputString $ render u
+outputUrl render u = string $ render u
 
 -- | Same as 'outputUrl', but appends a query-string with given keys and
 -- values.
@@ -42,7 +42,7 @@ outputUrlParams :: (url -> String) -> (url, [(String, String)]) -> Html
 outputUrlParams render (u, []) = outputUrl render u
 outputUrlParams render (u, params) = mappend
     (outputUrl render u)
-    (outputString $ showParams params)
+    (string $ showParams params)
   where
     showParams x = '?' : intercalate "&" (map go x)
     go (x, y) = go' x ++ '=' : go' y
