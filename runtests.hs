@@ -5,7 +5,6 @@ import Test.HUnit hiding (Test)
 
 import qualified Text.Hamlet.Parse
 import Text.Hamlet
-import Text.Hamlet.Monad (hamletToByteString)
 import Data.ByteString.UTF8 (fromString)
 import Data.ByteString.Lazy.UTF8 (toString)
 
@@ -62,7 +61,7 @@ data Arg url = Arg
     { getArg :: Arg url
     , var :: HtmlContent
     , url :: Url
-    , embed :: (url -> String) -> Hamlet url
+    , embed :: Hamlet url
     , true :: Bool
     , false :: Bool
     , list :: [Arg url]
@@ -85,9 +84,9 @@ theArg = Arg
     , urlParams = (Home, [("foo", "bar"), ("foo1", "bar1")])
     }
 
-helper :: String -> ((Url -> String) -> Hamlet Url) -> Assertion
+helper :: String -> Hamlet Url -> Assertion
 helper res h = do
-    let x = hamletToByteString render h
+    let x = renderHamlet render h
     res @=? toString x
 
 caseEmpty :: Assertion
@@ -280,7 +279,7 @@ caseNonAscii = do
 
 caseMaybeFunction :: Assertion
 caseMaybeFunction = do
-    helper "url?foo=bar&foo1=bar1" [$hamlet|
+    helper "url?foo=bar&amp;foo1=bar1" [$hamlet|
 $maybe Just.urlParams x
     @?x.theArg@
 |]

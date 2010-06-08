@@ -6,7 +6,7 @@ module Text.Hamlet
     , defaultHamletSettings
     , Hamlet (..)
     , HtmlContent (..)
-    , printHamlet
+    , renderHamlet
     ) where
 
 import Text.Hamlet.Monad

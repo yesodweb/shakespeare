@@ -7,7 +7,7 @@ import Text.Hamlet.Monad
 import Data.ByteString.Char8 (pack)
 
 bigTable :: ([Int], [Int]) -> L.ByteString
-bigTable (rows, cols) = hamletToByteString undefined $ [$hamlet|
+bigTable (rows, cols) = renderHamlet undefined $ [$hamlet|
 %table
     $forall rows _row
         %tr

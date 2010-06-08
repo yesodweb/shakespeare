@@ -80,9 +80,8 @@ contentToExp render scope (ContentUrl hasParams d) = do
     let d' = deref scope d
     return $ ou `AppE` render `AppE` d'
 contentToExp render scope (ContentEmbed d) = do
-    oe <- [|outputEmbed|]
     let d' = deref scope d
-    return $ oe `AppE` (d' `AppE` render)
+    return (d' `AppE` render)
 
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
