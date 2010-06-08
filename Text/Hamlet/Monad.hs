@@ -4,8 +4,6 @@ module Text.Hamlet.Monad
     ( -- * Datatypes
       Hamlet (..)
       -- * Output
-    , outputString
-    , outputOctets
     , outputUrl
     , outputUrlParams
       -- * Utility functions
@@ -32,13 +30,6 @@ cdata h = mconcat
     , h
     , preEscapedString "]]>"
     ]
-
--- | 'pack' a 'String' and call 'output'; this will not perform any escaping. The String must be UTF8-octets.
-outputString :: String -> Html
-outputString = string -- FIXME optimize
-
-outputOctets :: String -> Html
-outputOctets = preEscapedString -- FIXME optimize
 
 -- | Uses the URL rendering function to convert the given URL to a 'String' and
 -- then calls 'outputString'.

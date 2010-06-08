@@ -13,6 +13,7 @@ import Data.Char (isUpper)
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (mconcat, mappend, mempty)
+import Text.Blaze (unsafeBytestring)
 
 type Scope = [(Ident, Exp)]
 
@@ -68,7 +69,7 @@ docToExp render v (DocContent c) = contentToExp render v c
 
 contentToExp :: Exp -> Scope -> Content -> Q Exp
 contentToExp _ _ (ContentRaw s) = do
-    os <- [|outputOctets|]
+    os <- [|unsafeBytestring . S8.pack|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
 contentToExp _ scope (ContentVar d) = return $ deref scope d
