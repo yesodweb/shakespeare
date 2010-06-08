@@ -49,6 +49,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "empty statement list" caseEmptyStatementList
     , testCase "attribute conditionals" caseAttribCond
     , testCase "non-ascii" caseNonAscii
+    , testCase "maybe function" caseMaybeFunction
     ]
 
 data Url = Home | Sub SubUrl
@@ -276,3 +277,10 @@ caseAttribCond = do
 caseNonAscii :: Assertion
 caseNonAscii = do
     helper "עִבְרִי" [$hamlet|עִבְרִי|]
+
+caseMaybeFunction :: Assertion
+caseMaybeFunction = do
+    helper "url?foo=bar&foo1=bar1" [$hamlet|
+$maybe Just.urlParams x
+    @?x.theArg@
+|]

@@ -118,7 +118,11 @@ deref scope (Deref (z@(Ident zName):y)) =
      in foldr go z' $ reverse y
   where
     varName "" = error "Illegal empty varName"
-    varName v@(s:_)
-        | isUpper s = ConE $ mkName v
-        | otherwise = VarE $ mkName v
+    varName v@(s:_) =
+        case lookup (Ident v) scope of
+            Just e -> e
+            Nothing ->
+                if isUpper s
+                    then ConE $ mkName v
+                    else VarE $ mkName v
     go (Ident func) z' = varName func `AppE` z'
