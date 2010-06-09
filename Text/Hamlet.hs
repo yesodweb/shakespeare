@@ -11,8 +11,11 @@ module Text.Hamlet
     , Hamlet
       -- * Construction/rendering
     , renderHamlet
+    , renderHtml
     , preEscapedString
     , string
+    , unsafeBytestring
+    , cdata
     ) where
 
 import Text.Hamlet.Parse

@@ -105,7 +105,7 @@ hamletWithSettings set =
       case parseDoc set s of
         Error s' -> error s'
         Ok d -> do
-            render <- newName "render"
+            render <- newName "_render"
             func <- docsToExp (VarE render) [] d
             return $ LamE [VarP render] func
 
