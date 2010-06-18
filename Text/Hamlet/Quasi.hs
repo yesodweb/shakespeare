@@ -12,7 +12,7 @@ import Data.Char (isUpper)
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (mconcat, mappend, mempty)
-import Text.Blaze (unsafeBytestring, Html, string)
+import Text.Blaze (unsafeByteString, Html, string)
 import Data.List (intercalate)
 
 type Scope = [(Ident, Exp)]
@@ -69,7 +69,7 @@ docToExp render v (DocContent c) = contentToExp render v c
 
 contentToExp :: Exp -> Scope -> Content -> Q Exp
 contentToExp _ _ (ContentRaw s) = do
-    os <- [|unsafeBytestring . S8.pack|]
+    os <- [|unsafeByteString . S8.pack|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
 contentToExp _ scope (ContentVar d) = return $ deref scope d
@@ -131,7 +131,7 @@ deref scope (Deref (z@(Ident zName):y)) =
 -- a true exists, then the corresponding right action is performed. Only the
 -- first is performed. In there are no true values, then the second argument is
 -- performed, if supplied.
-condH :: [(Bool, Html)] -> Maybe Html -> Html
+condH :: [(Bool, Html ())] -> Maybe (Html ()) -> Html ()
 condH [] Nothing = mempty
 condH [] (Just x) = x
 condH ((True, y):_) _ = y
@@ -139,19 +139,19 @@ condH ((False, _):rest) z = condH rest z
 
 -- | Runs the second argument with the value in the first, if available.
 -- Otherwise, runs the third argument, if available.
-maybeH :: Maybe v -> (v -> Html) -> Maybe Html -> Html
+maybeH :: Maybe v -> (v -> Html ()) -> Maybe (Html ()) -> Html ()
 maybeH Nothing _ Nothing = mempty
 maybeH Nothing _ (Just x) = x
 maybeH (Just v) f _ = f v
 
 -- | Uses the URL rendering function to convert the given URL to a 'String' and
 -- then calls 'outputString'.
-outputUrl :: (url -> String) -> url -> Html
+outputUrl :: (url -> String) -> url -> Html ()
 outputUrl render u = string $ render u
 
 -- | Same as 'outputUrl', but appends a query-string with given keys and
 -- values.
-outputUrlParams :: (url -> String) -> (url, [(String, String)]) -> Html
+outputUrlParams :: (url -> String) -> (url, [(String, String)]) -> Html ()
 outputUrlParams render (u, []) = outputUrl render u
 outputUrlParams render (u, params) = mappend
     (outputUrl render u)
