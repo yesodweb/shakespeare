@@ -59,14 +59,14 @@ render (Sub SubUrl) = "suburl"
 
 data Arg url = Arg
     { getArg :: Arg url
-    , var :: Html
+    , var :: Html ()
     , url :: Url
     , embed :: Hamlet url
     , true :: Bool
     , false :: Bool
     , list :: [Arg url]
-    , nothing :: Maybe Html
-    , just :: Maybe Html
+    , nothing :: Maybe (Html ())
+    , just :: Maybe (Html ())
     , urlParams :: (Url, [(String, String)])
     }
 
