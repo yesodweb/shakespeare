@@ -70,7 +70,7 @@ parseLines :: HamletSettings -> String -> Result [(Int, Line)]
 parseLines set = mapM (go . killCarriage) . lines where
     go s = do
         let (spaces, s') = countSpaces 0 s
-        l <- parseLine set s'
+        l <- parseLine set $ killTrailingDollar s'
         Ok (spaces, l)
     countSpaces i (' ':rest) = countSpaces (i + 1) rest
     countSpaces i ('\t':rest) = countSpaces (i + 4) rest
@@ -79,6 +79,10 @@ parseLines set = mapM (go . killCarriage) . lines where
         | null s = s
         | last s == '\r' = init s
         | otherwise = s
+    killTrailingDollar "" = ""
+    killTrailingDollar x
+        | last x == '$' && odd (length $ filter (== '$') x) = init x
+        | otherwise = x
 
 parseLine :: HamletSettings -> String -> Result Line
 parseLine set "!!!" =

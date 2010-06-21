@@ -49,6 +49,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "attribute conditionals" caseAttribCond
     , testCase "non-ascii" caseNonAscii
     , testCase "maybe function" caseMaybeFunction
+    , testCase "trailing dollar sign" caseTrailingDollarSign
     ]
 
 data Url = Home | Sub SubUrl
@@ -283,3 +284,9 @@ caseMaybeFunction = do
 $maybe Just.urlParams x
     @?x.theArg@
 |]
+
+caseTrailingDollarSign :: Assertion
+caseTrailingDollarSign =
+    helper "trailing space \ndollar sign $" [$hamlet|trailing space $
+\
+dollar sign $$|]
