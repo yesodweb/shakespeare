@@ -20,11 +20,17 @@ type Scope = [(Ident, Exp)]
 docsToExp :: Exp -> Scope -> [Doc] -> Q Exp
 docsToExp render scope docs = do
     exps <- mapM (docToExp render scope) docs
-    ma <- [|mappend|]
     me <- [|mempty|]
-    return $ if null exps then me else foldr1 (go ma) exps
-  where
-    go ma x y = ma `AppE` x `AppE` y
+    return $
+        case exps of
+            [] -> me
+            [x] -> x
+            _ ->
+                let x = init exps
+                    y = last exps
+                    x' = map (BindS WildP) x
+                    y' = NoBindS y
+                 in DoE $ x' ++ [y']
 
 docToExp :: Exp -> Scope -> Doc -> Q Exp
 docToExp render scope (DocForall list ident@(Ident name) inside) = do
