@@ -37,7 +37,7 @@ newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
 
 data Content = ContentRaw String
-             | ContentVar Deref
+             | ContentVar Bool Deref -- ^ is it html?
              | ContentUrl Bool Deref -- ^ bool: does it include params?
              | ContentEmbed Deref
     deriving (Show, Eq, Read, Data, Typeable)
@@ -146,9 +146,11 @@ parseLine' set = do
     contentDollar = do
         _ <- char '$'
         (char '$' >> return (ContentRaw "$")) <|> (do
+            isHtml <- (char '<' >> return True) <|> return False
             s <- deref True
+            if isHtml then char '>' >> return () else return ()
             _ <- char '$'
-            return $ ContentVar s)
+            return $ ContentVar isHtml s)
     contentAt = do
         _ <- char '@'
         (char '@' >> return (ContentRaw "@")) <|> (do

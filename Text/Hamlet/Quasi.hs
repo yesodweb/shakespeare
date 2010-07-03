@@ -78,7 +78,10 @@ contentToExp _ _ (ContentRaw s) = do
     os <- [|unsafeByteString . S8.pack|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
-contentToExp _ scope (ContentVar d) = return $ deref scope d
+contentToExp _ scope (ContentVar True d) = return $ deref scope d
+contentToExp _ scope (ContentVar False d) = do
+    str <- [|string|]
+    return $ str `AppE` deref scope d
 contentToExp render scope (ContentUrl hasParams d) = do
     ou <- if hasParams then [|outputUrlParams|] else [|outputUrl|]
     let d' = deref scope d
