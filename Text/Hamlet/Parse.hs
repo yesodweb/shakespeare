@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 module Text.Hamlet.Parse
     ( Result (..)
@@ -9,23 +8,15 @@ module Text.Hamlet.Parse
     , parseDoc
     , HamletSettings (..)
     , defaultHamletSettings
-#if TEST
-    , testSuite
-#endif
     )
     where
 
-import Control.Applicative
+import Control.Applicative ((<$>), Applicative (..))
 import Control.Monad
 import Control.Arrow
 import Data.Data
 import Data.List (intercalate)
-
-#if TEST
-import Test.Framework (testGroup, Test)
-import Test.Framework.Providers.HUnit
-import Test.HUnit hiding (Test)
-#endif
+import Text.ParserCombinators.Parsec hiding (Line)
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -69,9 +60,9 @@ data Line = LineForall Deref Ident
 parseLines :: HamletSettings -> String -> Result [(Int, Line)]
 parseLines set = mapM (go . killCarriage) . lines where
     go s = do
-        let (spaces, s') = countSpaces 0 s
+        let (spaces', s') = countSpaces 0 s
         l <- parseLine set $ killTrailingDollar s'
-        Ok (spaces, l)
+        Ok (spaces', l)
     countSpaces i (' ':rest) = countSpaces (i + 1) rest
     countSpaces i ('\t':rest) = countSpaces (i + 4) rest
     countSpaces i x = (i, x)
@@ -85,208 +76,142 @@ parseLines set = mapM (go . killCarriage) . lines where
         | otherwise = x
 
 parseLine :: HamletSettings -> String -> Result Line
-parseLine set "!!!" =
-    Ok $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
-parseLine _ "\\" = Ok $ LineContent [ContentRaw "\n"]
-parseLine _ ('\\':s) = LineContent <$> parseContent s
-parseLine _ ('$':'f':'o':'r':'a':'l':'l':' ':rest) =
-    case words rest of
-        [x, y] -> do
-            x' <- parseDeref x
-            y' <- parseIdent y
-            return $ LineForall x' y'
-        _ -> Error $ "Invalid forall: " ++ rest
-parseLine _ ('$':'i':'f':' ':rest) = LineIf <$> parseDeref rest
-parseLine _ ('$':'e':'l':'s':'e':'i':'f':' ':rest) =
-    LineElseIf <$> parseDeref rest
-parseLine _ "$else" = Ok LineElse
-parseLine _ ('$':'m':'a':'y':'b':'e':' ':rest) =
-    case words rest of
-        [x, y] -> do
-            x' <- parseDeref x
-            y' <- parseIdent y
-            return $ LineMaybe x' y'
-        _ -> Error $ "Invalid maybe: " ++ rest
-parseLine _ "$nothing" = Ok LineNothing
-parseLine _ x@(c:_) | c `elem` "%#." = do
-    let (begin, rest) = break (== ' ') x
-        rest' = dropWhile (== ' ') rest
-    (tn, attr, classes) <- parseTag begin
-    con <- parseContent rest'
-    return $ LineTag tn attr con classes
-parseLine _ s = LineContent <$> parseContent s
+parseLine set s =
+    case parse (parseLine' set) "" s of
+        Left e -> Error $ show e
+        Right x -> Ok x
 
-#if TEST
-fooBar :: Deref
-fooBar = Deref [Ident "bar", Ident "foo"]
-
-caseParseLine :: Assertion
-caseParseLine = do
-    let parseLine' = parseLine defaultHamletSettings
-    parseLine' "$if foo.bar" @?= Ok (LineIf fooBar)
-    parseLine' "$elseif foo.bar" @?= Ok (LineElseIf fooBar)
-    parseLine' "$else" @?= Ok LineElse
-    parseLine' "%img!src=@foo.bar@"
-        @?= Ok (LineTag "img" [(Nothing, "src", [ContentUrl False fooBar])] [] [])
-    parseLine' "%img!src=@?foo.bar@"
-        @?= Ok (LineTag "img" [(Nothing, "src", [ContentUrl True fooBar])] [] [])
-    parseLine' ".$foo.bar$"
-        @?= Ok (LineTag "div" [] [] [[ContentVar fooBar]])
-    parseLine' "%span#foo.bar.bar2!baz=bin"
-        @?= Ok (LineTag "span" [ (Nothing, "id", [ContentRaw "foo"])
-                               , (Nothing, "baz", [ContentRaw "bin"])
-                               ] []
-                               [ [ContentRaw "bar"]
-                               , [ContentRaw "bar2"]
-                               ])
-    parseLine' "\\#this is raw"
-        @?= Ok (LineContent [ContentRaw "#this is raw"])
-    parseLine' "\\"
-        @?= Ok (LineContent [ContentRaw "\n"])
-    parseLine' "%img!:baz:src=@foo.bar@"
-        @?= Ok (LineTag "img"
-                [(Just $ Deref [Ident "baz"],
-                  "src",
-                  [ContentUrl False fooBar])] [] [])
-#endif
-
-parseContent :: String -> Result [Content]
-parseContent "" = Ok []
-parseContent s =
-    case break (flip elem "@$^") s of
-        (_, "") -> Ok [ContentRaw s]
-        (a, delim:a') -> do
-            b <-
-                case break (== delim) a' of
-                    ("", _:rest) -> do
-                        rest' <- parseContent rest
-                        return $ ContentRaw [delim] : rest'
-                    (deref, _:rest) -> do
-                        let (x, deref') = case delim of
-                                    '$' -> (ContentVar, deref)
-                                    '@' ->
-                                        case deref of
-                                            '?':y -> (ContentUrl True, y)
-                                            _ -> (ContentUrl False, deref)
-                                    '^' -> (ContentEmbed, deref)
-                                    _ -> error $ "Invalid delim in parseContent: " ++ [delim]
-                        deref'' <- parseDeref deref'
-                        rest' <- parseContent rest
-                        return $ x deref'' : rest'
-                    (_, "") -> error $ "Missing ending delimiter in " ++ s
-            case a of
-                "" -> return b
-                _ -> return $ ContentRaw a : b
-
-#if TEST
-caseParseContent :: Assertion
-caseParseContent = do
-    parseContent "" @?= Ok []
-    parseContent "foo" @?= Ok [ContentRaw "foo"]
-    parseContent "foo $bar$ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentVar $ Deref [Ident "bar"]
-                                        , ContentRaw " baz"
-                                        ]
-    parseContent "foo @bar@ baz" @?=
-        Ok [ ContentRaw "foo "
-           , ContentUrl False (Deref [Ident "bar"])
-           , ContentRaw " baz"
-           ]
-    parseContent "foo @?bar@ baz" @?=
-        Ok [ ContentRaw "foo "
-           , ContentUrl True (Deref [Ident "bar"])
-           , ContentRaw " baz"
-           ]
-    parseContent "foo ^bar^ baz" @?= Ok [ ContentRaw "foo "
-                                        , ContentEmbed $ Deref [Ident "bar"]
-                                        , ContentRaw " baz"
-                                        ]
-    parseContent "@@" @?= Ok [ContentRaw "@"]
-    parseContent "^^" @?= Ok [ContentRaw "^"]
-#endif
-
-parseDeref :: String -> Result Deref
-parseDeref "" = Error "Invalid empty deref"
-parseDeref s = Deref . reverse <$> go s where
-    go a = case break (== '.') a of
-                (x, '.':y) -> do
-                    x' <- parseIdent x
-                    y' <- go y
-                    return $ x' : y'
-                (x, "") -> return <$> parseIdent x
-                _ -> Error "Invalid branch in Text.Hamlet.Parse.parseDef"
-
-#if TEST
-caseParseDeref :: Assertion
-caseParseDeref = do
-    parseDeref "baz.bar.foo" @?=
-        Ok (Deref [ Ident "foo"
-                  , Ident "bar"
-                  , Ident "baz"])
-#endif
-
-parseIdent :: String -> Result Ident
-parseIdent "" = Error "Invalid empty ident"
-parseIdent s
-    | all (flip elem (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_'")) s
-        = Ok $ Ident s
-    | otherwise = Error $ "Invalid identifier: " ++ s
-
-#if TEST
-caseParseIdent :: Assertion
-caseParseIdent = parseIdent "foo" @?= Ok (Ident "foo")
-#endif
-
-parseTag :: String -> Result
-                (String,
-                 [(Maybe Deref, String, [Content])],
-                 [[Content]])
-parseTag s = do
-    pieces <- takePieces s
-    (a, b, c) <- foldM go ("div", id, id) pieces
-    return (a, b [], c [])
+parseLine' :: HamletSettings -> Parser Line
+parseLine' set = do
+    x <- doctype <|> backslash <|> try control <|> tag
+        <|> (LineContent <$> content InContent)
+    (char '$' >> eof) <|> eof
+    return x
   where
-    go (_, attrs, classes) (_, '%':tn) = Ok (tn, attrs, classes)
-    go (tn, attrs, classes) (_, '.':cl) = do
-        con <- parseContent cl
-        Ok (tn, attrs, classes . (:) con)
-    go (tn, attrs, classes) (_, '#':cl) = do
-        con <- parseContent cl
-        Ok (tn, attrs . (:) (Nothing, "id", con), classes)
-    go (tn, attrs, classes) (cond, '!':rest) = do
-        let (name, val) = break (== '=') rest
-        val' <- case val of
-                    '=':x -> parseContent x
-                    _ -> Ok []
-        cond' <- case cond of
-                    Nothing -> return Nothing
-                    Just x -> Just <$> parseDeref x
-        Ok (tn, attrs . (:) (cond', name, val'), classes)
-    go _ _ = error "Invalid branch in Text.Hamlet.Parse.parseTag"
+    doctype = do
+        _ <- string "!!!"
+        eof
+        return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
+    backslash = do
+        _ <- char '\\'
+        (eof >> return (LineContent [ContentRaw "\n"]))
+            <|> (LineContent <$> content InContent)
+    control = do
+        _ <- char '$'
+        (string "if" >> controlIf) <|>
+            (string "else" >> controlElse) <|>
+            (string "maybe" >> controlMaybe) <|>
+            (string "nothing" >> eof >> return LineNothing) <|>
+            (string "forall" >> controlForall)
+    controlIf = do
+        spaces
+        x <- deref False
+        eof
+        return $ LineIf x
+    controlElse =
+        (string "if" >> controlElseIf) <|> (eof >> return LineElse)
+    controlElseIf = do
+        spaces
+        x <- deref False
+        eof
+        return $ LineElseIf x
+    controlMaybe = do
+        spaces
+        x <- deref False
+        spaces
+        y <- ident
+        return $ LineMaybe x y
+    controlForall = do
+        spaces
+        x <- deref False
+        spaces
+        y <- ident
+        return $ LineForall x y
+    tag = do
+        x <- tagName <|> tagIdent <|> tagClass
+        xs <- many $ tagIdent <|> tagClass <|> tagAttrib
+        c <- (eof >> return []) <|> (do
+            _ <- many1 $ oneOf " \t"
+            many $ content' InContent)
+        let (tn, attr, classes) = tag' $ x : xs
+        return $ LineTag tn attr c classes
+    content cr = do
+        x <- many $ content' cr
+        case cr of
+            InQuotes -> char '"' >> return ()
+            _ -> return ()
+        return x
+    content' cr = contentDollar <|> contentAt <|> contentCarrot
+                                <|> contentReg cr
+    contentDollar = do
+        _ <- char '$'
+        (char '$' >> return (ContentRaw "$")) <|> (do
+            s <- deref True
+            _ <- char '$'
+            return $ ContentVar s)
+    contentAt = do
+        _ <- char '@'
+        (char '@' >> return (ContentRaw "@")) <|> (do
+            x <- (char '?' >> return True) <|> return False
+            s <- deref True
+            _ <- char '@'
+            return $ ContentUrl x s)
+    contentCarrot = do
+        _ <- char '^'
+        (char '^' >> return (ContentRaw "^")) <|> (do
+            s <- deref True
+            _ <- char '^'
+            return $ ContentEmbed s)
+    contentReg InContent = ContentRaw <$> many1 (noneOf "$@^")
+    contentReg NotInQuotes = ContentRaw <$> many1 (noneOf "$@^#.! \t")
+    contentReg InQuotes =
+        (do
+            _ <- char '\\'
+            ContentRaw . return <$> anyChar
+        ) <|> (ContentRaw <$> many1 (noneOf "$@^\\\""))
+    tagName = do
+        _ <- char '%'
+        s <- many1 $ noneOf " \t.#!"
+        return $ TagName s
+    tagAttribValue = do
+        cr <- (char '"' >> return InQuotes) <|> return NotInQuotes
+        content cr
+    tagIdent = char '#' >> TagIdent <$> tagAttribValue
+    tagClass = char '.' >> TagClass <$> tagAttribValue
+    tagAttrib = do
+        _ <- char '!'
+        cond <- (Just <$> tagAttribCond) <|> return Nothing
+        s <- many1 $ noneOf " \t.!="
+        v <- (do
+            _ <- char '='
+            s' <- tagAttribValue
+            return s') <|> return []
+        return $ TagAttrib (cond, s, v)
+    tagAttribCond = do
+        _ <- char ':'
+        d <- deref True
+        _ <- char ':'
+        return d
+    tag' = foldr tag'' ("div", [], [])
+    tag'' (TagName s) (_, y, z) = (s, y, z)
+    tag'' (TagIdent s) (x, y, z) = (x, (Nothing, "id", s) : y, z)
+    tag'' (TagClass s) (x, y, z) = (x, y, s : z)
+    tag'' (TagAttrib s) (x, y, z) = (x, s : y, z)
+    deref spaceAllowed = do
+        let delim = if spaceAllowed
+                        then (char '.' <|> (many1 (char ' ') >> return ' '))
+                        else char '.'
+        x <- ident
+        xs <- many $ delim >> ident
+        return $ Deref $ x : xs
+    ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
 
-takePieces :: String -> Result [(Maybe String, String)]
-takePieces "" = Ok []
-takePieces (a:s) = do
-    let (cond, s') =
-            case (a, s) of
-                ('!', ':':rest) ->
-                    case break (== ':') rest of
-                        (x, ':':y) -> (Just x, y)
-                        _ -> (Nothing, s)
-                _ -> (Nothing, s)
-    (x, y) <- takePiece ((:) a) False False False s'
-    y' <- takePieces y
-    return $ (cond, x) : y'
-  where
-    takePiece front False False False "" = Ok (front "", "")
-    takePiece _ _ _ _ "" = Error $ "Unterminated URL, var or embed: " ++ s
-    takePiece front False False False (c:rest)
-        | c `elem` "#.%!" = Ok (front "", c:rest)
-    takePiece front x y z (c:rest)
-        | c == '$' = takePiece (front . (:) c) (not x) y z rest
-        | c == '@' = takePiece (front . (:) c) x (not y) z rest
-        | c == '^' = takePiece (front . (:) c) x y (not z) rest
-        | otherwise = takePiece (front . (:) c) x y z rest
+data TagPiece = TagName String
+              | TagIdent [Content]
+              | TagClass [Content]
+              | TagAttrib (Maybe Deref, String, [Content])
+
+data ContentRule = InQuotes | NotInQuotes | InContent
 
 data Nest = Nest Line [Nest]
 
@@ -436,14 +361,3 @@ parseConds set front (Nest (LineElseIf d) inside:rest) = do
     inside' <- nestToDoc set inside
     parseConds set (front . (:) (d, inside')) rest
 parseConds _ front rest = Ok (front [], Nothing, rest)
-
-#if TEST
----- Testing
-testSuite :: Test
-testSuite = testGroup "Text.Hamlet.Parse"
-    [ testCase "parseLine" caseParseLine
-    , testCase "parseContent" caseParseContent
-    , testCase "parseDeref" caseParseDeref
-    , testCase "parseIdent" caseParseIdent
-    ]
-#endif

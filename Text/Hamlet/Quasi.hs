@@ -117,12 +117,14 @@ hamletWithSettings set =
 
 deref :: Scope -> Deref -> Exp
 deref _ (Deref []) = error "Invalid empty deref"
-deref scope (Deref (z@(Ident zName):y)) =
+deref scope (Deref d) =
     let z' = case lookup z scope of
                 Nothing -> varName zName
                 Just zExp -> zExp
-     in foldr go z' $ reverse y
+     in foldr go z' y
   where
+    z@(Ident zName) = last d
+    y = init d
     varName "" = error "Illegal empty varName"
     varName v@(s:_) =
         case lookup (Ident v) scope of

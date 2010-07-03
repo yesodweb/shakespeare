@@ -3,16 +3,11 @@ import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 
-import qualified Text.Hamlet.Parse
 import Text.Hamlet
-import Data.ByteString.UTF8 (fromString)
 import Data.ByteString.Lazy.UTF8 (toString)
 
 main :: IO ()
-main = defaultMain
-    [ Text.Hamlet.Parse.testSuite
-    , testSuite
-    ]
+main = defaultMain [testSuite]
 
 testSuite :: Test
 testSuite = testGroup "Text.Hamlet"
@@ -50,6 +45,10 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "non-ascii" caseNonAscii
     , testCase "maybe function" caseMaybeFunction
     , testCase "trailing dollar sign" caseTrailingDollarSign
+    , testCase "non leading percent sign" caseNonLeadingPercent
+    , testCase "quoted attributes" caseQuotedAttribs
+    , testCase "spaced derefs" caseSpacedDerefs
+    , testCase "attrib vars" caseAttribVars
     ]
 
 data Url = Home | Sub SubUrl
@@ -178,7 +177,7 @@ $else
 caseList :: Assertion
 caseList = do
     helper "xxx" [$hamlet|
-$forall list.theArg x
+$forall list.theArg _x
     x
 |]
 
@@ -212,11 +211,11 @@ caseAttribOrder = helper "<meta 1 2 3>" [$hamlet|%meta!1!2!3|]
 caseNothing :: Assertion
 caseNothing = do
     helper "" [$hamlet|
-$maybe nothing.theArg n
+$maybe nothing.theArg _n
     nothing
 |]
     helper "nothing" [$hamlet|
-$maybe nothing.theArg n
+$maybe nothing.theArg _n
     something
 $nothing
     nothing
@@ -258,13 +257,14 @@ caseEscape = do
 \
 \ 
 |]
+    helper "$@^" [$hamlet|$$@@^^|]
 
 caseEmptyStatementList :: Assertion
 caseEmptyStatementList = do
     helper "" [$hamlet|$if True|]
-    helper "" [$hamlet|$maybe Nothing x|]
+    helper "" [$hamlet|$maybe Nothing _x|]
     let emptyList = []
-    helper "" [$hamlet|$forall emptyList x|]
+    helper "" [$hamlet|$forall emptyList _x|]
 
 caseAttribCond :: Assertion
 caseAttribCond = do
@@ -290,3 +290,26 @@ caseTrailingDollarSign =
     helper "trailing space \ndollar sign $" [$hamlet|trailing space $
 \
 dollar sign $$|]
+
+caseNonLeadingPercent :: Assertion
+caseNonLeadingPercent =
+    helper "<span style=\"height:100%\">foo</span>" [$hamlet|
+%span!style=height:100% foo
+|]
+
+caseQuotedAttribs :: Assertion
+caseQuotedAttribs =
+    helper "<input type=\"submit\" value=\"Submit response\">" [$hamlet|
+%input!type=submit!value="Submit response"
+|]
+
+caseSpacedDerefs :: Assertion
+caseSpacedDerefs = do
+    helper "&lt;var&gt;" [$hamlet|$var theArg$|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$var theArg$|]
+
+caseAttribVars :: Assertion
+caseAttribVars = do
+    helper "<div id=\"&lt;var&gt;\"></div>" [$hamlet|#$var.theArg$|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$var.theArg$|]
+    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|%div!f=$var.theArg$|]
