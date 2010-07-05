@@ -58,31 +58,15 @@ data Line = LineForall Deref Ident
     deriving (Eq, Show, Read)
 
 parseLines :: HamletSettings -> String -> Result [(Int, Line)]
-parseLines set = mapM (go . killCarriage) . lines where
-    go s = do
-        let (spaces', s') = countSpaces 0 s
-        l <- parseLine set $ killTrailingDollar s'
-        Ok (spaces', l)
-    countSpaces i (' ':rest) = countSpaces (i + 1) rest
-    countSpaces i ('\t':rest) = countSpaces (i + 4) rest
-    countSpaces i x = (i, x)
-    killCarriage s
-        | null s = s
-        | last s == '\r' = init s
-        | otherwise = s
-    killTrailingDollar "" = ""
-    killTrailingDollar x
-        | last x == '$' && odd (length $ filter (== '$') x) = init x
-        | otherwise = x
-
-parseLine :: HamletSettings -> String -> Result Line
-parseLine set s =
-    case parse (parseLine' set) "" s of
+parseLines set s =
+    case parse (many $ parseLine set) s s of
         Left e -> Error $ show e
         Right x -> Ok x
 
-parseLine' :: HamletSettings -> Parser Line
-parseLine' set =
+parseLine :: HamletSettings -> Parser (Int, Line)
+parseLine set = do
+    ss <- fmap sum $ many ((char ' ' >> return 1) <|> (char '\t' >> return 4))
+    x <- (eol' >> return (LineContent [])) <|>
          doctype <|>
          backslash <|>
          try controlIf <|>
@@ -93,8 +77,10 @@ parseLine' set =
          try controlForall <|>
          tag <|>
          (LineContent <$> content InContent)
+    return (ss, x)
   where
-    eol = (string "\r\n" >> return ()) <|> (char '\n' >> return ()) <|> eof
+    eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
+    eol = eof <|> eol'
     doctype = do
         string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
@@ -139,13 +125,13 @@ parseLine' set =
         let (tn, attr, classes) = tag' $ x : xs
         return $ LineTag tn attr c classes
     content cr = do
-        x <- many $ content' cr
+        x <- many1 $ content' cr
         case cr of
             InQuotes -> char '"' >> return ()
             NotInQuotes -> return ()
-            InContent -> eol
+            InContent -> (char '$' >> eol) <|> eol
         return x
-    content' cr = contentDollar <|> contentAt <|> contentCarrot
+    content' cr = try contentDollar <|> contentAt <|> contentCarrot
                                 <|> contentReg cr
     contentDollar = do
         _ <- char '$'
@@ -168,13 +154,13 @@ parseLine' set =
             s <- deref True
             _ <- char '^'
             return $ ContentEmbed s)
-    contentReg InContent = ContentRaw <$> many1 (noneOf "$@^")
-    contentReg NotInQuotes = ContentRaw <$> many1 (noneOf "$@^#.! \t")
+    contentReg InContent = ContentRaw <$> many1 (noneOf "$@^\r\n")
+    contentReg NotInQuotes = ContentRaw <$> many1 (noneOf "$@^#.! \t\n\r")
     contentReg InQuotes =
         (do
             _ <- char '\\'
             ContentRaw . return <$> anyChar
-        ) <|> (ContentRaw <$> many1 (noneOf "$@^\\\""))
+        ) <|> (ContentRaw <$> many1 (noneOf "$@^\\\"\n\r"))
     tagName = do
         _ <- char '%'
         s <- many1 $ noneOf " \t.#!"
