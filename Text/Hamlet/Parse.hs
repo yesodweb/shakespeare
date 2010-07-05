@@ -82,64 +82,68 @@ parseLine set s =
         Right x -> Ok x
 
 parseLine' :: HamletSettings -> Parser Line
-parseLine' set = do
-    x <- doctype <|> backslash <|> try control <|> tag
-        <|> (LineContent <$> content InContent)
-    (char '$' >> eof) <|> eof
-    return x
+parseLine' set =
+         doctype <|>
+         backslash <|>
+         try controlIf <|>
+         try controlElseIf <|>
+         try (string "$else" >> eol >> return LineElse) <|>
+         try controlMaybe <|>
+         try (string "$nothing" >> eol >> return LineNothing) <|>
+         try controlForall <|>
+         tag <|>
+         (LineContent <$> content InContent)
   where
+    eol = (string "\r\n" >> return ()) <|> (char '\n' >> return ()) <|> eof
     doctype = do
-        _ <- string "!!!"
-        eof
+        string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
     backslash = do
         _ <- char '\\'
-        (eof >> return (LineContent [ContentRaw "\n"]))
+        (eol >> return (LineContent [ContentRaw "\n"]))
             <|> (LineContent <$> content InContent)
-    control = do
-        _ <- char '$'
-        (string "if" >> controlIf) <|>
-            (string "else" >> controlElse) <|>
-            (string "maybe" >> controlMaybe) <|>
-            (string "nothing" >> eof >> return LineNothing) <|>
-            (string "forall" >> controlForall)
     controlIf = do
+        _ <- string "$if"
         spaces
         x <- deref False
-        eof
+        eol
         return $ LineIf x
-    controlElse =
-        (string "if" >> controlElseIf) <|> (eof >> return LineElse)
     controlElseIf = do
+        _ <- string "$elseif"
         spaces
         x <- deref False
-        eof
+        eol
         return $ LineElseIf x
     controlMaybe = do
+        _ <- string "$maybe"
         spaces
         x <- deref False
         spaces
         y <- ident
+        eol
         return $ LineMaybe x y
     controlForall = do
+        _ <- string "$forall"
         spaces
         x <- deref False
         spaces
         y <- ident
+        eol
         return $ LineForall x y
     tag = do
         x <- tagName <|> tagIdent <|> tagClass
         xs <- many $ tagIdent <|> tagClass <|> tagAttrib
-        c <- (eof >> return []) <|> (do
+        c <- (eol >> return []) <|> (do
             _ <- many1 $ oneOf " \t"
-            many $ content' InContent)
+            content InContent)
         let (tn, attr, classes) = tag' $ x : xs
         return $ LineTag tn attr c classes
     content cr = do
         x <- many $ content' cr
         case cr of
             InQuotes -> char '"' >> return ()
-            _ -> return ()
+            NotInQuotes -> return ()
+            InContent -> eol
         return x
     content' cr = contentDollar <|> contentAt <|> contentCarrot
                                 <|> contentReg cr
