@@ -50,6 +50,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "spaced derefs" caseSpacedDerefs
     , testCase "attrib vars" caseAttribVars
     , testCase "strings and html" caseStringsAndHtml
+    , testCase "nesting" caseNesting
     ]
 
 data Url = Home | Sub SubUrl
@@ -320,3 +321,17 @@ caseStringsAndHtml = do
     let str = "<string>"
     let html = preEscapedString "<html>"
     helper "&lt;string&gt; <html>" [$hamlet|$str$ $<html>$|]
+
+caseNesting :: Assertion
+caseNesting = do
+    helper
+      "<table><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table>"
+      [$hamlet|
+%table
+  %tbody
+    $forall users user
+        %tr
+         %td $user$
+|]
+  where
+    users = ["1", "2"]

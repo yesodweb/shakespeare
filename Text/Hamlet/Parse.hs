@@ -163,7 +163,7 @@ parseLine set = do
         ) <|> (ContentRaw <$> many1 (noneOf "$@^\\\"\n\r"))
     tagName = do
         _ <- char '%'
-        s <- many1 $ noneOf " \t.#!"
+        s <- many1 $ noneOf " \t.#!\r\n"
         return $ TagName s
     tagAttribValue = do
         cr <- (char '"' >> return InQuotes) <|> return NotInQuotes
