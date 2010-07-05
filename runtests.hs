@@ -333,5 +333,23 @@ caseNesting = do
         %tr
          %td $user$
 |]
+    helper
+        (concat
+          [ "<select id=\"foo\" name=\"foo\"><option selected></option>"
+          , "<option value=\"true\">Yes</option>"
+          , "<option value=\"false\">No</option>"
+          , "</select>"
+          ])
+        [$hamlet|
+%select#$name$!name=$name$
+    %option!:isBoolBlank.val:selected
+    %option!value=true!:isBoolTrue.val:selected Yes
+    %option!value=false!:isBoolFalse.val:selected No
+|]
   where
     users = ["1", "2"]
+    name = "foo"
+    val = 5
+    isBoolBlank _ = True
+    isBoolTrue _ = False
+    isBoolFalse _ = False

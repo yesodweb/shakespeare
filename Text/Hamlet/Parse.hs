@@ -173,7 +173,7 @@ parseLine set = do
     tagAttrib = do
         _ <- char '!'
         cond <- (Just <$> tagAttribCond) <|> return Nothing
-        s <- many1 $ noneOf " \t.!="
+        s <- many1 $ noneOf " \t.!=\r\n"
         v <- (do
             _ <- char '='
             s' <- tagAttribValue
