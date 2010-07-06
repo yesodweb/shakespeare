@@ -51,6 +51,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "attrib vars" caseAttribVars
     , testCase "strings and html" caseStringsAndHtml
     , testCase "nesting" caseNesting
+    , testCase "trailing space" caseTrailingSpace
     ]
 
 data Url = Home | Sub SubUrl
@@ -353,3 +354,7 @@ caseNesting = do
     isBoolBlank _ = True
     isBoolTrue _ = False
     isBoolFalse _ = False
+
+caseTrailingSpace :: Assertion
+caseTrailingSpace =
+    helper "" [$hamlet|        |]

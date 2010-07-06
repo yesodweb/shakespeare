@@ -65,9 +65,9 @@ parseLines set s =
 
 parseLine :: HamletSettings -> Parser (Int, Line)
 parseLine set = do
-    ss <- fmap sum $ many ((char ' ' >> return 1) <|> (char '\t' >> return 4))
-    x <- (eol' >> return (LineContent [])) <|>
-         doctype <|>
+    ss <- fmap sum $ many ((char ' ' >> return 1) <|>
+                           (char '\t' >> return 4))
+    x <- doctype <|>
          backslash <|>
          try controlIf <|>
          try controlElseIf <|>
@@ -76,7 +76,12 @@ parseLine set = do
          try (string "$nothing" >> eol >> return LineNothing) <|>
          try controlForall <|>
          tag <|>
-         (LineContent <$> content InContent)
+         (do
+            cs <- content InContent
+            isEof <- (eof >> return True) <|> return False
+            if null cs && ss == 0 && isEof
+                then fail "End of Hamlet template"
+                else return $ LineContent cs)
     return (ss, x)
   where
     eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
@@ -125,7 +130,7 @@ parseLine set = do
         let (tn, attr, classes) = tag' $ x : xs
         return $ LineTag tn attr c classes
     content cr = do
-        x <- many1 $ content' cr
+        x <- many $ content' cr
         case cr of
             InQuotes -> char '"' >> return ()
             NotInQuotes -> return ()
