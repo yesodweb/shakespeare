@@ -1,4 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Text.Hamlet.Quasi
     ( hamlet
     , xhamlet
@@ -14,6 +16,13 @@ import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (mconcat, mappend, mempty)
 import Text.Blaze (unsafeByteString, Html, string)
 import Data.List (intercalate)
+
+class ToHtml a where
+    toHtml :: a -> Html ()
+instance ToHtml String where
+    toHtml = string
+instance ToHtml (Html a) where
+    toHtml x = x >> return ()
 
 type Scope = [(Ident, Exp)]
 
@@ -78,9 +87,8 @@ contentToExp _ _ (ContentRaw s) = do
     os <- [|unsafeByteString . S8.pack|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
-contentToExp _ scope (ContentVar True d) = return $ deref scope d
-contentToExp _ scope (ContentVar False d) = do
-    str <- [|string|]
+contentToExp _ scope (ContentVar d) = do
+    str <- [|toHtml|]
     return $ str `AppE` deref scope d
 contentToExp render scope (ContentUrl hasParams d) = do
     ou <- if hasParams then [|outputUrlParams|] else [|outputUrl|]

@@ -105,11 +105,11 @@ caseTag = helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [$hamlet|
 
 caseVar :: Assertion
 caseVar = do
-    helper "&lt;var&gt;" [$hamlet|$<var.theArg>$|]
+    helper "&lt;var&gt;" [$hamlet|$var.theArg$|]
 
 caseVarChain :: Assertion
 caseVarChain = do
-    helper "&lt;var&gt;" [$hamlet|$<var.getArg.getArg.getArg.theArg>$|]
+    helper "&lt;var&gt;" [$hamlet|$var.getArg.getArg.getArg.theArg$|]
 
 caseUrl :: Assertion
 caseUrl = do
@@ -247,7 +247,7 @@ caseConstructor = do
     helper "url" [$hamlet|@Home@|]
     helper "suburl" [$hamlet|@Sub.SubUrl@|]
     let text = "<raw text>"
-    helper "<raw text>" [$hamlet|$<preEscapedString.text>$|]
+    helper "<raw text>" [$hamlet|$preEscapedString.text$|]
 
 caseUrlParams :: Assertion
 caseUrlParams = do
@@ -308,20 +308,20 @@ caseQuotedAttribs =
 
 caseSpacedDerefs :: Assertion
 caseSpacedDerefs = do
-    helper "&lt;var&gt;" [$hamlet|$<var theArg>$|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$<var theArg>$|]
+    helper "&lt;var&gt;" [$hamlet|$var theArg$|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$var theArg$|]
 
 caseAttribVars :: Assertion
 caseAttribVars = do
-    helper "<div id=\"&lt;var&gt;\"></div>" [$hamlet|#$<var.theArg>$|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$<var.theArg>$|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|%div!f=$<var.theArg>$|]
+    helper "<div id=\"&lt;var&gt;\"></div>" [$hamlet|#$var.theArg$|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$var.theArg$|]
+    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|%div!f=$var.theArg$|]
 
 caseStringsAndHtml :: Assertion
 caseStringsAndHtml = do
     let str = "<string>"
     let html = preEscapedString "<html>"
-    helper "&lt;string&gt; <html>" [$hamlet|$str$ $<html>$|]
+    helper "&lt;string&gt; <html>" [$hamlet|$str$ $html$|]
 
 caseNesting :: Assertion
 caseNesting = do
