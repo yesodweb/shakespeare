@@ -52,6 +52,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "strings and html" caseStringsAndHtml
     , testCase "nesting" caseNesting
     , testCase "trailing space" caseTrailingSpace
+    , testCase "currency symbols" caseCurrency
     ]
 
 data Url = Home | Sub SubUrl
@@ -358,3 +359,9 @@ caseNesting = do
 caseTrailingSpace :: Assertion
 caseTrailingSpace =
     helper "" [$hamlet|        |]
+
+caseCurrency :: Assertion
+caseCurrency =
+    helper foo [$hamlet|$foo$|]
+  where
+    foo = "eg: 5, $6, €7.01, £75"
