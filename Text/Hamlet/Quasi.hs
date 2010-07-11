@@ -5,6 +5,9 @@ module Text.Hamlet.Quasi
     ( hamlet
     , xhamlet
     , hamletWithSettings
+    , hamletFile
+    , xhamletFile
+    , hamletFileWithSettings
     ) where
 
 import Text.Hamlet.Parse
@@ -116,15 +119,35 @@ xhamlet = hamletWithSettings $ HamletSettings doctype True where
 -- Please see accompanying documentation for a description of Hamlet syntax.
 hamletWithSettings :: HamletSettings -> QuasiQuoter
 hamletWithSettings set =
-    QuasiQuoter go $ error "Cannot quasi-quote Hamlet to patterns"
+    QuasiQuoter (hamletFromString set)
+      $ error "Cannot quasi-quote Hamlet to patterns"
+
+hamletFromString :: HamletSettings -> String -> Q Exp
+hamletFromString set s = do
+  case parseDoc set s of
+    Error s' -> error s'
+    Ok d -> do
+        render <- newName "_render"
+        func <- docsToExp (VarE render) [] d
+        return $ LamE [VarP render] func
+
+hamletFileWithSettings :: HamletSettings -> FilePath -> Q Exp
+hamletFileWithSettings set fp = do
+    contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    hamletFromString set contents
+
+-- | Calls 'hamletFileWithSettings' with 'defaultHamletSettings'.
+hamletFile :: FilePath -> Q Exp
+hamletFile = hamletFileWithSettings defaultHamletSettings
+
+-- | Calls 'hamletFileWithSettings' using XHTML 1.0 Strict settings.
+xhamletFile :: FilePath -> Q Exp
+xhamletFile =
+    hamletFileWithSettings $ HamletSettings doctype True
   where
-    go s = do
-      case parseDoc set s of
-        Error s' -> error s'
-        Ok d -> do
-            render <- newName "_render"
-            func <- docsToExp (VarE render) [] d
-            return $ LamE [VarP render] func
+    doctype =
+      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
+      "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
 
 deref :: Scope -> Deref -> Exp
 deref _ (Deref []) = error "Invalid empty deref"

@@ -2,8 +2,12 @@ module Text.Hamlet
     ( -- * Basic quasiquoters
       hamlet
     , xhamlet
-      -- * Build customized quasiquoters
+      -- * Load from external file
+    , hamletFile
+    , xhamletFile
+      -- * Customized settings
     , hamletWithSettings
+    , hamletFileWithSettings
     , HamletSettings (..)
     , defaultHamletSettings
       -- * Datatypes

@@ -1,4 +1,5 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
@@ -53,6 +54,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "nesting" caseNesting
     , testCase "trailing space" caseTrailingSpace
     , testCase "currency symbols" caseCurrency
+    , testCase "external" caseExternal
     ]
 
 data Url = Home | Sub SubUrl
@@ -365,3 +367,10 @@ caseCurrency =
     helper foo [$hamlet|$foo$|]
   where
     foo = "eg: 5, $6, €7.01, £75"
+
+caseExternal :: Assertion
+caseExternal = do
+    helper "foo<br>" $ $(hamletFile "external.hamlet")
+    helper "foo<br/>" $ $(xhamletFile "external.hamlet")
+  where
+    foo = "foo"
