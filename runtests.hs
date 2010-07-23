@@ -55,6 +55,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "trailing space" caseTrailingSpace
     , testCase "currency symbols" caseCurrency
     , testCase "external" caseExternal
+    , testCase "parens" caseParens
     ]
 
 data Url = Home | Sub SubUrl
@@ -374,3 +375,17 @@ caseExternal = do
     helper "foo<br/>" $ $(xhamletFile "external.hamlet")
   where
     foo = "foo"
+
+caseParens :: Assertion
+caseParens = do
+    let plus = (++)
+        x = "x"
+        y = "y"
+    helper "xy" [$hamlet|$(plus x) y$|]
+    helper "xy" [$hamlet|$(plus.x).y$|]
+    helper "xxy" [$hamlet|$(plus (plus x).x).y$|]
+    let list = ["1", "2", "3"]
+    helper "123" [$hamlet|
+$forall (id id.id id.list) x
+    $x$
+|]

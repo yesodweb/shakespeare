@@ -31,7 +31,8 @@ instance Applicative Result where
     pure = return
     (<*>) = ap
 
-newtype Deref = Deref [Ident] -- ^ is monadic, ident
+data Deref = DerefLeaf Ident
+           | DerefBranch Deref Deref
     deriving (Show, Eq, Read, Data, Typeable)
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
@@ -192,13 +193,19 @@ parseLine set = do
     tag'' (TagIdent s) (x, y, z) = (x, (Nothing, "id", s) : y, z)
     tag'' (TagClass s) (x, y, z) = (x, y, s : z)
     tag'' (TagAttrib s) (x, y, z) = (x, s : y, z)
+    derefParens = do
+        _ <- char '('
+        x <- deref True
+        _ <- char ')'
+        return x
+    derefSingle = derefParens <|> fmap DerefLeaf ident
     deref spaceAllowed = do
         let delim = if spaceAllowed
                         then (char '.' <|> (many1 (char ' ') >> return ' '))
                         else char '.'
-        x <- ident
-        xs <- many $ delim >> ident
-        return $ Deref $ x : xs
+        x <- derefSingle
+        xs <- many $ delim >> derefSingle
+        return $ foldr1 DerefBranch $ x : xs
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
 
 data TagPiece = TagName String

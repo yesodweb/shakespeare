@@ -150,15 +150,15 @@ xhamletFile =
       "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
 
 deref :: Scope -> Deref -> Exp
-deref _ (Deref []) = error "Invalid empty deref"
-deref scope (Deref d) =
-    let z' = case lookup z scope of
-                Nothing -> varName zName
-                Just zExp -> zExp
-     in foldr go z' y
+deref scope (DerefBranch x y) =
+    let x' = deref scope x
+        y' = deref scope y
+     in x' `AppE` y'
+deref scope (DerefLeaf d@(Ident dName)) =
+    case lookup d scope of
+        Nothing -> varName dName
+        Just exp' -> exp'
   where
-    z@(Ident zName) = last d
-    y = init d
     varName "" = error "Illegal empty varName"
     varName v@(s:_) =
         case lookup (Ident v) scope of
@@ -167,7 +167,6 @@ deref scope (Deref d) =
                 if isUpper s
                     then ConE $ mkName v
                     else VarE $ mkName v
-    go (Ident func) z' = varName func `AppE` z'
 
 -- | Checks for truth in the left value in each pair in the first argument. If
 -- a true exists, then the corresponding right action is performed. Only the
