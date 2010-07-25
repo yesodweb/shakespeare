@@ -193,11 +193,7 @@ parseLine set = do
     tag'' (TagIdent s) (x, y, z) = (x, (Nothing, "id", s) : y, z)
     tag'' (TagClass s) (x, y, z) = (x, y, s : z)
     tag'' (TagAttrib s) (x, y, z) = (x, s : y, z)
-    derefParens = do
-        _ <- char '('
-        x <- deref True
-        _ <- char ')'
-        return x
+    derefParens = between (char '(') (char ')') $ deref True
     derefSingle = derefParens <|> fmap DerefLeaf ident
     deref spaceAllowed = do
         let delim = if spaceAllowed
