@@ -3,7 +3,6 @@
 import Criterion.Main
 import qualified Data.ByteString.Lazy.Char8 as L
 import Text.Hamlet
-import Text.Hamlet.Monad
 import Data.ByteString.Char8 (pack)
 
 bigTable :: ([Int], [Int]) -> L.ByteString
