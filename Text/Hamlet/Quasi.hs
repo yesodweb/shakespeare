@@ -4,7 +4,10 @@
 module Text.Hamlet.Quasi
     ( hamlet
     , xhamlet
+    , hamlet'
+    , xhamlet'
     , hamletWithSettings
+    , hamletWithSettings'
     , hamletFile
     , xhamletFile
     , hamletFileWithSettings
@@ -101,16 +104,21 @@ contentToExp render scope (ContentEmbed d) = do
     let d' = deref scope d
     return (d' `AppE` render)
 
+-- | Calls 'hamletWithSettings'' with 'defaultHamletSettings'.
+hamlet' :: QuasiQuoter
+hamlet' = hamletWithSettings' defaultHamletSettings
+
+-- | Calls 'hamletWithSettings'' using XHTML 1.0 Strict settings.
+xhamlet' :: QuasiQuoter
+xhamlet' = hamletWithSettings' xhtmlHamletSettings
+
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings defaultHamletSettings
 
 -- | Calls 'hamletWithSettings' using XHTML 1.0 Strict settings.
 xhamlet :: QuasiQuoter
-xhamlet = hamletWithSettings $ HamletSettings doctype True where
-    doctype =
-      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
-      "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
+xhamlet = hamletWithSettings xhtmlHamletSettings
 
 -- | A quasi-quoter that converts Hamlet syntax into a function of form:
 --
@@ -121,6 +129,17 @@ hamletWithSettings :: HamletSettings -> QuasiQuoter
 hamletWithSettings set =
     QuasiQuoter (hamletFromString set)
       $ error "Cannot quasi-quote Hamlet to patterns"
+
+-- | A quasi-quoter that converts Hamlet syntax into a 'Html' ().
+--
+-- Please see accompanying documentation for a description of Hamlet syntax.
+hamletWithSettings' :: HamletSettings -> QuasiQuoter
+hamletWithSettings' set =
+    QuasiQuoter (\s -> do
+        x <- hamletFromString set s
+        id' <- [|id|]
+        return $ x `AppE` id')
+    $ error "Cannot quasi-quote Hamlet to patterns"
 
 hamletFromString :: HamletSettings -> String -> Q Exp
 hamletFromString set s = do

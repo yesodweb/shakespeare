@@ -8,6 +8,7 @@ module Text.Hamlet.Parse
     , parseDoc
     , HamletSettings (..)
     , defaultHamletSettings
+    , xhtmlHamletSettings
     )
     where
 
@@ -331,6 +332,14 @@ data HamletSettings = HamletSettings
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
 defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False
+
+xhtmlHamletSettings :: HamletSettings
+xhtmlHamletSettings =
+    HamletSettings doctype True
+  where
+    doctype =
+      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
+      "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
 
 data CloseStyle = NoClose | CloseInside | CloseSeparate
 

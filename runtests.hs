@@ -56,6 +56,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "currency symbols" caseCurrency
     , testCase "external" caseExternal
     , testCase "parens" caseParens
+    , testCase "hamlet' and xhamlet'" caseHamlet'
     ]
 
 data Url = Home | Sub SubUrl
@@ -354,7 +355,7 @@ caseNesting = do
   where
     users = ["1", "2"]
     name = "foo"
-    val = 5
+    val = 5 :: Int
     isBoolBlank _ = True
     isBoolTrue _ = False
     isBoolFalse _ = False
@@ -384,8 +385,18 @@ caseParens = do
     helper "xy" [$hamlet|$(plus x) y$|]
     helper "xy" [$hamlet|$(plus.x).y$|]
     helper "xxy" [$hamlet|$(plus (plus x).x).y$|]
-    let list = ["1", "2", "3"]
+    let alist = ["1", "2", "3"]
     helper "123" [$hamlet|
-$forall (id id.id id.list) x
+$forall (id id.id id.alist) x
     $x$
 |]
+
+helper' :: String -> Html ()-> Assertion
+helper' res h = do
+    let x = renderHtml h
+    res @=? toString x
+
+caseHamlet' :: Assertion
+caseHamlet' = do
+    helper' "foo" [$hamlet'|foo|]
+    helper' "foo" [$xhamlet'|foo|]

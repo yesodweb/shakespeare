@@ -2,6 +2,8 @@ module Text.Hamlet
     ( -- * Basic quasiquoters
       hamlet
     , xhamlet
+    , hamlet'
+    , xhamlet'
       -- * Load from external file
     , hamletFile
     , xhamletFile
