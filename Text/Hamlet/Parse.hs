@@ -9,6 +9,7 @@ module Text.Hamlet.Parse
     , HamletSettings (..)
     , defaultHamletSettings
     , xhtmlHamletSettings
+    , debugHamletSettings
     )
     where
 
@@ -266,6 +267,8 @@ nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
                  _ -> DocContent $ ContentRaw ">"
         start = DocContent $ ContentRaw $ "<" ++ tn
         attrs'' = concatMap attrToContent attrs'
+        newline = DocContent $ ContentRaw
+                $ if hamletCloseNewline set then "\n" else ""
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ start
@@ -274,6 +277,7 @@ nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
        : map DocContent content
       ++ inside'
       ++ end
+       : newline
        : rest'
 nestToDoc set (Nest (LineContent content) inside:rest) = do
     inside' <- nestToDoc set inside
@@ -327,19 +331,24 @@ data HamletSettings = HamletSettings
       -- | 'True' means to close empty tags (eg, img) with a trailing slash, ie
       -- XML-style empty tags. 'False' uses HTML-style.
     , hamletCloseEmpties :: Bool
+      -- | Should we put a newline after closing a tag?
+    , hamletCloseNewline :: Bool
     }
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
-defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False
+defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False False
 
 xhtmlHamletSettings :: HamletSettings
 xhtmlHamletSettings =
-    HamletSettings doctype True
+    HamletSettings doctype True False
   where
     doctype =
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
       "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
+
+debugHamletSettings :: HamletSettings
+debugHamletSettings = HamletSettings "<!DOCTYPE html>" False True
 
 data CloseStyle = NoClose | CloseInside | CloseSeparate
 

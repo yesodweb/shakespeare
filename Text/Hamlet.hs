@@ -4,6 +4,7 @@ module Text.Hamlet
     , xhamlet
     , hamlet'
     , xhamlet'
+    , hamletDebug
       -- * Load from external file
     , hamletFile
     , xhamletFile

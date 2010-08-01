@@ -57,6 +57,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "external" caseExternal
     , testCase "parens" caseParens
     , testCase "hamlet' and xhamlet'" caseHamlet'
+    , testCase "hamletDebug" caseHamletDebug
     ]
 
 data Url = Home | Sub SubUrl
@@ -400,3 +401,10 @@ caseHamlet' :: Assertion
 caseHamlet' = do
     helper' "foo" [$hamlet'|foo|]
     helper' "foo" [$xhamlet'|foo|]
+
+caseHamletDebug :: Assertion
+caseHamletDebug = do
+    helper "<p>foo</p>\n<p>bar</p>\n" [$hamletDebug|
+%p foo
+%p bar
+|]

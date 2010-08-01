@@ -6,6 +6,7 @@ module Text.Hamlet.Quasi
     , xhamlet
     , hamlet'
     , xhamlet'
+    , hamletDebug
     , hamletWithSettings
     , hamletWithSettings'
     , hamletFile
@@ -116,6 +117,10 @@ xhamlet' = hamletWithSettings' xhtmlHamletSettings
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings defaultHamletSettings
 
+-- | Calls 'hamletWithSettings' with 'debugHamletSettings'.
+hamletDebug :: QuasiQuoter
+hamletDebug = hamletWithSettings debugHamletSettings
+
 -- | Calls 'hamletWithSettings' using XHTML 1.0 Strict settings.
 xhamlet :: QuasiQuoter
 xhamlet = hamletWithSettings xhtmlHamletSettings
@@ -161,12 +166,7 @@ hamletFile = hamletFileWithSettings defaultHamletSettings
 
 -- | Calls 'hamletFileWithSettings' using XHTML 1.0 Strict settings.
 xhamletFile :: FilePath -> Q Exp
-xhamletFile =
-    hamletFileWithSettings $ HamletSettings doctype True
-  where
-    doctype =
-      "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
-      "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
+xhamletFile = hamletFileWithSettings xhtmlHamletSettings
 
 deref :: Scope -> Deref -> Exp
 deref scope (DerefBranch x y) =
