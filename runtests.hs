@@ -6,7 +6,6 @@ import Test.HUnit hiding (Test)
 
 import Text.Hamlet
 import Data.ByteString.Lazy.UTF8 (toString)
-import Data.Object
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -418,6 +417,11 @@ caseHamletRT = do
                 [ "$foo.bar.baz$ bin $"
                 , "$forall list l"
                 , "  $l$"
+                , "$maybe just j"
+                , "  $j$"
+                , "$maybe nothing n"
+                , "$nothing"
+                , "  nothing"
                 ]
     let scope =
             HDMap
@@ -431,6 +435,8 @@ caseHamletRT = do
                     , HDHtml $ string "2"
                     , HDHtml $ string "3"
                     ])
+                , ("just", HDMaybe $ Just $ HDHtml $ string "just")
+                , ("nothing", HDMaybe Nothing)
                 ]
     rend <- renderHamletRT rt scope
-    toString (renderHtml rend) @?= "foo<bar>baz bin 123"
+    toString (renderHtml rend) @?= "foo<bar>baz bin 123justnothing"

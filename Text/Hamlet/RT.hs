@@ -18,12 +18,14 @@ import Text.Hamlet.Parse
 import Data.List (intercalate)
 
 data HamletData = HDHtml (Html ())
+                | HDMaybe (Maybe HamletData)
                 | HDList [HamletData]
                 | HDMap [(String, HamletData)]
 
 data SimpleDoc = SDRaw String
                | SDVar [String]
                | SDForall [String] String [SimpleDoc]
+               | SDMaybe [String] String [SimpleDoc] [SimpleDoc]
 
 newtype HamletRT = HamletRT [SimpleDoc]
 
@@ -44,6 +46,11 @@ parseHamletRT set s =
         deref' <- flattenDeref x deref
         docs' <- mapM convert docs
         return $ SDForall deref' ident docs'
+    convert x@(DocMaybe deref (Ident ident) jdocs ndocs) = do
+        deref' <- flattenDeref x deref
+        jdocs' <- mapM convert jdocs
+        ndocs' <- maybe (return []) (mapM convert) ndocs
+        return $ SDMaybe deref' ident jdocs' ndocs'
     convert (DocContent (ContentRaw s')) = return $ SDRaw s'
     convert x@(DocContent (ContentVar deref)) =
         case flattenDeref x deref of
@@ -77,6 +84,14 @@ renderHamletRT (HamletRT docs) (HDMap scope0) =
                     let scope' = HDMap $ (ident, o) : scope
                     renderHamletRT (HamletRT docs') scope'
             _ -> fa $ intercalate "." n ++ ": expected HDList"
+    go scope (SDMaybe n ident jdocs ndocs) = do
+        v <- lookup' n n $ HDMap scope
+        (scope', docs') <-
+            case v of
+                HDMaybe Nothing -> return (scope, ndocs)
+                HDMaybe (Just o) -> return ((ident, o) : scope, jdocs)
+                _ -> fa $ intercalate "." n ++ ": expected HDMaybe"
+        renderHamletRT (HamletRT docs') $ HDMap scope'
     lookup' _ [] x = return x
     lookup' orig (n:ns) (HDMap m) =
         case lookup n m of
