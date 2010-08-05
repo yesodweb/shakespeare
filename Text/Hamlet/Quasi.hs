@@ -12,6 +12,7 @@ module Text.Hamlet.Quasi
     , hamletFile
     , xhamletFile
     , hamletFileWithSettings
+    , showParams
     ) where
 
 import Text.Hamlet.Parse
@@ -216,8 +217,11 @@ outputUrlParams render (u, []) = outputUrl render u
 outputUrlParams render (u, params) = mappend
     (outputUrl render u)
     (string $ showParams params)
+
+showParams :: [(String, String)] -> String
+showParams z =
+    '?' : intercalate "&" (map go z)
   where
-    showParams x = '?' : intercalate "&" (map go x)
     go (x, y) = go' x ++ '=' : go' y
     go' = concatMap encodeUrlChar
 

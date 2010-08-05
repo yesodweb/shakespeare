@@ -15,10 +15,12 @@ import Data.Typeable (Typeable)
 import Control.Failure
 import Text.Blaze
 import Text.Hamlet.Parse
+import Text.Hamlet.Quasi (showParams)
 import Data.List (intercalate)
 
 data HamletData url = HDHtml (Html ())
                     | HDUrl url
+                    | HDUrlParams url [(String, String)]
                     | HDTemplate HamletRT
                     | HDBool Bool
                     | HDMaybe (Maybe (HamletData url))
@@ -27,7 +29,7 @@ data HamletData url = HDHtml (Html ())
 
 data SimpleDoc = SDRaw String
                | SDVar [String]
-               | SDUrl [String]
+               | SDUrl Bool [String]
                | SDTemplate [String]
                | SDForall [String] String [SimpleDoc]
                | SDMaybe [String] String [SimpleDoc] [SimpleDoc]
@@ -61,9 +63,9 @@ parseHamletRT set s =
     convert x@(DocContent (ContentVar deref)) = do
         y <- flattenDeref x deref
         return $ SDVar y
-    convert x@(DocContent (ContentUrl False deref)) = do
+    convert x@(DocContent (ContentUrl p deref)) = do
         y <- flattenDeref x deref
-        return $ SDUrl y
+        return $ SDUrl p y
     convert x@(DocContent (ContentEmbed deref)) = do
         y <- flattenDeref x deref
         return $ SDTemplate y
@@ -76,7 +78,6 @@ parseHamletRT set s =
             deref' <- flattenDeref x deref
             docs'' <- mapM convert docs'
             return (deref', docs'')
-    convert x = failure $ HamletUnsupportedDocException x
     flattenDeref _ (DerefLeaf (Ident x)) = return [x]
     flattenDeref orig (DerefBranch (DerefLeaf (Ident x)) y) = do
         y' <- flattenDeref orig y
@@ -97,11 +98,14 @@ renderHamletRT (HamletRT docs) (HDMap scope0) renderUrl =
         case v of
             HDHtml h -> return h
             _ -> fa $ intercalate "." n ++ ": expected HDHtml"
-    go scope (SDUrl n) = do
+    go scope (SDUrl p n) = do
         v <- lookup' n n $ HDMap scope
-        case v of
-            HDUrl u -> return $ preEscapedString $ renderUrl u
-            _ -> fa $ intercalate "." n ++ ": expected HDUrl "
+        case (p, v) of
+            (False, HDUrl u) -> return $ preEscapedString $ renderUrl u
+            (True, HDUrlParams u q) ->
+                return $ preEscapedString $ renderUrl u ++ showParams q
+            (False, _) -> fa $ intercalate "." n ++ ": expected HDUrl"
+            (True, _) -> fa $ intercalate "." n ++ ": expected HDUrlParams"
     go scope (SDTemplate n) = do
         v <- lookup' n n $ HDMap scope
         case v of

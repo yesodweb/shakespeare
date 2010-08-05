@@ -432,6 +432,7 @@ caseHamletRT = do
                 , "$if false"
                 , "$else"
                 , "  b"
+                , "@?urlp@"
                 ]
     let scope =
             HDMap
@@ -450,8 +451,10 @@ caseHamletRT = do
                 , ("template", HDTemplate temp)
                 , ("var", HDHtml $ string "var")
                 , ("url", HDUrl Home)
+                , ("urlp", HDUrlParams Home [("foo", "bar")])
                 , ("true", HDBool True)
                 , ("false", HDBool False)
                 ]
     rend <- renderHamletRT rt scope render
-    toString (renderHtml rend) @?= "foo<bar>baz bin 123justnothingvarurlab"
+    toString (renderHtml rend) @?=
+        "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
