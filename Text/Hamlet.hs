@@ -13,6 +13,7 @@ module Text.Hamlet
     , hamletFileWithSettings
     , HamletSettings (..)
     , defaultHamletSettings
+    , xhtmlHamletSettings
       -- * Datatypes
     , Html
     , Hamlet
@@ -23,10 +24,16 @@ module Text.Hamlet
     , string
     , unsafeByteString
     , cdata
+      -- * Runtime Hamlet
+    , HamletRT
+    , HamletException (..)
+    , parseHamletRT
+    , renderHamletRT
     ) where
 
 import Text.Hamlet.Parse
 import Text.Hamlet.Quasi
+import Text.Hamlet.RT
 import Text.Blaze
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid (mappend)

@@ -6,6 +6,7 @@ import Test.HUnit hiding (Test)
 
 import Text.Hamlet
 import Data.ByteString.Lazy.UTF8 (toString)
+import Data.Object
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -58,6 +59,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "parens" caseParens
     , testCase "hamlet' and xhamlet'" caseHamlet'
     , testCase "hamletDebug" caseHamletDebug
+    , testCase "hamlet runtime" caseHamletRT
     ]
 
 data Url = Home | Sub SubUrl
@@ -408,3 +410,17 @@ caseHamletDebug = do
 %p foo
 %p bar
 |]
+
+caseHamletRT :: Assertion
+caseHamletRT = do
+    rt <- parseHamletRT defaultHamletSettings "$foo.bar.baz$ bin"
+    let scope =
+            Mapping
+                [ ("foo", Mapping
+                    [ ("bar", Mapping
+                        [ ("baz", Scalar $ preEscapedString "foo<bar>baz")
+                        ])
+                    ])
+                ]
+    rend <- renderHamletRT rt scope
+    toString (renderHtml rend) @?= "foo<bar>baz bin"
