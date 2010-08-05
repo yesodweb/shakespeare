@@ -267,8 +267,8 @@ nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
                  _ -> DocContent $ ContentRaw ">"
         start = DocContent $ ContentRaw $ "<" ++ tn
         attrs'' = concatMap attrToContent attrs'
-        newline = DocContent $ ContentRaw
-                $ if hamletCloseNewline set then "\n" else ""
+        newline' = DocContent $ ContentRaw
+                 $ if hamletCloseNewline set then "\n" else ""
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ start
@@ -277,7 +277,7 @@ nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
        : map DocContent content
       ++ inside'
       ++ end
-       : newline
+       : newline'
        : rest'
 nestToDoc set (Nest (LineContent content) inside:rest) = do
     inside' <- nestToDoc set inside

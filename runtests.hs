@@ -413,7 +413,12 @@ caseHamletDebug = do
 
 caseHamletRT :: Assertion
 caseHamletRT = do
-    rt <- parseHamletRT defaultHamletSettings "$foo.bar.baz$ bin"
+    rt <- parseHamletRT defaultHamletSettings $
+            unlines
+                [ "$foo.bar.baz$ bin $"
+                , "$forall list l"
+                , "  $l$"
+                ]
     let scope =
             Mapping
                 [ ("foo", Mapping
@@ -421,6 +426,11 @@ caseHamletRT = do
                         [ ("baz", Scalar $ preEscapedString "foo<bar>baz")
                         ])
                     ])
+                , ("list", Sequence
+                    [ Scalar $ string "1"
+                    , Scalar $ string "2"
+                    , Scalar $ string "3"
+                    ])
                 ]
     rend <- renderHamletRT rt scope
-    toString (renderHtml rend) @?= "foo<bar>baz bin"
+    toString (renderHtml rend) @?= "foo<bar>baz bin 123"
