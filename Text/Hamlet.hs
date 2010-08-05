@@ -26,6 +26,7 @@ module Text.Hamlet
     , cdata
       -- * Runtime Hamlet
     , HamletRT
+    , HamletData (..)
     , HamletException (..)
     , parseHamletRT
     , renderHamletRT

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Text.Hamlet.RT
     ( HamletRT
+    , HamletData (..)
     , HamletException (..)
     , parseHamletRT
     , renderHamletRT
@@ -14,8 +15,11 @@ import Data.Typeable (Typeable)
 import Control.Failure
 import Text.Blaze
 import Text.Hamlet.Parse
-import Data.Object
 import Data.List (intercalate)
+
+data HamletData = HDHtml (Html ())
+                | HDList [HamletData]
+                | HDMap [(String, HamletData)]
 
 data SimpleDoc = SDRaw String
                | SDVar [String]
@@ -54,31 +58,31 @@ parseHamletRT set s =
 
 renderHamletRT :: Failure HamletException m
                => HamletRT
-               -> Object String (Html ())
+               -> HamletData
                -> m (Html ())
-renderHamletRT (HamletRT docs) (Mapping scope0) =
+renderHamletRT (HamletRT docs) (HDMap scope0) =
     liftM mconcat $ mapM (go scope0) docs
   where
     go _ (SDRaw s) = return $ preEscapedString s
     go scope (SDVar n) = do
-        v <- lookup' n n $ Mapping scope
+        v <- lookup' n n $ HDMap scope
         case v of
-            Scalar h -> return h
-            _ -> fa $ intercalate "." n ++ ": expected scalar"
+            HDHtml h -> return h
+            _ -> fa $ intercalate "." n ++ ": expected HDHtml"
     go scope (SDForall n ident docs') = do
-        v <- lookup' n n $ Mapping scope
+        v <- lookup' n n $ HDMap scope
         case v of
-            Sequence os -> do
+            HDList os -> do
                 liftM mconcat $ forM os $ \o -> do
-                    let scope' = Mapping $ (ident, o) : scope
+                    let scope' = HDMap $ (ident, o) : scope
                     renderHamletRT (HamletRT docs') scope'
-            _ -> fa $ intercalate "." n ++ ": expected sequence"
+            _ -> fa $ intercalate "." n ++ ": expected HDList"
     lookup' _ [] x = return x
-    lookup' orig (n:ns) (Mapping m) =
+    lookup' orig (n:ns) (HDMap m) =
         case lookup n m of
             Nothing -> fa $ intercalate "." orig ++ " not found"
             Just o -> lookup' orig ns o
     lookup' orig _ _ = fa $ intercalate "." orig ++ ": unexpected type"
     fa = failure . HamletRenderException
 renderHamletRT _ _ =
-    failure $ HamletRenderException "renderHamletRT must be given a Mapping"
+    failure $ HamletRenderException "renderHamletRT must be given a HDMap"

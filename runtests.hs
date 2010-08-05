@@ -420,16 +420,16 @@ caseHamletRT = do
                 , "  $l$"
                 ]
     let scope =
-            Mapping
-                [ ("foo", Mapping
-                    [ ("bar", Mapping
-                        [ ("baz", Scalar $ preEscapedString "foo<bar>baz")
+            HDMap
+                [ ("foo", HDMap
+                    [ ("bar", HDMap
+                        [ ("baz", HDHtml $ preEscapedString "foo<bar>baz")
                         ])
                     ])
-                , ("list", Sequence
-                    [ Scalar $ string "1"
-                    , Scalar $ string "2"
-                    , Scalar $ string "3"
+                , ("list", HDList
+                    [ HDHtml $ string "1"
+                    , HDHtml $ string "2"
+                    , HDHtml $ string "3"
                     ])
                 ]
     rend <- renderHamletRT rt scope
