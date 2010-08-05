@@ -20,6 +20,7 @@ import Data.List (intercalate)
 data HamletData url = HDHtml (Html ())
                     | HDUrl url
                     | HDTemplate HamletRT
+                    | HDBool Bool
                     | HDMaybe (Maybe (HamletData url))
                     | HDList [HamletData url]
                     | HDMap [(String, HamletData url)]
@@ -30,6 +31,7 @@ data SimpleDoc = SDRaw String
                | SDTemplate [String]
                | SDForall [String] String [SimpleDoc]
                | SDMaybe [String] String [SimpleDoc] [SimpleDoc]
+               | SDCond [([String], [SimpleDoc])] [SimpleDoc]
 
 newtype HamletRT = HamletRT [SimpleDoc]
 
@@ -65,6 +67,15 @@ parseHamletRT set s =
     convert x@(DocContent (ContentEmbed deref)) = do
         y <- flattenDeref x deref
         return $ SDTemplate y
+    convert x@(DocCond conds els) = do
+        conds' <- mapM go conds
+        els' <- maybe (return []) (mapM convert) els
+        return $ SDCond conds' els'
+      where
+        go (deref, docs') = do
+            deref' <- flattenDeref x deref
+            docs'' <- mapM convert docs'
+            return (deref', docs'')
     convert x = failure $ HamletUnsupportedDocException x
     flattenDeref _ (DerefLeaf (Ident x)) = return [x]
     flattenDeref orig (DerefBranch (DerefLeaf (Ident x)) y) = do
@@ -112,6 +123,15 @@ renderHamletRT (HamletRT docs) (HDMap scope0) renderUrl =
                 HDMaybe (Just o) -> return ((ident, o) : scope, jdocs)
                 _ -> fa $ intercalate "." n ++ ": expected HDMaybe"
         renderHamletRT (HamletRT docs') (HDMap scope') renderUrl
+    go scope (SDCond [] docs') =
+        renderHamletRT (HamletRT docs') (HDMap scope) renderUrl
+    go scope (SDCond ((b, docs'):cs) els) = do
+        v <- lookup' b b $ HDMap scope
+        case v of
+            HDBool True ->
+                renderHamletRT (HamletRT docs') (HDMap scope) renderUrl
+            HDBool False -> go scope (SDCond cs els)
+            _ -> fa $ intercalate "." b ++ ": expected HDBool"
     lookup' _ [] x = return x
     lookup' orig (n:ns) (HDMap m) =
         case lookup n m of
