@@ -1,11 +1,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+-- | Most everything exported here is exported also by "Text.Hamlet". The
+-- exceptions to that rule should not be necessary for normal usage.
 module Text.Hamlet.RT
-    ( HamletRT
+    ( -- * Public API
+      HamletRT (..)
     , HamletData (..)
     , HamletException (..)
     , parseHamletRT
     , renderHamletRT
+    , SimpleDoc (..)
     ) where
 
 import Data.Monoid (mconcat)
