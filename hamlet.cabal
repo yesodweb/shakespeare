@@ -47,9 +47,9 @@ library
                      parsec >= 2 && < 4,
                      failure >= 0.1.0 && < 0.2
     exposed-modules: Text.Hamlet
+                     Text.Hamlet.RT
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
-                     Text.Hamlet.RT
     ghc-options:     -Wall
 
 executable             runtests
