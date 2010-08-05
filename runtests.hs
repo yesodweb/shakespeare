@@ -412,6 +412,7 @@ caseHamletDebug = do
 
 caseHamletRT :: Assertion
 caseHamletRT = do
+    temp <- parseHamletRT defaultHamletSettings "$var$"
     rt <- parseHamletRT defaultHamletSettings $
             unlines
                 [ "$foo.bar.baz$ bin $"
@@ -422,6 +423,7 @@ caseHamletRT = do
                 , "$maybe nothing n"
                 , "$nothing"
                 , "  nothing"
+                , "^template^"
                 ]
     let scope =
             HDMap
@@ -437,6 +439,8 @@ caseHamletRT = do
                     ])
                 , ("just", HDMaybe $ Just $ HDHtml $ string "just")
                 , ("nothing", HDMaybe Nothing)
+                , ("template", HDTemplate temp)
+                , ("var", HDHtml $ string "var")
                 ]
     rend <- renderHamletRT rt scope
-    toString (renderHtml rend) @?= "foo<bar>baz bin 123justnothing"
+    toString (renderHtml rend) @?= "foo<bar>baz bin 123justnothingvar"

@@ -18,12 +18,14 @@ import Text.Hamlet.Parse
 import Data.List (intercalate)
 
 data HamletData = HDHtml (Html ())
+                | HDTemplate HamletRT
                 | HDMaybe (Maybe HamletData)
                 | HDList [HamletData]
                 | HDMap [(String, HamletData)]
 
 data SimpleDoc = SDRaw String
                | SDVar [String]
+               | SDTemplate [String]
                | SDForall [String] String [SimpleDoc]
                | SDMaybe [String] String [SimpleDoc] [SimpleDoc]
 
@@ -52,10 +54,12 @@ parseHamletRT set s =
         ndocs' <- maybe (return []) (mapM convert) ndocs
         return $ SDMaybe deref' ident jdocs' ndocs'
     convert (DocContent (ContentRaw s')) = return $ SDRaw s'
-    convert x@(DocContent (ContentVar deref)) =
-        case flattenDeref x deref of
-            Nothing -> failure $ HamletUnsupportedDocException x
-            Just s' -> return $ SDVar s'
+    convert x@(DocContent (ContentVar deref)) = do
+        y <- flattenDeref x deref
+        return $ SDVar y
+    convert x@(DocContent (ContentEmbed deref)) = do
+        y <- flattenDeref x deref
+        return $ SDTemplate y
     convert x = failure $ HamletUnsupportedDocException x
     flattenDeref _ (DerefLeaf (Ident x)) = return [x]
     flattenDeref orig (DerefBranch (DerefLeaf (Ident x)) y) = do
@@ -76,6 +80,11 @@ renderHamletRT (HamletRT docs) (HDMap scope0) =
         case v of
             HDHtml h -> return h
             _ -> fa $ intercalate "." n ++ ": expected HDHtml"
+    go scope (SDTemplate n) = do
+        v <- lookup' n n $ HDMap scope
+        case v of
+            HDTemplate h -> renderHamletRT h $ HDMap scope
+            _ -> fa $ intercalate "." n ++ ": expected HDTemplate"
     go scope (SDForall n ident docs') = do
         v <- lookup' n n $ HDMap scope
         case v of
