@@ -60,7 +60,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamletDebug" caseHamletDebug
     , testCase "hamlet runtime" caseHamletRT
     , testCase "hamlet runtime" caseHamletRT
-    , testCase "hamletFileDebug" caseHamletFileDebug
+    , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
+    , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
     ]
 
 data Url = Home | Sub SubUrl
@@ -466,11 +467,19 @@ bar = $(hamletFileDebug "external-debug.hamlet")
   where
     foo = "foo"
 
-caseHamletFileDebug :: Assertion
-caseHamletFileDebug = do
+caseHamletFileDebugChange :: Assertion
+caseHamletFileDebugChange = do
     let foo = "foo"
     writeFile "external-debug.hamlet" "$foo$ 1"
     helper "foo 1" $ $(hamletFileDebug "external-debug.hamlet")
     writeFile "external-debug.hamlet" "$foo$ 2"
     helper "foo 2" $ $(hamletFileDebug "external-debug.hamlet")
     writeFile "external-debug.hamlet" "$foo$ 1"
+
+caseHamletFileDebugFeatures :: Assertion
+caseHamletFileDebugFeatures = do
+    let var = "var"
+    flip helper $(hamletFileDebug "external-debug2.hamlet") $ concat
+        [ "var"
+        , "var"
+        ]

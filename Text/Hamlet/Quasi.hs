@@ -14,6 +14,7 @@ module Text.Hamlet.Quasi
     , hamletFileWithSettings
     , showParams
     , ToHtml (..)
+    , varName
     ) where
 
 import Text.Hamlet.Parse
@@ -177,17 +178,18 @@ deref scope (DerefBranch x y) =
      in x' `AppE` y'
 deref scope (DerefLeaf d@(Ident dName)) =
     case lookup d scope of
-        Nothing -> varName dName
+        Nothing -> varName scope dName
         Just exp' -> exp'
-  where
-    varName "" = error "Illegal empty varName"
-    varName v@(s:_) =
-        case lookup (Ident v) scope of
-            Just e -> e
-            Nothing ->
-                if isUpper s
-                    then ConE $ mkName v
-                    else VarE $ mkName v
+
+varName :: Scope -> String -> Exp
+varName _ "" = error "Illegal empty varName"
+varName scope v@(s:_) =
+    case lookup (Ident v) scope of
+        Just e -> e
+        Nothing ->
+            if isUpper s
+                then ConE $ mkName v
+                else VarE $ mkName v
 
 -- | Checks for truth in the left value in each pair in the first argument. If
 -- a true exists, then the corresponding right action is performed. Only the

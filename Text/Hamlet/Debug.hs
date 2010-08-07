@@ -12,6 +12,10 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.ByteString.UTF8 as BSU
 import Text.Blaze
 import Data.Maybe (catMaybes)
+import Data.List
+import Data.Ord
+import Data.Function
+import Control.Arrow
 
 unsafeRenderTemplate :: FilePath -> HamletData url
                      -> (url -> String) -> Html ()
@@ -27,10 +31,28 @@ hamletFileDebug fp = do
     urt <- [|unsafeRenderTemplate|]
     hd <- fmap catMaybes $ mapM getHD docs
     hdm <- [|HDMap|]
-    return $ urt `AppE` LitE (StringL fp) `AppE` (hdm `AppE` ListE hd)
+    hd' <- combineHDs hd
+    return $ urt `AppE` LitE (StringL fp) `AppE` hd'
 
-getHD :: SimpleDoc -> Q (Maybe Exp)
-getHD (SDVar [x]) = do
+derefToExp :: [String] -> Exp
+derefToExp = foldr1 AppE . map (varName [])
+
+combineHDs :: [([String], Exp)] -> Q Exp
+combineHDs [([], y)] = return y
+combineHDs pairs = do
+    pairs' <- mapM (\(x, y) -> do
+                y' <- combineHDs y
+                return $ TupE [LitE $ StringL x, y'])
+            $ map (fst . head &&& map snd)
+            $ groupBy ((==) `on` fst)
+            $ sortBy (comparing fst)
+            $ map (\(x:xs, y) -> (x, (xs, y))) pairs
+    hm <- [|HDMap|]
+    return $ hm `AppE` ListE pairs'
+
+
+getHD :: SimpleDoc -> Q (Maybe ([String], Exp))
+getHD (SDVar x) = do
     th <- [|HDHtml . toHtml|]
-    return $ Just $ TupE [LitE $ StringL x, th `AppE` VarE (mkName x)]
+    return $ Just (x, th `AppE` derefToExp x)
 getHD _ = return Nothing
