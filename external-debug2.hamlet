@@ -19,3 +19,6 @@ $maybe just j
 $maybe nothing _
 $nothing
     nothing
+$forall list l
+    $id.id.l$
+    $extra$

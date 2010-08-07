@@ -169,6 +169,8 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
             Just o -> lookup'' orig ns o
     lookup'' orig ns _ =
         fa $ showName orig ++ ": expected a map" ++ ", rem: " ++ show ns
+renderHamletRT' _ _ _ _ =
+    fa "renderHamletRT' must be given a HDMap"
 
 fa :: Failure HamletException m => String -> m a
 fa = failure . HamletRenderException

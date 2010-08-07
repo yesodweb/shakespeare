@@ -479,6 +479,8 @@ caseHamletFileDebugFeatures = do
     let true = True
     let just = Just "just"
         nothing = Nothing
+    let list = words "1 2 3"
+    let extra = "e"
     flip helper $(hamletFileDebug "external-debug2.hamlet") $ concat
         [ "var"
         , "var"
@@ -493,4 +495,5 @@ caseHamletFileDebugFeatures = do
         , "just"
         , "just"
         , "nothing"
+        , "1e2e3e"
         ]

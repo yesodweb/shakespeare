@@ -48,7 +48,6 @@ combineHDs pairs = do
                     _ -> do
                         let y' = map (\(a, b) ->
                                     (if null a then [""] else a, b)) y
-                        q <- newName "x"
                         y'' <- combineHDs y'
                         return $ TupE [LitE $ StringL x, y''])
             $ map (fst . head &&& map snd)
@@ -88,8 +87,21 @@ getHD render (SDMaybe x y docs _) = do
     jsubs <- combineHDs subs
     let jsubs' = LamE [VarP $ mkName y] jsubs
     e <- [|\a -> HDMaybe . fmap a|]
-    return [(x, e `AppE` jsubs' `AppE` derefToExp x)]
+    return $ (x, e `AppE` jsubs' `AppE` derefToExp x) : tops
   where
     go (a@(y':rest), e)
         | y == y' = Right (rest, e)
         | otherwise = Left (a, e)
+    go ([], _) = error "getHD of SDMaybe"
+getHD render (SDForall x y docs) = do
+    hd <- fmap concat $ mapM (getHD render) docs
+    let (tops, subs) = partitionEithers $ map go hd
+    jsubs <- combineHDs subs
+    let jsubs' = LamE [VarP $ mkName y] jsubs
+    e <- [|\a -> HDList . map a|]
+    return $ (x, e `AppE` jsubs' `AppE` derefToExp x) : tops
+  where
+    go (a@(y':rest), e)
+        | y == y' = Right (rest, e)
+        | otherwise = Left (a, e)
+    go ([], _) = error "getHD of SDForall"
