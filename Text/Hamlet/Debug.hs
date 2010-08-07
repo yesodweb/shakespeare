@@ -11,11 +11,11 @@ import qualified Data.ByteString.Char8 as S8
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.ByteString.UTF8 as BSU
 import Text.Blaze
-import Data.Maybe (catMaybes)
 import Data.List
 import Data.Ord
 import Data.Function
 import Control.Arrow
+import Data.Either
 
 unsafeRenderTemplate :: FilePath -> HamletData url
                      -> (url -> String) -> Html ()
@@ -69,3 +69,14 @@ getHD _ (SDCond xs _) =
     go x = do
         tb <- [|HDBool|]
         return (x, tb `AppE` derefToExp x)
+getHD render (SDMaybe x y docs _) = do
+    hd <- fmap concat $ mapM (getHD render) docs
+    let (tops, subs) = partitionEithers $ map go hd
+    jsubs <- combineHDs subs
+    let jsubs' = LamE [VarP $ mkName y] jsubs
+    e <- [|\a -> HDMaybe . fmap a|]
+    return [(x, e `AppE` jsubs' `AppE` derefToExp x)]
+  where
+    go (a@(y':rest), e)
+        | y == y' = Right (rest, e)
+        | otherwise = Left (a, e)

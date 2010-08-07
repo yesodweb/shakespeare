@@ -13,3 +13,8 @@ $else
 $if not.true
 $elseif true
     elseif true
+$maybe just j
+    $j$
+$maybe nothing _
+$nothing
+    nothing
