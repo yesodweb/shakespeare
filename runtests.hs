@@ -59,6 +59,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamlet' and xhamlet'" caseHamlet'
     , testCase "hamletDebug" caseHamletDebug
     , testCase "hamlet runtime" caseHamletRT
+    , testCase "hamlet runtime" caseHamletRT
+    , testCase "hamletFileDebug" caseHamletFileDebug
     ]
 
 data Url = Home | Sub SubUrl
@@ -458,3 +460,17 @@ caseHamletRT = do
     rend <- renderHamletRT rt scope render
     toString (renderHtml rend) @?=
         "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
+
+bar :: Hamlet Url
+bar = $(hamletFileDebug "external-debug.hamlet")
+  where
+    foo = "foo"
+
+caseHamletFileDebug :: Assertion
+caseHamletFileDebug = do
+    let foo = "foo"
+    writeFile "external-debug.hamlet" "$foo$ 1"
+    helper "foo 1" $ $(hamletFileDebug "external-debug.hamlet")
+    writeFile "external-debug.hamlet" "$foo$ 2"
+    helper "foo 2" $ $(hamletFileDebug "external-debug.hamlet")
+    writeFile "external-debug.hamlet" "$foo$ 1"

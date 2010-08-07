@@ -8,6 +8,7 @@ module Text.Hamlet
       -- * Load from external file
     , hamletFile
     , xhamletFile
+    , hamletFileDebug
       -- * Customized settings
     , hamletWithSettings
     , hamletFileWithSettings
@@ -35,6 +36,7 @@ module Text.Hamlet
 import Text.Hamlet.Parse
 import Text.Hamlet.Quasi
 import Text.Hamlet.RT
+import Text.Hamlet.Debug
 import Text.Blaze
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid (mappend)

@@ -13,6 +13,7 @@ module Text.Hamlet.Quasi
     , xhamletFile
     , hamletFileWithSettings
     , showParams
+    , ToHtml (..)
     ) where
 
 import Text.Hamlet.Parse
