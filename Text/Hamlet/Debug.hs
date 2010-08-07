@@ -39,15 +39,28 @@ derefToExp :: [String] -> Exp
 derefToExp = foldr1 AppE . map (varName []) . reverse
 
 combineHDs :: [([String], Exp)] -> Q Exp
-combineHDs (([], y):_) = return y
+combineHDs [([], e)] = return e
+combineHDs [([""], e)] = return e
 combineHDs pairs = do
     pairs' <- mapM (\(x, y) -> do
-                y' <- combineHDs y
-                return $ TupE [LitE $ StringL x, y'])
+                case y of
+                    [([""], e)] -> return $ TupE [LitE $ StringL "", e]
+                    _ -> do
+                        let y' = map (\(a, b) ->
+                                    (if null a then [""] else a, b)) y
+                        q <- newName "x"
+                        y'' <- combineHDs y'
+                        return $ TupE [LitE $ StringL x, y''])
             $ map (fst . head &&& map snd)
             $ groupBy ((==) `on` fst)
             $ sortBy (comparing fst)
-            $ map (\(x:xs, y) -> (x, (xs, y))) pairs
+            $ map (\(x, y) ->
+                        case x of
+                            [] -> ("", ([], y))
+                            (x':xs) -> (x', (xs, y)))
+            $ map head
+            $ groupBy ((==) `on` fst)
+            $ sortBy (comparing fst) pairs
     hm <- [|HDMap|]
     return $ hm `AppE` ListE pairs'
 

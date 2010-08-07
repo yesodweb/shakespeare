@@ -59,8 +59,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamlet' and xhamlet'" caseHamlet'
     , testCase "hamletDebug" caseHamletDebug
     , testCase "hamlet runtime" caseHamletRT
-    --, testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
-    --, testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
+    , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
+    , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
     ]
 
 data Url = Home | Sub SubUrl
@@ -461,7 +461,6 @@ caseHamletRT = do
     toString (renderHtml rend) @?=
         "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
 
-{-
 caseHamletFileDebugChange :: Assertion
 caseHamletFileDebugChange = do
     let foo = "foo"
@@ -492,6 +491,6 @@ caseHamletFileDebugFeatures = do
         , "not true"
         , "elseif true"
         , "just"
+        , "just"
         , "nothing"
         ]
--}

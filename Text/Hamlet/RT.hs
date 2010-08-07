@@ -167,7 +167,8 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
         case lookup n m of
             Nothing -> fa $ showName orig ++ " not found"
             Just o -> lookup'' orig ns o
-    lookup'' orig _ _ = fa $ showName orig ++ ": expected a map"
+    lookup'' orig ns _ =
+        fa $ showName orig ++ ": expected a map" ++ ", rem: " ++ show ns
 
 fa :: Failure HamletException m => String -> m a
 fa = failure . HamletRenderException
