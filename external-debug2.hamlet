@@ -15,6 +15,7 @@ $elseif true
     elseif true
 $maybe just j
     $j$
+    $id.j$
 $maybe nothing _
 $nothing
     nothing

@@ -59,9 +59,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamlet' and xhamlet'" caseHamlet'
     , testCase "hamletDebug" caseHamletDebug
     , testCase "hamlet runtime" caseHamletRT
-    , testCase "hamlet runtime" caseHamletRT
-    , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
-    , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
+    --, testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
+    --, testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
     ]
 
 data Url = Home | Sub SubUrl
@@ -418,7 +417,7 @@ caseHamletRT = do
     temp <- parseHamletRT defaultHamletSettings "$var$"
     rt <- parseHamletRT defaultHamletSettings $
             unlines
-                [ "$foo.bar.baz$ bin $"
+                [ "$baz.bar.foo$ bin $"
                 , "$forall list l"
                 , "  $l$"
                 , "$maybe just j"
@@ -437,36 +436,33 @@ caseHamletRT = do
                 , "  b"
                 , "@?urlp@"
                 ]
-    let scope =
-            HDMap
-                [ ("foo", HDMap
-                    [ ("bar", HDMap
-                        [ ("baz", HDHtml $ preEscapedString "foo<bar>baz")
+    let hs x = HamletData (Just x) [] []
+        scope =
+            HamletData Nothing []
+                [ ("foo", HamletData Nothing []
+                    [ ("bar", HamletData Nothing []
+                        [ ("baz", hs $ HDHtml $ preEscapedString "foo<bar>baz")
                         ])
                     ])
-                , ("list", HDList
-                    [ HDHtml $ string "1"
-                    , HDHtml $ string "2"
-                    , HDHtml $ string "3"
-                    ])
-                , ("just", HDMaybe $ Just $ HDHtml $ string "just")
-                , ("nothing", HDMaybe Nothing)
-                , ("template", HDTemplate temp)
-                , ("var", HDHtml $ string "var")
-                , ("url", HDUrl Home)
-                , ("urlp", HDUrlParams Home [("foo", "bar")])
-                , ("true", HDBool True)
-                , ("false", HDBool False)
+                , ("list", HamletData Nothing
+                    [ hs $ HDHtml $ string "1"
+                    , hs $ HDHtml $ string "2"
+                    , hs $ HDHtml $ string "3"
+                    ] [])
+                , ("just", hs $ HDMaybe $ Just $ hs $ HDHtml $ string "just")
+                , ("nothing", hs $ HDMaybe Nothing)
+                , ("template", hs $ HDTemplate temp)
+                , ("var", hs $ HDHtml $ string "var")
+                , ("url", hs $ HDUrl Home)
+                , ("urlp", hs $ HDUrlParams Home [("foo", "bar")])
+                , ("true", hs $ HDBool True)
+                , ("false", hs $ HDBool False)
                 ]
     rend <- renderHamletRT rt scope render
     toString (renderHtml rend) @?=
         "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
 
-bar :: Hamlet Url
-bar = $(hamletFileDebug "external-debug.hamlet")
-  where
-    foo = "foo"
-
+{-
 caseHamletFileDebugChange :: Assertion
 caseHamletFileDebugChange = do
     let foo = "foo"
@@ -499,3 +495,4 @@ caseHamletFileDebugFeatures = do
         , "just"
         , "nothing"
         ]
+-}

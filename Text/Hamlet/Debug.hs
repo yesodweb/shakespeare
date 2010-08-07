@@ -36,7 +36,7 @@ hamletFileDebug fp = do
     return $ LamE [VarP render] h
 
 derefToExp :: [String] -> Exp
-derefToExp = foldr1 AppE . map (varName [])
+derefToExp = foldr1 AppE . map (varName []) . reverse
 
 combineHDs :: [([String], Exp)] -> Q Exp
 combineHDs (([], y):_) = return y
@@ -48,7 +48,7 @@ combineHDs pairs = do
             $ groupBy ((==) `on` fst)
             $ sortBy (comparing fst)
             $ map (\(x:xs, y) -> (x, (xs, y))) pairs
-    hm <- [|HDMap|]
+    hm <- [|HamletData Nothing []|]
     return $ hm `AppE` ListE pairs'
 
 

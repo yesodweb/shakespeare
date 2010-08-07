@@ -6,6 +6,7 @@ module Text.Hamlet.RT
     ( -- * Public API
       HamletRT (..)
     , HamletData (..)
+    , HamletScalar (..)
     , HamletException (..)
     , parseHamletRT
     , renderHamletRT
@@ -23,14 +24,19 @@ import Text.Hamlet.Parse
 import Text.Hamlet.Quasi (showParams)
 import Data.List (intercalate)
 
-data HamletData url = HDHtml (Html ())
-                    | HDUrl url
-                    | HDUrlParams url [(String, String)]
-                    | HDTemplate HamletRT
-                    | HDBool Bool
-                    | HDMaybe (Maybe (HamletData url))
-                    | HDList [HamletData url]
-                    | HDMap [(String, HamletData url)]
+data HamletScalar url
+    = HDHtml (Html ())
+    | HDUrl url
+    | HDUrlParams url [(String, String)]
+    | HDTemplate HamletRT
+    | HDBool Bool
+    | HDMaybe (Maybe (HamletData url))
+
+data HamletData url = HamletData
+    { hdScalar :: Maybe (HamletScalar url)
+    , hdList :: [HamletData url]
+    , hdMap :: [(String, HamletData url)]
+    }
 
 data SimpleDoc = SDRaw String
                | SDVar [String]
@@ -86,7 +92,7 @@ parseHamletRT set s =
     flattenDeref _ (DerefLeaf (Ident x)) = return [x]
     flattenDeref orig (DerefBranch (DerefLeaf (Ident x)) y) = do
         y' <- flattenDeref orig y
-        return $ x : y'
+        return $ y' ++ [x]
     flattenDeref orig _ = failure $ HamletUnsupportedDocException orig
 
 renderHamletRT :: Failure HamletException m
@@ -102,61 +108,69 @@ renderHamletRT' :: Failure HamletException m
                 -> HamletData url
                 -> (url -> String)
                 -> m (Html ())
-renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
+renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
     liftM mconcat $ mapM (go scope0) docs
   where
     go _ (SDRaw s) = return $ preEscapedString s
     go scope (SDVar n) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         case v of
             HDHtml h -> return h
-            _ -> fa $ intercalate "." n ++ ": expected HDHtml"
+            _ -> fa $ showName n ++ ": expected HDHtml"
     go scope (SDUrl p n) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         case (p, v) of
             (False, HDUrl u) -> return $ preEscapedString $ renderUrl u
             (True, HDUrlParams u q) ->
                 return $ preEscapedString $ renderUrl u ++ showParams q
-            (False, _) -> fa $ intercalate "." n ++ ": expected HDUrl"
-            (True, _) -> fa $ intercalate "." n ++ ": expected HDUrlParams"
+            (False, _) -> fa $ showName n ++ ": expected HDUrl"
+            (True, _) -> fa $ showName n ++ ": expected HDUrlParams"
     go scope (SDTemplate n) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         case (tempAsHtml, v) of
-            (False, HDTemplate h) -> renderHamletRT h (HDMap scope) renderUrl
-            (False, _) -> fa $ intercalate "." n ++ ": expected HDTemplate"
+            (False, HDTemplate h) -> renderHamletRT h scope renderUrl
+            (False, _) -> fa $ showName n ++ ": expected HDTemplate"
             (True, HDHtml h) -> return h
-            (True, _) -> fa $ intercalate "." n ++ ": expected HDHtml"
+            (True, _) -> fa $ showName n ++ ": expected HDHtml"
     go scope (SDForall n ident docs') = do
-        v <- lookup' n n $ HDMap scope
-        case v of
-            HDList os -> do
-                liftM mconcat $ forM os $ \o -> do
-                    let scope' = HDMap $ (ident, o) : scope
-                    renderHamletRT (HamletRT docs') scope' renderUrl
-            _ -> fa $ intercalate "." n ++ ": expected HDList"
+        os <- liftM hdList $ lookup'' n n scope
+        liftM mconcat $ forM os $ \o -> do
+            let m = (ident, o) : hdMap scope
+            let scope' = scope { hdMap = m }
+            renderHamletRT (HamletRT docs') scope' renderUrl
     go scope (SDMaybe n ident jdocs ndocs) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         (scope', docs') <-
             case v of
                 HDMaybe Nothing -> return (scope, ndocs)
-                HDMaybe (Just o) -> return ((ident, o) : scope, jdocs)
-                _ -> fa $ intercalate "." n ++ ": expected HDMaybe"
-        renderHamletRT (HamletRT docs') (HDMap scope') renderUrl
+                HDMaybe (Just o) -> do
+                    let m = (ident, o) : hdMap scope
+                        scope' = scope { hdMap = m }
+                    return (scope', jdocs)
+                _ -> fa $ showName n ++ ": expected HDMaybe"
+        renderHamletRT (HamletRT docs') scope' renderUrl
     go scope (SDCond [] docs') =
-        renderHamletRT (HamletRT docs') (HDMap scope) renderUrl
+        renderHamletRT (HamletRT docs') scope renderUrl
     go scope (SDCond ((b, docs'):cs) els) = do
-        v <- lookup' b b $ HDMap scope
+        v <- lookup' b b scope
         case v of
             HDBool True ->
-                renderHamletRT (HamletRT docs') (HDMap scope) renderUrl
+                renderHamletRT (HamletRT docs') scope renderUrl
             HDBool False -> go scope (SDCond cs els)
-            _ -> fa $ intercalate "." b ++ ": expected HDBool"
-    lookup' _ [] x = return x
-    lookup' orig (n:ns) (HDMap m) =
-        case lookup n m of
-            Nothing -> fa $ intercalate "." orig ++ " not found"
-            Just o -> lookup' orig ns o
-    lookup' orig _ _ = fa $ intercalate "." orig ++ ": unexpected type"
-    fa = failure . HamletRenderException
-renderHamletRT' _ _ _ _ =
-    failure $ HamletRenderException "renderHamletRT must be given a HDMap"
+            _ -> fa $ showName b ++ ": expected HDBool"
+    lookup' orig k x = do
+        y <- liftM hdScalar $ lookup'' orig k x
+        case y of
+            Nothing -> fa $ showName orig ++ ": expected a scalar"
+            Just z -> return z
+    lookup'' _ [] x = return x
+    lookup'' orig (n:ns) m =
+        case lookup n $ hdMap m of
+            Nothing -> fa $ showName orig ++ " not found"
+            Just o -> lookup'' orig ns o
+
+fa :: Failure HamletException m => String -> m a
+fa = failure . HamletRenderException
+
+showName :: [String] -> String
+showName = intercalate "." . reverse
