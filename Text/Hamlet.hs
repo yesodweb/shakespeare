@@ -28,7 +28,6 @@ module Text.Hamlet
       -- * Runtime Hamlet
     , HamletRT
     , HamletData (..)
-    , HamletScalar (..)
     , HamletException (..)
     , parseHamletRT
     , renderHamletRT

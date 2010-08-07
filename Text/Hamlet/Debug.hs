@@ -48,7 +48,7 @@ combineHDs pairs = do
             $ groupBy ((==) `on` fst)
             $ sortBy (comparing fst)
             $ map (\(x:xs, y) -> (x, (xs, y))) pairs
-    hm <- [|HamletData Nothing []|]
+    hm <- [|HDMap|]
     return $ hm `AppE` ListE pairs'
 
 

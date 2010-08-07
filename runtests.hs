@@ -436,27 +436,26 @@ caseHamletRT = do
                 , "  b"
                 , "@?urlp@"
                 ]
-    let hs x = HamletData (Just x) [] []
-        scope =
-            HamletData Nothing []
-                [ ("foo", HamletData Nothing []
-                    [ ("bar", HamletData Nothing []
-                        [ ("baz", hs $ HDHtml $ preEscapedString "foo<bar>baz")
+    let scope =
+            HDMap
+                [ ("foo", HDMap
+                    [ ("bar", HDMap
+                        [ ("baz", HDHtml $ preEscapedString "foo<bar>baz")
                         ])
                     ])
-                , ("list", HamletData Nothing
-                    [ hs $ HDHtml $ string "1"
-                    , hs $ HDHtml $ string "2"
-                    , hs $ HDHtml $ string "3"
-                    ] [])
-                , ("just", hs $ HDMaybe $ Just $ hs $ HDHtml $ string "just")
-                , ("nothing", hs $ HDMaybe Nothing)
-                , ("template", hs $ HDTemplate temp)
-                , ("var", hs $ HDHtml $ string "var")
-                , ("url", hs $ HDUrl Home)
-                , ("urlp", hs $ HDUrlParams Home [("foo", "bar")])
-                , ("true", hs $ HDBool True)
-                , ("false", hs $ HDBool False)
+                , ("list", HDList
+                    [ HDMap [("", HDHtml $ string "1")]
+                    , HDHtml $ string "2"
+                    , HDHtml $ string "3"
+                    ])
+                , ("just", HDMaybe $ Just $ HDHtml $ string "just")
+                , ("nothing", HDMaybe Nothing)
+                , ("template", HDTemplate temp)
+                , ("var", HDHtml $ string "var")
+                , ("url", HDUrl Home)
+                , ("urlp", HDUrlParams Home [("foo", "bar")])
+                , ("true", HDMap [("", HDBool True)])
+                , ("false", HDBool False)
                 ]
     rend <- renderHamletRT rt scope render
     toString (renderHtml rend) @?=
