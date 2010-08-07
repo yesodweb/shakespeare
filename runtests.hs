@@ -479,7 +479,13 @@ caseHamletFileDebugChange = do
 caseHamletFileDebugFeatures :: Assertion
 caseHamletFileDebugFeatures = do
     let var = "var"
+    let url = Home
+    let urlp = (Home, [("foo", "bar")])
     flip helper $(hamletFileDebug "external-debug2.hamlet") $ concat
         [ "var"
         , "var"
+        , "url"
+        , "url"
+        , "suburl"
+        , "url?foo=bar"
         ]

@@ -55,4 +55,7 @@ getHD :: SimpleDoc -> Q (Maybe ([String], Exp))
 getHD (SDVar x) = do
     th <- [|HDHtml . toHtml|]
     return $ Just (x, th `AppE` derefToExp x)
+getHD (SDUrl hasParams x) = do
+    th <- if hasParams then [|uncurry HDUrlParams|] else [|HDUrl|]
+    return $ Just (x, th `AppE` derefToExp x)
 getHD _ = return Nothing
