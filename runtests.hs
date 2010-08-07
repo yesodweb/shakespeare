@@ -482,6 +482,7 @@ caseHamletFileDebugFeatures = do
     let url = Home
     let urlp = (Home, [("foo", "bar")])
     let template = [$hamlet|template|]
+    let true = True
     flip helper $(hamletFileDebug "external-debug2.hamlet") $ concat
         [ "var"
         , "var"
@@ -490,4 +491,7 @@ caseHamletFileDebugFeatures = do
         , "suburl"
         , "url?foo=bar"
         , "template"
+        , "true"
+        , "not true"
+        , "elseif true"
         ]

@@ -30,8 +30,7 @@ hamletFileDebug fp = do
     HamletRT docs <- qRunIO $ parseHamletRT defaultHamletSettings contents
     urt <- [|unsafeRenderTemplate|]
     render <- newName "render"
-    hd <- fmap catMaybes $ mapM (getHD $ VarE render) docs
-    hdm <- [|HDMap|]
+    hd <- fmap concat $ mapM (getHD $ VarE render) docs
     hd' <- combineHDs hd
     let h = urt `AppE` LitE (StringL fp) `AppE` hd' `AppE` VarE render
     return $ LamE [VarP render] h
@@ -40,7 +39,7 @@ derefToExp :: [String] -> Exp
 derefToExp = foldr1 AppE . map (varName [])
 
 combineHDs :: [([String], Exp)] -> Q Exp
-combineHDs [([], y)] = return y
+combineHDs (([], y):_) = return y
 combineHDs pairs = do
     pairs' <- mapM (\(x, y) -> do
                 y' <- combineHDs y
@@ -53,14 +52,20 @@ combineHDs pairs = do
     return $ hm `AppE` ListE pairs'
 
 
-getHD :: Exp -> SimpleDoc -> Q (Maybe ([String], Exp))
-getHD _ SDRaw{} = return Nothing
+getHD :: Exp -> SimpleDoc -> Q [([String], Exp)]
+getHD _ SDRaw{} = return []
 getHD _ (SDVar x) = do
     th <- [|HDHtml . toHtml|]
-    return $ Just (x, th `AppE` derefToExp x)
+    return [(x, th `AppE` derefToExp x)]
 getHD _ (SDUrl hasParams x) = do
     th <- if hasParams then [|uncurry HDUrlParams|] else [|HDUrl|]
-    return $ Just (x, th `AppE` derefToExp x)
+    return [(x, th `AppE` derefToExp x)]
 getHD render (SDTemplate x) = do
     th <- [|HDHtml . toHtml|]
-    return $ Just (x, th `AppE` (derefToExp x `AppE` render))
+    return [(x, th `AppE` (derefToExp x `AppE` render))]
+getHD _ (SDCond xs _) =
+    mapM (go . fst) xs
+  where
+    go x = do
+        tb <- [|HDBool|]
+        return (x, tb `AppE` derefToExp x)

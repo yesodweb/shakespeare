@@ -5,3 +5,11 @@ $id.var$
 @Sub.SubUrl@
 @?urlp@
 ^template^
+$if id.true
+    true
+$if not.true
+$else
+    not true
+$if not.true
+$elseif true
+    elseif true
