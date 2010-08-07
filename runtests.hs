@@ -481,6 +481,7 @@ caseHamletFileDebugFeatures = do
     let var = "var"
     let url = Home
     let urlp = (Home, [("foo", "bar")])
+    let template = [$hamlet|template|]
     flip helper $(hamletFileDebug "external-debug2.hamlet") $ concat
         [ "var"
         , "var"
@@ -488,4 +489,5 @@ caseHamletFileDebugFeatures = do
         , "url"
         , "suburl"
         , "url?foo=bar"
+        , "template"
         ]

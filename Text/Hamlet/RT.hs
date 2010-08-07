@@ -9,6 +9,7 @@ module Text.Hamlet.RT
     , HamletException (..)
     , parseHamletRT
     , renderHamletRT
+    , renderHamletRT'
     , SimpleDoc (..)
     ) where
 
@@ -93,7 +94,15 @@ renderHamletRT :: Failure HamletException m
                -> HamletData url
                -> (url -> String)
                -> m (Html ())
-renderHamletRT (HamletRT docs) (HDMap scope0) renderUrl =
+renderHamletRT = renderHamletRT' False
+
+renderHamletRT' :: Failure HamletException m
+                => Bool
+                -> HamletRT
+                -> HamletData url
+                -> (url -> String)
+                -> m (Html ())
+renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
     liftM mconcat $ mapM (go scope0) docs
   where
     go _ (SDRaw s) = return $ preEscapedString s
@@ -112,9 +121,11 @@ renderHamletRT (HamletRT docs) (HDMap scope0) renderUrl =
             (True, _) -> fa $ intercalate "." n ++ ": expected HDUrlParams"
     go scope (SDTemplate n) = do
         v <- lookup' n n $ HDMap scope
-        case v of
-            HDTemplate h -> renderHamletRT h (HDMap scope) renderUrl
-            _ -> fa $ intercalate "." n ++ ": expected HDTemplate"
+        case (tempAsHtml, v) of
+            (False, HDTemplate h) -> renderHamletRT h (HDMap scope) renderUrl
+            (False, _) -> fa $ intercalate "." n ++ ": expected HDTemplate"
+            (True, HDHtml h) -> return h
+            (True, _) -> fa $ intercalate "." n ++ ": expected HDHtml"
     go scope (SDForall n ident docs') = do
         v <- lookup' n n $ HDMap scope
         case v of
@@ -147,5 +158,5 @@ renderHamletRT (HamletRT docs) (HDMap scope0) renderUrl =
             Just o -> lookup' orig ns o
     lookup' orig _ _ = fa $ intercalate "." orig ++ ": unexpected type"
     fa = failure . HamletRenderException
-renderHamletRT _ _ _ =
+renderHamletRT' _ _ _ _ =
     failure $ HamletRenderException "renderHamletRT must be given a HDMap"

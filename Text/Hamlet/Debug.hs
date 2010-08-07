@@ -22,17 +22,19 @@ unsafeRenderTemplate :: FilePath -> HamletData url
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     temp <- parseHamletRT defaultHamletSettings contents
-    renderHamletRT temp hd render
+    renderHamletRT' True temp hd render
 
 hamletFileDebug :: FilePath -> Q Exp
 hamletFileDebug fp = do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     HamletRT docs <- qRunIO $ parseHamletRT defaultHamletSettings contents
     urt <- [|unsafeRenderTemplate|]
-    hd <- fmap catMaybes $ mapM getHD docs
+    render <- newName "render"
+    hd <- fmap catMaybes $ mapM (getHD $ VarE render) docs
     hdm <- [|HDMap|]
     hd' <- combineHDs hd
-    return $ urt `AppE` LitE (StringL fp) `AppE` hd'
+    let h = urt `AppE` LitE (StringL fp) `AppE` hd' `AppE` VarE render
+    return $ LamE [VarP render] h
 
 derefToExp :: [String] -> Exp
 derefToExp = foldr1 AppE . map (varName [])
@@ -51,11 +53,14 @@ combineHDs pairs = do
     return $ hm `AppE` ListE pairs'
 
 
-getHD :: SimpleDoc -> Q (Maybe ([String], Exp))
-getHD (SDVar x) = do
+getHD :: Exp -> SimpleDoc -> Q (Maybe ([String], Exp))
+getHD _ SDRaw{} = return Nothing
+getHD _ (SDVar x) = do
     th <- [|HDHtml . toHtml|]
     return $ Just (x, th `AppE` derefToExp x)
-getHD (SDUrl hasParams x) = do
+getHD _ (SDUrl hasParams x) = do
     th <- if hasParams then [|uncurry HDUrlParams|] else [|HDUrl|]
     return $ Just (x, th `AppE` derefToExp x)
-getHD _ = return Nothing
+getHD render (SDTemplate x) = do
+    th <- [|HDHtml . toHtml|]
+    return $ Just (x, th `AppE` (derefToExp x `AppE` render))
