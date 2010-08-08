@@ -76,9 +76,40 @@ testSuite = testGroup "Text.Hamlet"
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
-render :: Url -> String
-render Home = "url"
-render (Sub SubUrl) = "suburl"
+render :: Url -> [(String, String)] -> String
+render Home qs = "url" ++ showParams qs
+render (Sub SubUrl) qs = "suburl" ++ showParams qs
+
+showParams :: [(String, String)] -> String
+showParams [] = ""
+showParams z =
+    '?' : intercalate "&" (map go z)
+  where
+    go (x, y) = go' x ++ '=' : go' y
+    go' = concatMap encodeUrlChar
+
+-- | Taken straight from web-encodings; reimplemented here to avoid extra
+-- dependencies.
+encodeUrlChar :: Char -> String
+encodeUrlChar c
+    -- List of unreserved characters per RFC 3986
+    -- Gleaned from http://en.wikipedia.org/wiki/Percent-encoding
+    | 'A' <= c && c <= 'Z' = [c]
+    | 'a' <= c && c <= 'z' = [c]
+    | '0' <= c && c <= '9' = [c]
+encodeUrlChar c@'-' = [c]
+encodeUrlChar c@'_' = [c]
+encodeUrlChar c@'.' = [c]
+encodeUrlChar c@'~' = [c]
+encodeUrlChar ' ' = "+"
+encodeUrlChar y =
+    let (a, c) = fromEnum y `divMod` 16
+        b = a `mod` 16
+        showHex' x
+            | x < 10 = toEnum $ x + (fromEnum '0')
+            | x < 16 = toEnum $ x - 10 + (fromEnum 'A')
+            | otherwise = error $ "Invalid argument to showHex: " ++ show x
+     in ['%', showHex' b, showHex' c]
 
 data Arg url = Arg
     { getArg :: Arg url
@@ -133,11 +164,11 @@ caseVarChain = do
 
 caseUrl :: Assertion
 caseUrl = do
-    helper (render Home) [$hamlet|@url.theArg@|]
+    helper (render Home []) [$hamlet|@url.theArg@|]
 
 caseUrlChain :: Assertion
 caseUrlChain = do
-    helper (render Home) [$hamlet|@url.getArg.getArg.getArg.theArg@|]
+    helper (render Home []) [$hamlet|@url.getArg.getArg.getArg.theArg@|]
 
 caseEmbed :: Assertion
 caseEmbed = do

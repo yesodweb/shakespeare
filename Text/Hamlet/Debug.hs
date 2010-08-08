@@ -19,7 +19,7 @@ import Control.Arrow
 import Data.Either
 
 unsafeRenderTemplate :: FilePath -> HamletData url
-                     -> (url -> String) -> Html ()
+                     -> (url -> [(String, String)] -> String) -> Html ()
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     temp <- parseHamletRT defaultHamletSettings contents

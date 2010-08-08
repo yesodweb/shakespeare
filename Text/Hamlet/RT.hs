@@ -20,7 +20,6 @@ import Data.Typeable (Typeable)
 import Control.Failure
 import Text.Blaze
 import Text.Hamlet.Parse
-import Text.Hamlet.Quasi (showParams)
 import Data.List (intercalate)
 
 data HamletData url
@@ -93,7 +92,7 @@ parseHamletRT set s =
 renderHamletRT :: Failure HamletException m
                => HamletRT
                -> HamletData url
-               -> (url -> String)
+               -> (url -> [(String, String)] -> String)
                -> m (Html ())
 renderHamletRT = renderHamletRT' False
 
@@ -101,7 +100,7 @@ renderHamletRT' :: Failure HamletException m
                 => Bool
                 -> HamletRT
                 -> HamletData url
-                -> (url -> String)
+                -> (url -> [(String, String)] -> String)
                 -> m (Html ())
 renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
     liftM mconcat $ mapM (go scope0) docs
@@ -115,9 +114,9 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
     go scope (SDUrl p n) = do
         v <- lookup' n n $ HDMap scope
         case (p, v) of
-            (False, HDUrl u) -> return $ preEscapedString $ renderUrl u
+            (False, HDUrl u) -> return $ preEscapedString $ renderUrl u []
             (True, HDUrlParams u q) ->
-                return $ preEscapedString $ renderUrl u ++ showParams q
+                return $ preEscapedString $ renderUrl u q
             (False, _) -> fa $ showName n ++ ": expected HDUrl"
             (True, _) -> fa $ showName n ++ ": expected HDUrlParams"
     go scope (SDTemplate n) = do

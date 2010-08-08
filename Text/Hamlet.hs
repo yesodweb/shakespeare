@@ -42,10 +42,10 @@ import qualified Data.ByteString.Lazy as L
 import Data.Monoid (mappend)
 
 -- | An function generating an 'Html' given a URL-rendering function.
-type Hamlet url = (url -> String) -> Html ()
+type Hamlet url = (url -> [(String, String)] -> String) -> Html ()
 
 -- | Converts a 'Hamlet' to lazy bytestring.
-renderHamlet :: (url -> String) -> Hamlet url -> L.ByteString
+renderHamlet :: (url -> [(String, String)] -> String) -> Hamlet url -> L.ByteString
 renderHamlet render h = renderHtml $ h render
 
 -- | Wrap an 'Html' for embedding in an XML file.

@@ -32,7 +32,6 @@ import qualified Data.ByteString.Lazy as L
 import Data.Monoid
 import Data.Word (Word8)
 import Data.Bits
-import Text.Hamlet.Quasi (showParams)
 import System.IO.Unsafe (unsafePerformIO)
 
 data Color = Color Word8 Word8 Word8
@@ -66,12 +65,12 @@ colorBlack = Color 0 0 0
 renderStyle :: Style -> L.ByteString
 renderStyle (Style b) = toLazyByteString b
 
-renderCamlet :: (url -> String) -> Camlet url -> L.ByteString
+renderCamlet :: (url -> [(String, String)] -> String) -> Camlet url -> L.ByteString
 renderCamlet r s = renderStyle $ s r
 
 newtype Style = Style Builder
     deriving Monoid
-type Camlet url = (url -> String) -> Style
+type Camlet url = (url -> [(String, String)] -> String) -> Style
 
 class ToStyle a where
     toStyle :: a -> String
@@ -297,10 +296,10 @@ contentToStyle _ (ContentVar d) = do
     return $ ts `AppE` derefToExp d
 contentToStyle r (ContentUrl d) = do
     ts <- [|Style . fromString|]
-    return $ ts `AppE` (VarE r `AppE` derefToExp d)
+    return $ ts `AppE` (VarE r `AppE` derefToExp d `AppE` ListE [])
 contentToStyle r (ContentUrlParam d) = do
     ts <- [|Style . fromString|]
-    up <- [|\r' (u, p) -> r' u ++ showParams p|]
+    up <- [|\r' (u, p) -> r' u p|]
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
 contentToStyle r (ContentMix d) = do
     un <- [|unCamletMixin|]
@@ -377,12 +376,12 @@ camletRuntime fp cd render' = unsafePerformIO $ do
             _ -> error $ show d ++ ": expected CDPlain"
     go (ContentUrl d) =
         case lookup d cd of
-            Just (CDUrl u) -> Style $ fromString $ render' u
+            Just (CDUrl u) -> Style $ fromString $ render' u []
             _ -> error $ show d ++ ": expected CDUrl"
     go (ContentUrlParam d) =
         case lookup d cd of
             Just (CDUrlParam (u, p)) ->
-                Style $ fromString $ render' u ++ showParams p
+                Style $ fromString $ render' u p
             _ -> error $ show d ++ ": expected CDUrlParam"
     go (ContentMix d) =
         case lookup d cd of

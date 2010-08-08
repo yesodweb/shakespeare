@@ -12,7 +12,6 @@ module Text.Hamlet.Quasi
     , hamletFile
     , xhamletFile
     , hamletFileWithSettings
-    , showParams
     , ToHtml (..)
     , varName
     ) where
@@ -101,7 +100,9 @@ contentToExp _ scope (ContentVar d) = do
     str <- [|toHtml|]
     return $ str `AppE` deref scope d
 contentToExp render scope (ContentUrl hasParams d) = do
-    ou <- if hasParams then [|outputUrlParams|] else [|outputUrl|]
+    ou <- if hasParams
+            then [|\r (u, p) -> string $ r u p|]
+            else [|\r u -> string $ r u []|]
     let d' = deref scope d
     return $ ou `AppE` render `AppE` d'
 contentToExp render scope (ContentEmbed d) = do
@@ -207,46 +208,3 @@ maybeH :: Maybe v -> (v -> Html ()) -> Maybe (Html ()) -> Html ()
 maybeH Nothing _ Nothing = mempty
 maybeH Nothing _ (Just x) = x
 maybeH (Just v) f _ = f v
-
--- | Uses the URL rendering function to convert the given URL to a 'String' and
--- then calls 'outputString'.
-outputUrl :: (url -> String) -> url -> Html ()
-outputUrl render u = string $ render u
-
--- | Same as 'outputUrl', but appends a query-string with given keys and
--- values.
-outputUrlParams :: (url -> String) -> (url, [(String, String)]) -> Html ()
-outputUrlParams render (u, []) = outputUrl render u
-outputUrlParams render (u, params) = mappend
-    (outputUrl render u)
-    (string $ showParams params)
-
-showParams :: [(String, String)] -> String
-showParams z =
-    '?' : intercalate "&" (map go z)
-  where
-    go (x, y) = go' x ++ '=' : go' y
-    go' = concatMap encodeUrlChar
-
--- | Taken straight from web-encodings; reimplemented here to avoid extra
--- dependencies.
-encodeUrlChar :: Char -> String
-encodeUrlChar c
-    -- List of unreserved characters per RFC 3986
-    -- Gleaned from http://en.wikipedia.org/wiki/Percent-encoding
-    | 'A' <= c && c <= 'Z' = [c]
-    | 'a' <= c && c <= 'z' = [c]
-    | '0' <= c && c <= '9' = [c]
-encodeUrlChar c@'-' = [c]
-encodeUrlChar c@'_' = [c]
-encodeUrlChar c@'.' = [c]
-encodeUrlChar c@'~' = [c]
-encodeUrlChar ' ' = "+"
-encodeUrlChar y =
-    let (a, c) = fromEnum y `divMod` 16
-        b = a `mod` 16
-        showHex' x
-            | x < 10 = toEnum $ x + (fromEnum '0')
-            | x < 16 = toEnum $ x - 10 + (fromEnum 'A')
-            | otherwise = error $ "Invalid argument to showHex: " ++ show x
-     in ['%', showHex' b, showHex' c]

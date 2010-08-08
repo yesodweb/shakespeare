@@ -19,18 +19,17 @@ import qualified Data.ByteString.Char8 as S8
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid
-import Text.Hamlet.Quasi (showParams)
 import System.IO.Unsafe (unsafePerformIO)
 
 renderJavascript :: Javascript -> L.ByteString
 renderJavascript (Javascript b) = toLazyByteString b
 
-renderJamlet :: (url -> String) -> Jamlet url -> L.ByteString
+renderJamlet :: (url -> [(String, String)] -> String) -> Jamlet url -> L.ByteString
 renderJamlet r s = renderJavascript $ s r
 
 newtype Javascript = Javascript Builder
     deriving Monoid
-type Jamlet url = (url -> String) -> Javascript
+type Jamlet url = (url -> [(String, String)] -> String) -> Javascript
 
 class ToJavascript a where
     toJavascript :: a -> String
@@ -138,10 +137,10 @@ contentToJavascript _ (ContentVar d) = do
     return $ ts `AppE` derefToExp d
 contentToJavascript r (ContentUrl d) = do
     ts <- [|Javascript . fromString|]
-    return $ ts `AppE` (VarE r `AppE` derefToExp d)
+    return $ ts `AppE` (VarE r `AppE` derefToExp d `AppE` ListE [])
 contentToJavascript r (ContentUrlParam d) = do
     ts <- [|Javascript . fromString|]
-    up <- [|\r' (u, p) -> r' u ++ showParams p|]
+    up <- [|\r' (u, p) -> r' u p|]
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
 contentToJavascript r (ContentMix d) = do
     return $ derefToExp d `AppE` VarE r
@@ -210,12 +209,12 @@ jamletRuntime fp cd render' = unsafePerformIO $ do
             _ -> error $ show d ++ ": expected JDPlain"
     go (ContentUrl d) =
         case lookup d cd of
-            Just (JDUrl u) -> Javascript $ fromString $ render' u
+            Just (JDUrl u) -> Javascript $ fromString $ render' u []
             _ -> error $ show d ++ ": expected JDUrl"
     go (ContentUrlParam d) =
         case lookup d cd of
             Just (JDUrlParam (u, p)) ->
-                Javascript $ fromString $ render' u ++ showParams p
+                Javascript $ fromString $ render' u p
             _ -> error $ show d ++ ": expected JDUrlParam"
     go (ContentMix d) =
         case lookup d cd of
