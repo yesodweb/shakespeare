@@ -6,7 +6,9 @@ import Test.HUnit hiding (Test)
 
 import Text.Hamlet
 import Text.Camlet
+import Text.Jamlet
 import Data.ByteString.Lazy.UTF8 (toString)
+import Data.List (intercalate)
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -66,6 +68,10 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "camletFile" caseCamletFile
     , testCase "camletFileDebug" caseCamletFileDebug
     , testCase "camletFileDebugChange" caseCamletFileDebugChange
+    , testCase "jamlet" caseJamlet
+    , testCase "jamletFile" caseJamletFile
+    , testCase "jamletFileDebug" caseJamletFileDebug
+    , testCase "jamletFileDebugChange" caseJamletFileDebugChange
     ]
 
 data Url = Home | Sub SubUrl
@@ -565,3 +571,60 @@ caseCamletFileDebugChange = do
     writeFile "external2.camlet" "foo\n  $var$: 2"
     celper "foo{var:2}" $(camletFileDebug "external2.camlet")
     writeFile "external2.camlet" "foo\n  $var$: 1"
+
+jmixin = [$jamlet|var x;|]
+
+jelper :: String -> Jamlet Url -> Assertion
+jelper res h = do
+    let x = renderJamlet render h
+    res @=? toString x
+
+caseJamlet :: Assertion
+caseJamlet = do
+    let var = "var"
+    let urlp = (Home, [("p", "q")])
+    flip jelper [$jamlet|שלום
+$var$
+@Home@
+@?urlp@
+^jmixin^
+|] $ intercalate "\r\n"
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ] ++ "\r\n"
+
+caseJamletFile :: Assertion
+caseJamletFile = do
+    let var = "var"
+    let urlp = (Home, [("p", "q")])
+    flip jelper $(jamletFile "external1.jamlet") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
+
+caseJamletFileDebug :: Assertion
+caseJamletFileDebug = do
+    let var = "var"
+    let urlp = (Home, [("p", "q")])
+    flip jelper $(jamletFileDebug "external1.jamlet") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
+
+caseJamletFileDebugChange :: Assertion
+caseJamletFileDebugChange = do
+    let var = "somevar"
+    writeFile "external2.jamlet" "var $var$ = 1;"
+    jelper "var somevar = 1;" $(jamletFileDebug "external2.jamlet")
+    writeFile "external2.jamlet" "var $var$ = 2;"
+    jelper "var somevar = 2;" $(jamletFileDebug "external2.jamlet")
+    writeFile "external2.jamlet" "var $var$ = 1;"
