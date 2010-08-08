@@ -1,0 +1,12 @@
+foo
+    color: $colorRed$
+    background: $colorBlack$
+    bar: baz
+    bin
+        color: $(((Color 127) 100) 5)$
+        bar: bar
+        unicode-test: שלום
+        f$var$x: someval
+        background-image: url(@Home@)
+        urlp: url(@?urlp@)
+    ^mixin^

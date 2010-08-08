@@ -11,6 +11,7 @@ module Text.Camlet
     , colorRed
     , colorBlack
     , camletFile
+    , camletFileDebug
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -32,8 +33,7 @@ import Data.Monoid
 import Data.Word (Word8)
 import Data.Bits
 import Text.Hamlet.Quasi (showParams)
-import qualified Data.ByteString.UTF8 as BSU
-import qualified Data.ByteString.Char8 as S8
+import System.IO.Unsafe (unsafePerformIO)
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -89,7 +89,17 @@ data FlatDec = FlatDec Contents [ContentPair]
 
 data Deref = DerefLeaf String
            | DerefBranch Deref Deref
-    deriving Show
+    deriving (Show, Eq)
+
+instance Lift Deref where
+    lift (DerefLeaf s) = do
+        dl <- [|DerefLeaf|]
+        return $ dl `AppE` (LitE $ StringL s)
+    lift (DerefBranch x y) = do
+        x' <- lift x
+        y' <- lift y
+        db <- [|DerefBranch|]
+        return $ db `AppE` x' `AppE` y'
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -270,9 +280,9 @@ camlet =
   where
     p = error "camlet quasi-quoter for patterns does not exist"
 
+camletFromString :: String -> Q Exp
 camletFromString s = do
-    let a = either (error . show) id
-          $ parse parseLines s s
+    let a = either (error . show) id $ parse parseLines s s
     let b = either (error . unlines) id
           $ sequenceA $ map (nestToDec True) $ nestLines a
     contentsToCamlet $ concatMap render $ concatMap flatDec b
@@ -307,6 +317,74 @@ derefToExp (DerefLeaf v@(s:_))
     | isUpper s = ConE $ mkName v
     | otherwise = VarE $ mkName v
 
+camletFile :: FilePath -> Q Exp
 camletFile fp = do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     camletFromString contents
+
+data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
+
+getVars :: Line -> [(Deref, VarType)]
+getVars (LinePair x y) = concatMap getVars' $ x ++ y
+getVars (LineSingle x) = concatMap getVars' x
+getVars (LineMix x) = [(x, VTMixin)]
+
+getVars' :: Content -> [(Deref, VarType)]
+getVars' ContentRaw{} = []
+getVars' (ContentVar d) = [(d, VTPlain)]
+getVars' (ContentUrl d) = [(d, VTUrl)]
+getVars' (ContentUrlParam d) = [(d, VTUrlParam)]
+getVars' (ContentMix d) = [(d, VTMixin)]
+
+data CDData url = CDPlain String
+                | CDUrl url
+                | CDUrlParam (url, [(String, String)])
+                | CDMixin (CamletMixin url)
+
+vtToExp :: (Deref, VarType) -> Q Exp
+vtToExp (d, vt) = do
+    d' <- lift d
+    c' <- c vt
+    return $ TupE [d', c' `AppE` derefToExp d]
+  where
+    c VTPlain = [|CDPlain . toStyle|]
+    c VTUrl = [|CDUrl|]
+    c VTUrlParam = [|CDUrlParam|]
+    c VTMixin = [|CDMixin|]
+
+camletFileDebug :: FilePath -> Q Exp
+camletFileDebug fp = do
+    s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    let a = either (error . show) id $ parse parseLines s s
+        b = concatMap (getVars . snd) a
+    c <- mapM vtToExp b
+    cr <- [|camletRuntime|]
+    return $ cr `AppE` (LitE $ StringL fp) `AppE` ListE c
+
+camletRuntime :: FilePath -> [(Deref, CDData url)] -> Camlet url
+camletRuntime fp cd render' = unsafePerformIO $ do
+    s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    let a = either (error . show) id $ parse parseLines s s
+    let b = either (error . unlines) id
+          $ sequenceA $ map (nestToDec True) $ nestLines a
+    return $ mconcat $ map go $ concatMap render $ concatMap flatDec b
+  where
+    go :: Content -> Style
+    go (ContentRaw s) = Style $ fromString s
+    go (ContentVar d) =
+        case lookup d cd of
+            Just (CDPlain s) -> Style $ fromString s
+            _ -> error $ show d ++ ": expected CDPlain"
+    go (ContentUrl d) =
+        case lookup d cd of
+            Just (CDUrl u) -> Style $ fromString $ render' u
+            _ -> error $ show d ++ ": expected CDUrl"
+    go (ContentUrlParam d) =
+        case lookup d cd of
+            Just (CDUrlParam (u, p)) ->
+                Style $ fromString $ render' u ++ showParams p
+            _ -> error $ show d ++ ": expected CDUrlParam"
+    go (ContentMix d) =
+        case lookup d cd of
+            Just (CDMixin (CamletMixin m)) -> m render'
+            _ -> error $ show d ++ ": expected CDMixin"

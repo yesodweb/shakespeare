@@ -65,6 +65,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "camlet" caseCamlet
     , testCase "camletFile" caseCamletFile
     , testCase "camletFileDebug" caseCamletFileDebug
+    , testCase "camletFileDebugChange" caseCamletFileDebugChange
     ]
 
 data Url = Home | Sub SubUrl
@@ -548,5 +549,19 @@ caseCamletFile = do
 
 caseCamletFileDebug :: Assertion
 caseCamletFileDebug = do
-    -- FIXME
-    return ()
+    let var = "var"
+    let urlp = (Home, [("p", "q")])
+    flip celper $(camletFileDebug "external1.camlet") $ concat
+        [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
+        , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
+        , "background-image:url(url);urlp:url(url?p=q)}"
+        ]
+
+caseCamletFileDebugChange :: Assertion
+caseCamletFileDebugChange = do
+    let var = "var"
+    writeFile "external2.camlet" "foo\n  $var$: 1"
+    celper "foo{var:1}" $(camletFileDebug "external2.camlet")
+    writeFile "external2.camlet" "foo\n  $var$: 2"
+    celper "foo{var:2}" $(camletFileDebug "external2.camlet")
+    writeFile "external2.camlet" "foo\n  $var$: 1"
