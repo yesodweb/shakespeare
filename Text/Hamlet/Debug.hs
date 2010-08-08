@@ -7,6 +7,7 @@ import Text.Hamlet.Parse
 import Text.Hamlet.Quasi
 import Text.Hamlet.RT
 import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Ppr
 import qualified Data.ByteString.Char8 as S8
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.ByteString.UTF8 as BSU
@@ -32,7 +33,7 @@ hamletFileDebug fp = do
     render <- newName "render"
     hd <- fmap concat $ mapM (getHD $ VarE render) docs
     hd' <- combineHDs hd
-    qRunIO $ writeFile (fp ++ ".data") $ show hd'
+    qRunIO $ writeFile (fp ++ ".data") $ pprint hd'
     let h = urt `AppE` LitE (StringL fp) `AppE` hd' `AppE` VarE render
     return $ LamE [VarP render] h
 

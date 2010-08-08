@@ -123,7 +123,7 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
     go scope (SDTemplate n) = do
         v <- lookup' n n $ HDMap scope
         case (tempAsHtml, v) of
-            (False, HDTemplate h) -> renderHamletRT h (HDMap scope) renderUrl
+            (False, HDTemplate h) -> renderHamletRT' tempAsHtml h (HDMap scope) renderUrl
             (False, _) -> fa $ showName n ++ ": expected HDTemplate"
             (True, HDHtml h) -> return h
             (True, _) -> fa $ showName n ++ ": expected HDHtml"
@@ -133,7 +133,7 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
             HDList os ->
                 liftM mconcat $ forM os $ \o -> do
                     let scope' = HDMap $ (ident, o) : scope
-                    renderHamletRT (HamletRT docs') scope' renderUrl
+                    renderHamletRT' tempAsHtml (HamletRT docs') scope' renderUrl
             _ -> fa $ showName n ++ ": expected HDList"
     go scope (SDMaybe n ident jdocs ndocs) = do
         v <- lookup' n n $ HDMap scope
@@ -144,14 +144,14 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
                     let scope' = (ident, o) : scope
                     return (scope', jdocs)
                 _ -> fa $ showName n ++ ": expected HDMaybe"
-        renderHamletRT (HamletRT docs') (HDMap scope') renderUrl
+        renderHamletRT' tempAsHtml (HamletRT docs') (HDMap scope') renderUrl
     go scope (SDCond [] docs') =
-        renderHamletRT (HamletRT docs') (HDMap scope) renderUrl
+        renderHamletRT' tempAsHtml (HamletRT docs') (HDMap scope) renderUrl
     go scope (SDCond ((b, docs'):cs) els) = do
         v <- lookup' b b $ HDMap scope
         case v of
             HDBool True ->
-                renderHamletRT (HamletRT docs') (HDMap scope) renderUrl
+                renderHamletRT' tempAsHtml (HamletRT docs') (HDMap scope) renderUrl
             HDBool False -> go scope (SDCond cs els)
             _ -> fa $ showName b ++ ": expected HDBool"
     lookup' orig k x = do
