@@ -63,6 +63,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
     , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
     , testCase "camlet" caseCamlet
+    , testCase "camletFile" caseCamletFile
+    , testCase "camletFileDebug" caseCamletFileDebug
     ]
 
 data Url = Home | Sub SubUrl
@@ -505,13 +507,14 @@ celper res h = do
     let x = renderCamlet render h
     res @=? toString x
 
-caseCamlet :: Assertion
-caseCamlet = do
-    let mixin :: CamletMixin a
-        mixin = [$camletMixin|
+mixin :: CamletMixin a
+mixin = [$camletMixin|
 a: b
 c: d
 |]
+
+caseCamlet :: Assertion
+caseCamlet = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
     flip celper [$camlet|
@@ -532,3 +535,18 @@ foo
         , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
         , "background-image:url(url);urlp:url(url?p=q)}"
         ]
+
+caseCamletFile :: Assertion
+caseCamletFile = do
+    let var = "var"
+    let urlp = (Home, [("p", "q")])
+    flip celper $(camletFile "external1.camlet") $ concat
+        [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
+        , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
+        , "background-image:url(url);urlp:url(url?p=q)}"
+        ]
+
+caseCamletFileDebug :: Assertion
+caseCamletFileDebug = do
+    -- FIXME
+    return ()

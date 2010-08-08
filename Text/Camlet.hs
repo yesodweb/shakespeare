@@ -10,6 +10,7 @@ module Text.Camlet
     , Color (..)
     , colorRed
     , colorBlack
+    , camletFile
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -31,6 +32,8 @@ import Data.Monoid
 import Data.Word (Word8)
 import Data.Bits
 import Text.Hamlet.Quasi (showParams)
+import qualified Data.ByteString.UTF8 as BSU
+import qualified Data.ByteString.Char8 as S8
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -263,15 +266,16 @@ newtype CamletMixin url = CamletMixin { unCamletMixin :: Camlet url }
 
 camlet :: QuasiQuoter
 camlet =
-    QuasiQuoter e p
+    QuasiQuoter camletFromString p
   where
     p = error "camlet quasi-quoter for patterns does not exist"
-    e s = do
-        let a = either (error . show) id
-              $ parse parseLines s s
-        let b = either (error . unlines) id
-              $ sequenceA $ map (nestToDec True) $ nestLines a
-        contentsToCamlet $ concatMap render $ concatMap flatDec b
+
+camletFromString s = do
+    let a = either (error . show) id
+          $ parse parseLines s s
+    let b = either (error . unlines) id
+          $ sequenceA $ map (nestToDec True) $ nestLines a
+    contentsToCamlet $ concatMap render $ concatMap flatDec b
 
 contentToStyle :: Name -> Content -> Q Exp
 contentToStyle _ (ContentRaw s') = do
@@ -302,3 +306,7 @@ derefToExp (DerefLeaf v@(s:_))
     | all isDigit v = LitE $ IntegerL $ read v
     | isUpper s = ConE $ mkName v
     | otherwise = VarE $ mkName v
+
+camletFile fp = do
+    contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    camletFromString contents
