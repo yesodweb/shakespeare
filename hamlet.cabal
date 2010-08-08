@@ -44,11 +44,14 @@ library
                      utf8-string >= 0.3.4 && < 0.4,
                      template-haskell,
                      blaze-html >= 0.1.1 && < 0.2,
+                     blaze-builder >= 0.1 && < 0.2,
+                     neither >= 0.0.1 && < 0.1,
                      parsec >= 2 && < 4,
                      failure >= 0.1.0 && < 0.2
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
-                     Text.Hamlet.Camlet
+                     Text.Camlet
+                     Text.Jamlet
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
                      Text.Hamlet.Debug

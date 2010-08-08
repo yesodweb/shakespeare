@@ -10,23 +10,15 @@ module Text.Jamlet
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
-import Data.Neither (AEither (..), either)
-import Data.Traversable (sequenceA)
-import Control.Applicative ((<$>))
-import Data.List (intercalate)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
 import Text.Blaze.Builder.Utf8 (fromString)
-import Data.Maybe (catMaybes)
-import Prelude hiding (either)
 import qualified Data.ByteString.Char8 as S8
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid
-import Data.Word (Word8)
-import Data.Bits
 import Text.Hamlet.Quasi (showParams)
 import System.IO.Unsafe (unsafePerformIO)
 
