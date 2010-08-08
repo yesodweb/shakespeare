@@ -32,6 +32,7 @@ hamletFileDebug fp = do
     render <- newName "render"
     hd <- fmap concat $ mapM (getHD $ VarE render) docs
     hd' <- combineHDs hd
+    qRunIO $ writeFile (fp ++ ".data") $ show hd'
     let h = urt `AppE` LitE (StringL fp) `AppE` hd' `AppE` VarE render
     return $ LamE [VarP render] h
 
@@ -75,19 +76,22 @@ getHD _ (SDUrl hasParams x) = do
 getHD render (SDTemplate x) = do
     th <- [|HDHtml . toHtml|]
     return [(x, th `AppE` (derefToExp x `AppE` render))]
-getHD _ (SDCond xs _) =
-    mapM (go . fst) xs
+getHD render (SDCond xs edocs) = do
+    hd <- fmap concat $ mapM (getHD render) $ edocs ++ concatMap snd xs
+    bools <- mapM (go . fst) xs
+    return $ hd ++ bools
   where
     go x = do
         tb <- [|HDBool|]
         return (x, tb `AppE` derefToExp x)
-getHD render (SDMaybe x y docs _) = do
+getHD render (SDMaybe x y docs ndocs) = do
     hd <- fmap concat $ mapM (getHD render) docs
-    let (tops, subs) = partitionEithers $ map go hd
+    let (tops1, subs) = partitionEithers $ map go hd
+    tops2 <- fmap concat $ mapM (getHD render) ndocs
     jsubs <- combineHDs subs
     let jsubs' = LamE [VarP $ mkName y] jsubs
     e <- [|\a -> HDMaybe . fmap a|]
-    return $ (x, e `AppE` jsubs' `AppE` derefToExp x) : tops
+    return $ (x, e `AppE` jsubs' `AppE` derefToExp x) : tops1 ++ tops2
   where
     go (a@(y':rest), e)
         | y == y' = Right (rest, e)

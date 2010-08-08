@@ -7,18 +7,23 @@ $id.var$
 ^template^
 $if id.true
     true
+    $id.id.id.id.id.extra$
 $if not.true
 $else
     not true
+    $id.id.id.id.extra$
 $if not.true
 $elseif true
     elseif true
+    $id.id.id.extra$
 $maybe just j
     $j$
     $id.j$
+    $id.id.extra$
 $maybe nothing _
 $nothing
     nothing
+    $id.extra$
 $forall list l
     $id.id.l$
     $extra$

@@ -50,6 +50,7 @@ library
                      Text.Hamlet.RT
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
+                     Text.Hamlet.Debug
     ghc-options:     -Wall
 
 executable             runtests
