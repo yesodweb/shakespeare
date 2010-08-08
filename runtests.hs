@@ -5,6 +5,7 @@ import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 
 import Text.Hamlet
+import Text.Camlet
 import Data.ByteString.Lazy.UTF8 (toString)
 
 main :: IO ()
@@ -61,6 +62,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamlet runtime" caseHamletRT
     , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
     , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
+    , testCase "camlet" caseCamlet
     ]
 
 data Url = Home | Sub SubUrl
@@ -496,4 +498,37 @@ caseHamletFileDebugFeatures = do
         , "juste"
         , "nothinge"
         , "1e2e3e"
+        ]
+
+celper :: String -> Camlet Url -> Assertion
+celper res h = do
+    let x = renderCamlet render h
+    res @=? toString x
+
+caseCamlet :: Assertion
+caseCamlet = do
+    let mixin :: CamletMixin a
+        mixin = [$camletMixin|
+a: b
+c: d
+|]
+    let var = "var"
+    let urlp = (Home, [("p", "q")])
+    flip celper [$camlet|
+foo
+    color: $colorRed$
+    background: $colorBlack$
+    bar: baz
+    bin
+        color: $(((Color 127) 100) 5)$
+        bar: bar
+        unicode-test: שלום
+        f$var$x: someval
+        background-image: url(@Home@)
+        urlp: url(@?urlp@)
+    ^mixin^
+|] $ concat
+        [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
+        , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
+        , "background-image:url(url);urlp:url(url?p=q)}"
         ]
