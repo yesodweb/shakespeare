@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Text.Camlet
     ( Camlet
+    , Css (..)
     , renderCamlet
     , CamletMixin
     , camletMixin
@@ -36,8 +37,8 @@ import System.IO.Unsafe (unsafePerformIO)
 
 data Color = Color Word8 Word8 Word8
     deriving Show
-instance ToStyle Color where
-    toStyle (Color r g b) =
+instance ToCss Color where
+    toCss (Color r g b) =
         let (r1, r2) = toHex r
             (g1, g2) = toHex g
             (b1, b2) = toHex b
@@ -62,19 +63,19 @@ colorRed = Color 255 0 0
 colorBlack :: Color
 colorBlack = Color 0 0 0
 
-renderStyle :: Style -> L.ByteString
-renderStyle (Style b) = toLazyByteString b
+renderCss :: Css -> L.ByteString
+renderCss (Css b) = toLazyByteString b
 
 renderCamlet :: (url -> [(String, String)] -> String) -> Camlet url -> L.ByteString
-renderCamlet r s = renderStyle $ s r
+renderCamlet r s = renderCss $ s r
 
-newtype Style = Style Builder
+newtype Css = Css Builder
     deriving Monoid
-type Camlet url = (url -> [(String, String)] -> String) -> Style
+type Camlet url = (url -> [(String, String)] -> String) -> Css
 
-class ToStyle a where
-    toStyle :: a -> String
-instance ToStyle [Char] where toStyle = id
+class ToCss a where
+    toCss :: a -> String
+instance ToCss [Char] where toCss = id
 
 data ContentPair = CPSimple Contents Contents
                  | CPMixin Deref
@@ -243,7 +244,7 @@ compressContents (x:y) = x : compressContents y
 contentsToCamlet :: [Content] -> Q Exp
 contentsToCamlet a = do
     r <- newName "_render"
-    c <- mapM (contentToStyle r) $ compressContents a
+    c <- mapM (contentToCss r) $ compressContents a
     d <- case c of
             [] -> [|mempty|]
             [x] -> return x
@@ -286,22 +287,22 @@ camletFromString s = do
           $ sequenceA $ map (nestToDec True) $ nestLines a
     contentsToCamlet $ concatMap render $ concatMap flatDec b
 
-contentToStyle :: Name -> Content -> Q Exp
-contentToStyle _ (ContentRaw s') = do
+contentToCss :: Name -> Content -> Q Exp
+contentToCss _ (ContentRaw s') = do
     let d = S8.unpack $ BSU.fromString s'
-    ts <- [|Style . fromByteString . S8.pack|]
+    ts <- [|Css . fromByteString . S8.pack|]
     return $ ts `AppE` LitE (StringL d)
-contentToStyle _ (ContentVar d) = do
-    ts <- [|Style . fromString . toStyle|]
+contentToCss _ (ContentVar d) = do
+    ts <- [|Css . fromString . toCss|]
     return $ ts `AppE` derefToExp d
-contentToStyle r (ContentUrl d) = do
-    ts <- [|Style . fromString|]
+contentToCss r (ContentUrl d) = do
+    ts <- [|Css . fromString|]
     return $ ts `AppE` (VarE r `AppE` derefToExp d `AppE` ListE [])
-contentToStyle r (ContentUrlParam d) = do
-    ts <- [|Style . fromString|]
+contentToCss r (ContentUrlParam d) = do
+    ts <- [|Css . fromString|]
     up <- [|\r' (u, p) -> r' u p|]
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
-contentToStyle r (ContentMix d) = do
+contentToCss r (ContentMix d) = do
     un <- [|unCamletMixin|]
     return $ un `AppE` derefToExp d `AppE` VarE r
 
@@ -346,7 +347,7 @@ vtToExp (d, vt) = do
     c' <- c vt
     return $ TupE [d', c' `AppE` derefToExp d]
   where
-    c VTPlain = [|CDPlain . toStyle|]
+    c VTPlain = [|CDPlain . toCss|]
     c VTUrl = [|CDUrl|]
     c VTUrlParam = [|CDUrlParam|]
     c VTMixin = [|CDMixin|]
@@ -368,20 +369,20 @@ camletRuntime fp cd render' = unsafePerformIO $ do
           $ sequenceA $ map (nestToDec True) $ nestLines a
     return $ mconcat $ map go $ concatMap render $ concatMap flatDec b
   where
-    go :: Content -> Style
-    go (ContentRaw s) = Style $ fromString s
+    go :: Content -> Css
+    go (ContentRaw s) = Css $ fromString s
     go (ContentVar d) =
         case lookup d cd of
-            Just (CDPlain s) -> Style $ fromString s
+            Just (CDPlain s) -> Css $ fromString s
             _ -> error $ show d ++ ": expected CDPlain"
     go (ContentUrl d) =
         case lookup d cd of
-            Just (CDUrl u) -> Style $ fromString $ render' u []
+            Just (CDUrl u) -> Css $ fromString $ render' u []
             _ -> error $ show d ++ ": expected CDUrl"
     go (ContentUrlParam d) =
         case lookup d cd of
             Just (CDUrlParam (u, p)) ->
-                Style $ fromString $ render' u p
+                Css $ fromString $ render' u p
             _ -> error $ show d ++ ": expected CDUrlParam"
     go (ContentMix d) =
         case lookup d cd of
