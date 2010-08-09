@@ -90,7 +90,7 @@ parseLine set = do
     eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
     eol = eof <|> eol'
     doctype = do
-        string "!!!" >> eol
+        try $ string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
     backslash = do
         _ <- char '\\'
@@ -125,7 +125,7 @@ parseLine set = do
         eol
         return $ LineForall x y
     tag = do
-        x <- tagName <|> tagIdent <|> tagClass
+        x <- tagName <|> tagIdent <|> tagClass <|> tagAttrib
         xs <- many $ tagIdent <|> tagClass <|> tagAttrib
         c <- (eol >> return []) <|> (do
             _ <- many1 $ oneOf " \t"

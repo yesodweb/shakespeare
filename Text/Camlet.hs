@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Text.Camlet
     ( Camlet
+    , Css (..)
     , renderCamlet
     , CamletMixin
     , camletMixin

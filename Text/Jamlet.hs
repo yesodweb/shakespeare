@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Text.Jamlet
     ( Jamlet
+    , Javascript (..)
     , renderJamlet
     , jamlet
     , jamletFile

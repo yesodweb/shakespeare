@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Text.Hamlet.Quasi
     ( hamlet
     , xhamlet
@@ -14,6 +15,8 @@ module Text.Hamlet.Quasi
     , hamletFileWithSettings
     , ToHtml (..)
     , varName
+    , Html (..)
+    , Hamlet
     ) where
 
 import Text.Hamlet.Parse
@@ -22,16 +25,17 @@ import Language.Haskell.TH.Quote
 import Data.Char (isUpper)
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Char8 as S8
-import Data.Monoid (mconcat, mappend, mempty)
-import Text.Blaze (unsafeByteString, Html, string)
-import Data.List (intercalate)
+import Data.Monoid (Monoid (..))
+import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
+import Text.Blaze.Builder.Utf8 (fromString)
+import Text.Blaze.Builder.Html (fromHtmlEscapedString)
 
 class ToHtml a where
-    toHtml :: a -> Html ()
+    toHtml :: a -> Html
 instance ToHtml String where
-    toHtml = string
-instance ToHtml (Html a) where
-    toHtml x = x >> return ()
+    toHtml = Html . fromHtmlEscapedString
+instance ToHtml Html where
+    toHtml = id
 
 type Scope = [(Ident, Exp)]
 
@@ -39,16 +43,13 @@ docsToExp :: Exp -> Scope -> [Doc] -> Q Exp
 docsToExp render scope docs = do
     exps <- mapM (docToExp render scope) docs
     me <- [|mempty|]
+    ma <- [|mappend|]
+    let ma' x y = InfixE (Just x) ma $ Just y
     return $
         case exps of
             [] -> me
             [x] -> x
-            _ ->
-                let x = init exps
-                    y = last exps
-                    x' = map (BindS WildP) x
-                    y' = NoBindS y
-                 in DoE $ x' ++ [y']
+            _ -> foldr1 ma' exps
 
 docToExp :: Exp -> Scope -> Doc -> Q Exp
 docToExp render scope (DocForall list ident@(Ident name) inside) = do
@@ -93,7 +94,7 @@ docToExp render v (DocContent c) = contentToExp render v c
 
 contentToExp :: Exp -> Scope -> Content -> Q Exp
 contentToExp _ _ (ContentRaw s) = do
-    os <- [|unsafeByteString . S8.pack|]
+    os <- [|Html . fromByteString . S8.pack|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
 contentToExp _ scope (ContentVar d) = do
@@ -101,8 +102,8 @@ contentToExp _ scope (ContentVar d) = do
     return $ str `AppE` deref scope d
 contentToExp render scope (ContentUrl hasParams d) = do
     ou <- if hasParams
-            then [|\r (u, p) -> string $ r u p|]
-            else [|\r u -> string $ r u []|]
+            then [|\r (u, p) -> Html $ fromHtmlEscapedString $ r u p|]
+            else [|\r u -> Html $ fromHtmlEscapedString $ r u []|]
     let d' = deref scope d
     return $ ou `AppE` render `AppE` d'
 contentToExp render scope (ContentEmbed d) = do
@@ -196,7 +197,7 @@ varName scope v@(s:_) =
 -- a true exists, then the corresponding right action is performed. Only the
 -- first is performed. In there are no true values, then the second argument is
 -- performed, if supplied.
-condH :: [(Bool, Html ())] -> Maybe (Html ()) -> Html ()
+condH :: [(Bool, Html)] -> Maybe Html -> Html
 condH [] Nothing = mempty
 condH [] (Just x) = x
 condH ((True, y):_) _ = y
@@ -204,7 +205,13 @@ condH ((False, _):rest) z = condH rest z
 
 -- | Runs the second argument with the value in the first, if available.
 -- Otherwise, runs the third argument, if available.
-maybeH :: Maybe v -> (v -> Html ()) -> Maybe (Html ()) -> Html ()
+maybeH :: Maybe v -> (v -> Html) -> Maybe Html -> Html
 maybeH Nothing _ Nothing = mempty
 maybeH Nothing _ (Just x) = x
 maybeH (Just v) f _ = f v
+
+newtype Html = Html Builder
+    deriving Monoid
+
+-- | An function generating an 'Html' given a URL-rendering function.
+type Hamlet url = (url -> [(String, String)] -> String) -> Html

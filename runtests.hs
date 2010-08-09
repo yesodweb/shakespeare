@@ -113,7 +113,7 @@ encodeUrlChar y =
 
 data Arg url = Arg
     { getArg :: Arg url
-    , var :: Html ()
+    , var :: Html
     , url :: Url
     , embed :: Hamlet url
     , true :: Bool
@@ -366,7 +366,7 @@ caseAttribVars :: Assertion
 caseAttribVars = do
     helper "<div id=\"&lt;var&gt;\"></div>" [$hamlet|#$var.theArg$|]
     helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$var.theArg$|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|%div!f=$var.theArg$|]
+    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|!f=$var.theArg$|]
 
 caseStringsAndHtml :: Assertion
 caseStringsAndHtml = do
@@ -437,7 +437,7 @@ $forall (id id.id id.alist) x
     $x$
 |]
 
-helper' :: String -> Html ()-> Assertion
+helper' :: String -> Html -> Assertion
 helper' res h = do
     let x = renderHtml h
     res @=? toString x

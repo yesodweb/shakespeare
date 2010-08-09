@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Text.Hamlet
     ( -- * Basic quasiquoters
       hamlet
@@ -16,7 +17,7 @@ module Text.Hamlet
     , defaultHamletSettings
     , xhtmlHamletSettings
       -- * Datatypes
-    , Html
+    , Html (..)
     , Hamlet
       -- * Construction/rendering
     , renderHamlet
@@ -37,22 +38,34 @@ import Text.Hamlet.Parse
 import Text.Hamlet.Quasi
 import Text.Hamlet.RT
 import Text.Hamlet.Debug
-import Text.Blaze
+import qualified Data.ByteString as S
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid (mappend)
-
--- | An function generating an 'Html' given a URL-rendering function.
-type Hamlet url = (url -> [(String, String)] -> String) -> Html ()
+import Text.Blaze.Builder.Core (toLazyByteString, fromByteString)
+import Text.Blaze.Builder.Html (fromHtmlEscapedString)
+import Text.Blaze.Builder.Utf8 (fromString)
 
 -- | Converts a 'Hamlet' to lazy bytestring.
 renderHamlet :: (url -> [(String, String)] -> String) -> Hamlet url -> L.ByteString
 renderHamlet render h = renderHtml $ h render
 
+renderHtml :: Html -> L.ByteString
+renderHtml (Html h) = toLazyByteString h
+
 -- | Wrap an 'Html' for embedding in an XML file.
-cdata :: Html () -> Html ()
+cdata :: Html -> Html
 cdata h =
-    preEscapedString "<![CDATA["
+    Html (fromByteString "<![CDATA[")
     `mappend`
     h
     `mappend`
-    preEscapedString "]]>"
+    Html (fromByteString "]]>")
+
+preEscapedString :: String -> Html
+preEscapedString = Html . fromString
+
+string :: String -> Html
+string = Html . fromHtmlEscapedString
+
+unsafeByteString :: S.ByteString -> Html
+unsafeByteString = Html . fromByteString

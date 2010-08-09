@@ -11,7 +11,6 @@ import Language.Haskell.TH.Ppr
 import qualified Data.ByteString.Char8 as S8
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.ByteString.UTF8 as BSU
-import Text.Blaze
 import Data.List
 import Data.Ord
 import Data.Function
@@ -19,7 +18,7 @@ import Control.Arrow
 import Data.Either
 
 unsafeRenderTemplate :: FilePath -> HamletData url
-                     -> (url -> [(String, String)] -> String) -> Html ()
+                     -> (url -> [(String, String)] -> String) -> Html
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     temp <- parseHamletRT defaultHamletSettings contents
