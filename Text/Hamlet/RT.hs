@@ -18,12 +18,13 @@ import Control.Monad (liftM, forM)
 import Control.Exception (Exception)
 import Data.Typeable (Typeable)
 import Control.Failure
-import Text.Blaze
 import Text.Hamlet.Parse
+import Text.Hamlet.Quasi (Html (..))
 import Data.List (intercalate)
+import Text.Blaze.Builder.Utf8 (fromString)
 
 data HamletData url
-    = HDHtml (Html ())
+    = HDHtml Html
     | HDUrl url
     | HDUrlParams url [(String, String)]
     | HDTemplate HamletRT
@@ -93,7 +94,7 @@ renderHamletRT :: Failure HamletException m
                => HamletRT
                -> HamletData url
                -> (url -> [(String, String)] -> String)
-               -> m (Html ())
+               -> m Html
 renderHamletRT = renderHamletRT' False
 
 renderHamletRT' :: Failure HamletException m
@@ -101,11 +102,11 @@ renderHamletRT' :: Failure HamletException m
                 -> HamletRT
                 -> HamletData url
                 -> (url -> [(String, String)] -> String)
-                -> m (Html ())
+                -> m Html
 renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
     liftM mconcat $ mapM (go scope0) docs
   where
-    go _ (SDRaw s) = return $ preEscapedString s
+    go _ (SDRaw s) = return $ Html $ fromString s
     go scope (SDVar n) = do
         v <- lookup' n n $ HDMap scope
         case v of
@@ -114,9 +115,9 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
     go scope (SDUrl p n) = do
         v <- lookup' n n $ HDMap scope
         case (p, v) of
-            (False, HDUrl u) -> return $ preEscapedString $ renderUrl u []
+            (False, HDUrl u) -> return $ Html $ fromString $ renderUrl u []
             (True, HDUrlParams u q) ->
-                return $ preEscapedString $ renderUrl u q
+                return $ Html $ fromString $ renderUrl u q
             (False, _) -> fa $ showName n ++ ": expected HDUrl"
             (True, _) -> fa $ showName n ++ ": expected HDUrlParams"
     go scope (SDTemplate n) = do

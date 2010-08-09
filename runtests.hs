@@ -113,7 +113,7 @@ encodeUrlChar y =
 
 data Arg url = Arg
     { getArg :: Arg url
-    , var :: Html ()
+    , var :: Html
     , url :: Url
     , embed :: Hamlet url
     , true :: Bool
@@ -437,7 +437,7 @@ $forall (id id.id id.alist) x
     $x$
 |]
 
-helper' :: String -> Html ()-> Assertion
+helper' :: String -> Html -> Assertion
 helper' res h = do
     let x = renderHtml h
     res @=? toString x
