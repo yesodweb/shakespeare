@@ -366,7 +366,7 @@ caseAttribVars :: Assertion
 caseAttribVars = do
     helper "<div id=\"&lt;var&gt;\"></div>" [$hamlet|#$var.theArg$|]
     helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|.$var.theArg$|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|%div!f=$var.theArg$|]
+    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|!f=$var.theArg$|]
 
 caseStringsAndHtml :: Assertion
 caseStringsAndHtml = do
