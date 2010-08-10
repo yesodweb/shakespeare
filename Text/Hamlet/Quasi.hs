@@ -22,13 +22,14 @@ module Text.Hamlet.Quasi
 import Text.Hamlet.Parse
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
-import Data.Char (isUpper)
+import Data.Char (isUpper, isDigit)
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
 import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
 import Text.Blaze.Builder.Utf8 (fromString)
 import Text.Blaze.Builder.Html (fromHtmlEscapedString)
+import Data.Maybe (fromMaybe)
 
 class ToHtml a where
     toHtml :: a -> Html
@@ -185,13 +186,14 @@ deref scope (DerefLeaf d@(Ident dName)) =
 
 varName :: Scope -> String -> Exp
 varName _ "" = error "Illegal empty varName"
-varName scope v@(s:_) =
-    case lookup (Ident v) scope of
-        Just e -> e
-        Nothing ->
-            if isUpper s
-                then ConE $ mkName v
-                else VarE $ mkName v
+varName scope v@(s:_) = fromMaybe (strToExp v) $ lookup (Ident v) scope
+
+strToExp :: String -> Exp
+strToExp s@(c:_)
+    | all isDigit s = LitE $ IntegerL $ read s
+    | isUpper c = ConE $ mkName s
+    | otherwise = VarE $ mkName s
+strToExp "" = error "strToExp on empty string"
 
 -- | Checks for truth in the left value in each pair in the first argument. If
 -- a true exists, then the corresponding right action is performed. Only the

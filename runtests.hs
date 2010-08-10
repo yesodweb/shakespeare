@@ -59,6 +59,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "currency symbols" caseCurrency
     , testCase "external" caseExternal
     , testCase "parens" caseParens
+    , testCase "hamlet literals"caseHamletLiterals
     , testCase "hamlet' and xhamlet'" caseHamlet'
     , testCase "hamletDebug" caseHamletDebug
     , testCase "hamlet runtime" caseHamletRT
@@ -436,6 +437,9 @@ caseParens = do
 $forall (id id.id id.alist) x
     $x$
 |]
+
+caseHamletLiterals :: Assertion
+caseHamletLiterals = helper "123" [$hamlet|$show.123$|]
 
 helper' :: String -> Html -> Assertion
 helper' res h = do
