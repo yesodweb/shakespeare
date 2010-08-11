@@ -49,8 +49,8 @@ library
                      failure >= 0.1.0 && < 0.2
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
-                     Text.Camlet
-                     Text.Jamlet
+                     Text.Cassius
+                     Text.Julius
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
                      Text.Hamlet.Debug

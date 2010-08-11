@@ -1,13 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-module Text.Jamlet
-    ( Jamlet
+module Text.Julius
+    ( Julius
     , Javascript (..)
-    , renderJamlet
-    , jamlet
-    , jamletFile
-    , jamletFileDebug
+    , renderJulius
+    , julius
+    , juliusFile
+    , juliusFileDebug
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -25,12 +25,12 @@ import System.IO.Unsafe (unsafePerformIO)
 renderJavascript :: Javascript -> L.ByteString
 renderJavascript (Javascript b) = toLazyByteString b
 
-renderJamlet :: (url -> [(String, String)] -> String) -> Jamlet url -> L.ByteString
-renderJamlet r s = renderJavascript $ s r
+renderJulius :: (url -> [(String, String)] -> String) -> Julius url -> L.ByteString
+renderJulius r s = renderJavascript $ s r
 
 newtype Javascript = Javascript Builder
     deriving Monoid
-type Jamlet url = (url -> [(String, String)] -> String) -> Javascript
+type Julius url = (url -> [(String, String)] -> String) -> Javascript
 
 class ToJavascript a where
     toJavascript :: a -> String
@@ -105,8 +105,8 @@ compressContents (ContentRaw x:ContentRaw y:z) =
     compressContents $ ContentRaw (x ++ y) : z
 compressContents (x:y) = x : compressContents y
 
-contentsToJamlet :: [Content] -> Q Exp
-contentsToJamlet a = do
+contentsToJulius :: [Content] -> Q Exp
+contentsToJulius a = do
     r <- newName "_render"
     c <- mapM (contentToJavascript r) $ compressContents a
     d <- case c of
@@ -117,16 +117,16 @@ contentsToJamlet a = do
                 return $ mc `AppE` ListE c
     return $ LamE [VarP r] d
 
-jamlet :: QuasiQuoter
-jamlet =
-    QuasiQuoter jamletFromString p
+julius :: QuasiQuoter
+julius =
+    QuasiQuoter juliusFromString p
   where
-    p = error "jamlet quasi-quoter for patterns does not exist"
+    p = error "julius quasi-quoter for patterns does not exist"
 
-jamletFromString :: String -> Q Exp
-jamletFromString s = do
+juliusFromString :: String -> Q Exp
+juliusFromString s = do
     let a = either (error . show) id $ parse parseContents s s
-    contentsToJamlet a
+    contentsToJulius a
 
 contentToJavascript :: Name -> Content -> Q Exp
 contentToJavascript _ (ContentRaw s') = do
@@ -157,10 +157,10 @@ derefToExp (DerefLeaf v@(s:_))
     | isUpper s = ConE $ mkName v
     | otherwise = VarE $ mkName v
 
-jamletFile :: FilePath -> Q Exp
-jamletFile fp = do
+juliusFile :: FilePath -> Q Exp
+juliusFile fp = do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
-    jamletFromString contents
+    juliusFromString contents
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
 
@@ -174,7 +174,7 @@ getVars (ContentMix d) = [(d, VTMixin)]
 data JDData url = JDPlain String
                 | JDUrl url
                 | JDUrlParam (url, [(String, String)])
-                | JDMixin (Jamlet url)
+                | JDMixin (Julius url)
 
 vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
@@ -187,17 +187,17 @@ vtToExp (d, vt) = do
     c VTUrlParam = [|JDUrlParam|]
     c VTMixin = [|JDMixin|]
 
-jamletFileDebug :: FilePath -> Q Exp
-jamletFileDebug fp = do
+juliusFileDebug :: FilePath -> Q Exp
+juliusFileDebug fp = do
     s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseContents s s
         b = concatMap getVars a
     c <- mapM vtToExp b
-    cr <- [|jamletRuntime|]
+    cr <- [|juliusRuntime|]
     return $ cr `AppE` (LitE $ StringL fp) `AppE` ListE c
 
-jamletRuntime :: FilePath -> [(Deref, JDData url)] -> Jamlet url
-jamletRuntime fp cd render' = unsafePerformIO $ do
+juliusRuntime :: FilePath -> [(Deref, JDData url)] -> Julius url
+juliusRuntime fp cd render' = unsafePerformIO $ do
     s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseContents s s
     return $ mconcat $ map go a

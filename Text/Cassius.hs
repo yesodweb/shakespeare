@@ -1,18 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-module Text.Camlet
-    ( Camlet
+module Text.Cassius
+    ( Cassius
     , Css (..)
-    , renderCamlet
-    , CamletMixin
-    , camletMixin
-    , camlet
+    , renderCassius
+    , CassiusMixin
+    , cassiusMixin
+    , cassius
     , Color (..)
     , colorRed
     , colorBlack
-    , camletFile
-    , camletFileDebug
+    , cassiusFile
+    , cassiusFileDebug
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -66,12 +66,12 @@ colorBlack = Color 0 0 0
 renderCss :: Css -> L.ByteString
 renderCss (Css b) = toLazyByteString b
 
-renderCamlet :: (url -> [(String, String)] -> String) -> Camlet url -> L.ByteString
-renderCamlet r s = renderCss $ s r
+renderCassius :: (url -> [(String, String)] -> String) -> Cassius url -> L.ByteString
+renderCassius r s = renderCss $ s r
 
 newtype Css = Css Builder
     deriving Monoid
-type Camlet url = (url -> [(String, String)] -> String) -> Css
+type Cassius url = (url -> [(String, String)] -> String) -> Css
 
 class ToCss a where
     toCss :: a -> String
@@ -241,8 +241,8 @@ compressContents (ContentRaw x:ContentRaw y:z) =
     compressContents $ ContentRaw (x ++ y) : z
 compressContents (x:y) = x : compressContents y
 
-contentsToCamlet :: [Content] -> Q Exp
-contentsToCamlet a = do
+contentsToCassius :: [Content] -> Q Exp
+contentsToCassius a = do
     r <- newName "_render"
     c <- mapM (contentToCss r) $ compressContents a
     d <- case c of
@@ -253,11 +253,11 @@ contentsToCamlet a = do
                 return $ mc `AppE` ListE c
     return $ LamE [VarP r] d
 
-camletMixin :: QuasiQuoter
-camletMixin =
+cassiusMixin :: QuasiQuoter
+cassiusMixin =
     QuasiQuoter e p
   where
-    p = error "camletMixin quasi-quoter for patterns does not exist"
+    p = error "cassiusMixin quasi-quoter for patterns does not exist"
     e s = do
         let a = either (error . show) id
               $ parse parseLines s s
@@ -266,26 +266,26 @@ camletMixin =
                         LinePair x y -> CPSimple x y
                         LineMix deref -> CPMixin deref
                         LineSingle _ -> error "Mixins cannot contain singles"
-        d <- contentsToCamlet
+        d <- contentsToCassius
            $ intercalate [ContentRaw ";"]
            $ map contentPairToContents b
-        sm <- [|CamletMixin|]
+        sm <- [|CassiusMixin|]
         return $ sm `AppE` d
 
-newtype CamletMixin url = CamletMixin { unCamletMixin :: Camlet url }
+newtype CassiusMixin url = CassiusMixin { unCassiusMixin :: Cassius url }
 
-camlet :: QuasiQuoter
-camlet =
-    QuasiQuoter camletFromString p
+cassius :: QuasiQuoter
+cassius =
+    QuasiQuoter cassiusFromString p
   where
-    p = error "camlet quasi-quoter for patterns does not exist"
+    p = error "cassius quasi-quoter for patterns does not exist"
 
-camletFromString :: String -> Q Exp
-camletFromString s = do
+cassiusFromString :: String -> Q Exp
+cassiusFromString s = do
     let a = either (error . show) id $ parse parseLines s s
     let b = either (error . unlines) id
           $ sequenceA $ map (nestToDec True) $ nestLines a
-    contentsToCamlet $ concatMap render $ concatMap flatDec b
+    contentsToCassius $ concatMap render $ concatMap flatDec b
 
 contentToCss :: Name -> Content -> Q Exp
 contentToCss _ (ContentRaw s') = do
@@ -303,7 +303,7 @@ contentToCss r (ContentUrlParam d) = do
     up <- [|\r' (u, p) -> r' u p|]
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
 contentToCss r (ContentMix d) = do
-    un <- [|unCamletMixin|]
+    un <- [|unCassiusMixin|]
     return $ un `AppE` derefToExp d `AppE` VarE r
 
 derefToExp :: Deref -> Exp
@@ -317,10 +317,10 @@ derefToExp (DerefLeaf v@(s:_))
     | isUpper s = ConE $ mkName v
     | otherwise = VarE $ mkName v
 
-camletFile :: FilePath -> Q Exp
-camletFile fp = do
+cassiusFile :: FilePath -> Q Exp
+cassiusFile fp = do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
-    camletFromString contents
+    cassiusFromString contents
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
 
@@ -339,7 +339,7 @@ getVars' (ContentMix d) = [(d, VTMixin)]
 data CDData url = CDPlain String
                 | CDUrl url
                 | CDUrlParam (url, [(String, String)])
-                | CDMixin (CamletMixin url)
+                | CDMixin (CassiusMixin url)
 
 vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
@@ -352,17 +352,17 @@ vtToExp (d, vt) = do
     c VTUrlParam = [|CDUrlParam|]
     c VTMixin = [|CDMixin|]
 
-camletFileDebug :: FilePath -> Q Exp
-camletFileDebug fp = do
+cassiusFileDebug :: FilePath -> Q Exp
+cassiusFileDebug fp = do
     s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseLines s s
         b = concatMap (getVars . snd) a
     c <- mapM vtToExp b
-    cr <- [|camletRuntime|]
+    cr <- [|cassiusRuntime|]
     return $ cr `AppE` (LitE $ StringL fp) `AppE` ListE c
 
-camletRuntime :: FilePath -> [(Deref, CDData url)] -> Camlet url
-camletRuntime fp cd render' = unsafePerformIO $ do
+cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
+cassiusRuntime fp cd render' = unsafePerformIO $ do
     s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseLines s s
     let b = either (error . unlines) id
@@ -386,5 +386,5 @@ camletRuntime fp cd render' = unsafePerformIO $ do
             _ -> error $ show d ++ ": expected CDUrlParam"
     go (ContentMix d) =
         case lookup d cd of
-            Just (CDMixin (CamletMixin m)) -> m render'
+            Just (CDMixin (CassiusMixin m)) -> m render'
             _ -> error $ show d ++ ": expected CDMixin"

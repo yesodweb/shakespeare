@@ -5,8 +5,8 @@ import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 
 import Text.Hamlet
-import Text.Camlet
-import Text.Jamlet
+import Text.Cassius
+import Text.Julius
 import Data.ByteString.Lazy.UTF8 (toString)
 import Data.List (intercalate)
 
@@ -65,14 +65,14 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamlet runtime" caseHamletRT
     , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
     , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
-    , testCase "camlet" caseCamlet
-    , testCase "camletFile" caseCamletFile
-    , testCase "camletFileDebug" caseCamletFileDebug
-    , testCase "camletFileDebugChange" caseCamletFileDebugChange
-    , testCase "jamlet" caseJamlet
-    , testCase "jamletFile" caseJamletFile
-    , testCase "jamletFileDebug" caseJamletFileDebug
-    , testCase "jamletFileDebugChange" caseJamletFileDebugChange
+    , testCase "cassius" caseCassius
+    , testCase "cassiusFile" caseCassiusFile
+    , testCase "cassiusFileDebug" caseCassiusFileDebug
+    , testCase "cassiusFileDebugChange" caseCassiusFileDebugChange
+    , testCase "julius" caseJulius
+    , testCase "juliusFile" caseJuliusFile
+    , testCase "juliusFileDebug" caseJuliusFileDebug
+    , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
     ]
 
 data Url = Home | Sub SubUrl
@@ -544,22 +544,22 @@ caseHamletFileDebugFeatures = do
         , "1e2e3e"
         ]
 
-celper :: String -> Camlet Url -> Assertion
+celper :: String -> Cassius Url -> Assertion
 celper res h = do
-    let x = renderCamlet render h
+    let x = renderCassius render h
     res @=? toString x
 
-mixin :: CamletMixin a
-mixin = [$camletMixin|
+mixin :: CassiusMixin a
+mixin = [$cassiusMixin|
 a: b
 c: d
 |]
 
-caseCamlet :: Assertion
-caseCamlet = do
+caseCassius :: Assertion
+caseCassius = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
-    flip celper [$camlet|
+    flip celper [$cassius|
 foo
     color: $colorRed$
     background: $colorBlack$
@@ -578,47 +578,47 @@ foo
         , "background-image:url(url);urlp:url(url?p=q)}"
         ]
 
-caseCamletFile :: Assertion
-caseCamletFile = do
+caseCassiusFile :: Assertion
+caseCassiusFile = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
-    flip celper $(camletFile "external1.camlet") $ concat
+    flip celper $(cassiusFile "external1.cassius") $ concat
         [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
         , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
         , "background-image:url(url);urlp:url(url?p=q)}"
         ]
 
-caseCamletFileDebug :: Assertion
-caseCamletFileDebug = do
+caseCassiusFileDebug :: Assertion
+caseCassiusFileDebug = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
-    flip celper $(camletFileDebug "external1.camlet") $ concat
+    flip celper $(cassiusFileDebug "external1.cassius") $ concat
         [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
         , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
         , "background-image:url(url);urlp:url(url?p=q)}"
         ]
 
-caseCamletFileDebugChange :: Assertion
-caseCamletFileDebugChange = do
+caseCassiusFileDebugChange :: Assertion
+caseCassiusFileDebugChange = do
     let var = "var"
-    writeFile "external2.camlet" "foo\n  $var$: 1"
-    celper "foo{var:1}" $(camletFileDebug "external2.camlet")
-    writeFile "external2.camlet" "foo\n  $var$: 2"
-    celper "foo{var:2}" $(camletFileDebug "external2.camlet")
-    writeFile "external2.camlet" "foo\n  $var$: 1"
+    writeFile "external2.cassius" "foo\n  $var$: 1"
+    celper "foo{var:1}" $(cassiusFileDebug "external2.cassius")
+    writeFile "external2.cassius" "foo\n  $var$: 2"
+    celper "foo{var:2}" $(cassiusFileDebug "external2.cassius")
+    writeFile "external2.cassius" "foo\n  $var$: 1"
 
-jmixin = [$jamlet|var x;|]
+jmixin = [$julius|var x;|]
 
-jelper :: String -> Jamlet Url -> Assertion
+jelper :: String -> Julius Url -> Assertion
 jelper res h = do
-    let x = renderJamlet render h
+    let x = renderJulius render h
     res @=? toString x
 
-caseJamlet :: Assertion
-caseJamlet = do
+caseJulius :: Assertion
+caseJulius = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
-    flip jelper [$jamlet|שלום
+    flip jelper [$julius|שלום
 $var$
 @Home@
 @?urlp@
@@ -631,11 +631,11 @@ $var$
         , "var x;"
         ] ++ "\r\n"
 
-caseJamletFile :: Assertion
-caseJamletFile = do
+caseJuliusFile :: Assertion
+caseJuliusFile = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
-    flip jelper $(jamletFile "external1.jamlet") $ unlines
+    flip jelper $(juliusFile "external1.julius") $ unlines
         [ "שלום"
         , var
         , "url"
@@ -643,11 +643,11 @@ caseJamletFile = do
         , "var x;"
         ]
 
-caseJamletFileDebug :: Assertion
-caseJamletFileDebug = do
+caseJuliusFileDebug :: Assertion
+caseJuliusFileDebug = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
-    flip jelper $(jamletFileDebug "external1.jamlet") $ unlines
+    flip jelper $(juliusFileDebug "external1.julius") $ unlines
         [ "שלום"
         , var
         , "url"
@@ -655,11 +655,11 @@ caseJamletFileDebug = do
         , "var x;"
         ]
 
-caseJamletFileDebugChange :: Assertion
-caseJamletFileDebugChange = do
+caseJuliusFileDebugChange :: Assertion
+caseJuliusFileDebugChange = do
     let var = "somevar"
-    writeFile "external2.jamlet" "var $var$ = 1;"
-    jelper "var somevar = 1;" $(jamletFileDebug "external2.jamlet")
-    writeFile "external2.jamlet" "var $var$ = 2;"
-    jelper "var somevar = 2;" $(jamletFileDebug "external2.jamlet")
-    writeFile "external2.jamlet" "var $var$ = 1;"
+    writeFile "external2.julius" "var $var$ = 1;"
+    jelper "var somevar = 1;" $(juliusFileDebug "external2.julius")
+    writeFile "external2.julius" "var $var$ = 2;"
+    jelper "var somevar = 2;" $(juliusFileDebug "external2.julius")
+    writeFile "external2.julius" "var $var$ = 1;"
