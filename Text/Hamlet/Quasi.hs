@@ -30,6 +30,10 @@ import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
 import Text.Blaze.Builder.Utf8 (fromString)
 import Text.Blaze.Builder.Html (fromHtmlEscapedString)
 import Data.Maybe (fromMaybe)
+import Data.String
+
+instance IsString Html where
+    fromString = Html . fromHtmlEscapedString
 
 class ToHtml a where
     toHtml :: a -> Html
