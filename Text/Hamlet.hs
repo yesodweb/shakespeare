@@ -19,6 +19,8 @@ module Text.Hamlet
       -- * Datatypes
     , Html (..)
     , Hamlet
+      -- * Typeclass
+    , ToHtml (..)
       -- * Construction/rendering
     , renderHamlet
     , renderHtml
