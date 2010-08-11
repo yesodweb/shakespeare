@@ -450,6 +450,8 @@ caseHamlet' :: Assertion
 caseHamlet' = do
     helper' "foo" [$hamlet'|foo|]
     helper' "foo" [$xhamlet'|foo|]
+    helper "<br>" $ const $ [$hamlet'|%br|]
+    helper "<br/>" $ const $ [$xhamlet'|%br|]
 
 caseHamletDebug :: Assertion
 caseHamletDebug = do
