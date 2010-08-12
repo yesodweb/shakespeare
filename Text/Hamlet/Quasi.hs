@@ -26,8 +26,7 @@ import Data.Char (isUpper, isDigit)
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
-import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
-import Text.Blaze.Builder.Utf8 (fromString)
+import Text.Blaze.Builder.Core (Builder, fromByteString)
 import Text.Blaze.Builder.Html (fromHtmlEscapedString)
 import Data.Maybe (fromMaybe)
 import Data.String
@@ -190,7 +189,7 @@ deref scope (DerefLeaf d@(Ident dName)) =
 
 varName :: Scope -> String -> Exp
 varName _ "" = error "Illegal empty varName"
-varName scope v@(s:_) = fromMaybe (strToExp v) $ lookup (Ident v) scope
+varName scope v@(_:_) = fromMaybe (strToExp v) $ lookup (Ident v) scope
 
 strToExp :: String -> Exp
 strToExp s@(c:_)

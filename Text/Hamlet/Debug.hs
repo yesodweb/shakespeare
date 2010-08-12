@@ -10,13 +10,11 @@ import Language.Haskell.TH.Syntax
 import qualified Data.ByteString.Char8 as S8
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.ByteString.UTF8 as BSU
-import Data.List
-import Data.Ord
-import Data.Function
 import Control.Arrow
 import Data.Either
+import Control.Monad (forM)
 
-unsafeRenderTemplate :: FilePath -> HamletData url
+unsafeRenderTemplate :: Show url => FilePath -> HamletMap url
                      -> (url -> [(String, String)] -> String) -> Html
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
     contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
@@ -29,81 +27,113 @@ hamletFileDebug fp = do
     HamletRT docs <- qRunIO $ parseHamletRT defaultHamletSettings contents
     urt <- [|unsafeRenderTemplate|]
     render <- newName "render"
-    hd <- fmap concat $ mapM (getHD $ VarE render) docs
-    hd' <- combineHDs hd
+    let hd = combineDVals $ concatMap getHD docs
+    hd' <- liftDVals (VarE render) hd
     let h = urt `AppE` LitE (StringL fp) `AppE` hd' `AppE` VarE render
     return $ LamE [VarP render] h
 
-derefToExp :: [String] -> Exp
-derefToExp = foldr1 AppE . map (varName []) . reverse
+derefToExp :: [Exp] -> Exp
+derefToExp = foldr1 AppE . reverse
 
-combineHDs :: [([String], Exp)] -> Q Exp
-combineHDs [([], e)] = return e
-combineHDs [([""], e)] = return e
-combineHDs pairs = do
-    pairs' <- mapM (\(x, y) -> do
-                case y of
-                    [([""], e)] -> return $ TupE [LitE $ StringL "", e]
-                    _ -> do
-                        let y' = map (\(a, b) ->
-                                    (if null a then [""] else a, b)) y
-                        y'' <- combineHDs y'
-                        return $ TupE [LitE $ StringL x, y''])
-            $ map (fst . head &&& map snd)
-            $ groupBy ((==) `on` fst)
-            $ sortBy (comparing fst)
-            $ map (\(x, y) ->
-                        case x of
-                            [] -> ("", ([], y))
-                            (x':xs) -> (x', (xs, y)))
-            $ map head
-            $ groupBy ((==) `on` fst)
-            $ sortBy (comparing fst) pairs
-    hm <- [|HDMap|]
-    return $ hm `AppE` ListE pairs'
+type DVal = ([Exp], DVal')
+data DVal' = DHtml
+           | DUrl
+           | DUrlParam
+           | DTemplate
+           | DBool
+           | DMaybe [([String], DVal)]
+           | DList [([String], DVal)]
+    deriving (Show, Eq)
 
+liftDVals :: Exp -> [([String], DVal)] -> Q Exp
+liftDVals render pairs = do
+    pairs' <- forM pairs $ \(k, d) -> do
+        let k' = ListE $ map (LitE . StringL) k
+        d' <- liftDVal render d
+        return $ TupE [k', d']
+    return $ ListE pairs'
 
-getHD :: Exp -> SimpleDoc -> Q [([String], Exp)]
-getHD _ SDRaw{} = return []
-getHD _ (SDVar x) = do
-    th <- [|HDHtml . toHtml|]
-    return [(x, th `AppE` derefToExp x)]
-getHD _ (SDUrl hasParams x) = do
-    th <- if hasParams then [|uncurry HDUrlParams|] else [|HDUrl|]
-    return [(x, th `AppE` derefToExp x)]
-getHD render (SDTemplate x) = do
-    th <- [|HDHtml . toHtml|]
-    return [(x, th `AppE` (derefToExp x `AppE` render))]
-getHD render (SDCond xs edocs) = do
-    hd <- fmap concat $ mapM (getHD render) $ edocs ++ concatMap snd xs
-    bools <- mapM (go . fst) xs
-    return $ hd ++ bools
+liftDVal :: Exp -> DVal -> Q Exp
+liftDVal _ (x, DHtml) = do
+    f <- [|HDHtml . toHtml|]
+    return $ f `AppE` derefToExp x
+liftDVal _ (x, DUrl) = do
+    f <- [|HDUrl|]
+    return $ f `AppE` derefToExp x
+liftDVal _ (x, DUrlParam) = do
+    f <- [|uncurry HDUrlParams|]
+    return $ f `AppE` derefToExp x
+liftDVal render (x, DTemplate) = do
+    f <- [|HDHtml|]
+    return $ f `AppE` (derefToExp x `AppE` render)
+liftDVal _ (x, DBool) = do
+    f <- [|HDBool|]
+    return $ f `AppE` derefToExp x
+liftDVal render (x, DMaybe each) = do
+    var <- newName "_var"
+    each' <- liftDVals render $ map (second $ replaceFirst $ VarE var) each
+    let each'' = LamE [VarP var] each'
+    hdlist <- [|HDMaybe|]
+    map' <- [|fmap|]
+    return $ hdlist `AppE` (map' `AppE` each'' `AppE` derefToExp x)
+liftDVal render (x, DList each) = do
+    var <- newName "_var"
+    each' <- liftDVals render $ map (second $ replaceFirst $ VarE var) each
+    let each'' = LamE [VarP var] each'
+    hdlist <- [|HDList|]
+    map' <- [|map|]
+    return $ hdlist `AppE` (map' `AppE` each'' `AppE` derefToExp x)
+
+combineDVals :: [([String], DVal)] -> [([String], DVal)]
+combineDVals [] = []
+combineDVals ((x1, y1):rest) =
+    case matches of
+        [] -> (x1, y1) : combineDVals rest
+        ys -> (x1, foldr combine' y1 ys) : combineDVals nomatch
   where
-    go x = do
-        tb <- [|HDBool|]
-        return (x, tb `AppE` derefToExp x)
-getHD render (SDMaybe x y docs ndocs) = do
-    hd <- fmap concat $ mapM (getHD render) docs
-    let (tops1, subs) = partitionEithers $ map go hd
-    tops2 <- fmap concat $ mapM (getHD render) ndocs
-    jsubs <- combineHDs subs
-    let jsubs' = LamE [VarP $ mkName y] jsubs
-    e <- [|\a -> HDMaybe . fmap a|]
-    return $ (x, e `AppE` jsubs' `AppE` derefToExp x) : tops1 ++ tops2
+    matches = map snd $ filter (\(x, _) -> x == x1) rest
+    nomatch = filter (\(x, _) -> x /= x1) rest
+    combine' (a, x) (b, y)
+        | a == b = (a, combine x y)
+        | otherwise = error $ "Bad parameters to combine: " ++ show ((a, x), (b, y))
+    combine (DList x) (DList y) = DList $ combineDVals $ x ++ y
+    combine (DMaybe x) (DMaybe y) = DMaybe $ combineDVals $ x ++ y
+    combine x y
+        | x == y = x
+    combine x y = error $ "Bad parameters to combine: " ++ show (x, y)
+
+varNames :: [String] -> [Exp]
+varNames = map $ varName []
+getHD :: SimpleDoc -> [([String], DVal)]
+getHD SDRaw{} = []
+getHD (SDVar x) = [(x, (varNames x, DHtml))]
+getHD (SDUrl hasParams x) =
+    [(x, (varNames x, if hasParams then DUrlParam else DUrl))]
+getHD (SDTemplate x) = [(x, (varNames x, DTemplate))]
+getHD (SDCond xs edocs) =
+    let hd = concatMap getHD $ edocs ++ concatMap snd xs
+        bools = map (\(x, _) -> (x, (varNames x, DBool))) xs
+     in hd ++ bools
+getHD (SDMaybe x y docs ndocs) =
+    (x, (varNames x, DMaybe subs)) : tops ++ ntops
   where
+    hd = concatMap getHD docs
+    (tops, subs) = partitionEithers $ map go hd
+    ntops = concatMap getHD ndocs
     go (a@(y':rest), e)
         | y == y' = Right (rest, e)
         | otherwise = Left (a, e)
     go ([], _) = error "getHD of SDMaybe"
-getHD render (SDForall x y docs) = do
-    hd <- fmap concat $ mapM (getHD render) docs
-    let (tops, subs) = partitionEithers $ map go hd
-    jsubs <- combineHDs subs
-    let jsubs' = LamE [VarP $ mkName y] jsubs
-    e <- [|\a -> HDList . map a|]
-    return $ (x, e `AppE` jsubs' `AppE` derefToExp x) : tops
+getHD (SDForall x y docs) =
+     (x, (varNames x, DList subs)) : tops
   where
+    hd = concatMap getHD docs
+    (tops, subs) = partitionEithers $ map go hd
     go (a@(y':rest), e)
         | y == y' = Right (rest, e)
         | otherwise = Left (a, e)
     go ([], _) = error "getHD of SDForall"
+
+replaceFirst :: Exp -> DVal -> DVal
+replaceFirst x (_:y, z) = (x:y, z)
+replaceFirst _ _ = error "replaceFirst on something empty"

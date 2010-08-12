@@ -74,6 +74,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "juliusFileDebug" caseJuliusFileDebug
     , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
     , testCase "comments" caseComments
+    , testCase "hamletFileDebug double foralls" caseDoubleForalls
     ]
 
 data Url = Home | Sub SubUrl
@@ -486,26 +487,23 @@ caseHamletRT = do
                 , "@?urlp@"
                 ]
     let scope =
-            HDMap
-                [ ("foo", HDMap
-                    [ ("bar", HDMap
-                        [ ("baz", HDHtml $ preEscapedString "foo<bar>baz")
-                        ])
-                    ])
-                , ("list", HDList
-                    [ HDMap [("", HDHtml $ string "1")]
-                    , HDHtml $ string "2"
-                    , HDHtml $ string "3"
-                    ])
-                , ("just", HDMaybe $ Just $ HDHtml $ string "just")
-                , ("nothing", HDMaybe Nothing)
-                , ("template", HDTemplate temp)
-                , ("var", HDHtml $ string "var")
-                , ("url", HDUrl Home)
-                , ("urlp", HDUrlParams Home [("foo", "bar")])
-                , ("true", HDMap [("", HDBool True)])
-                , ("false", HDBool False)
-                ]
+            [ (["foo", "bar", "baz"], HDHtml $ preEscapedString "foo<bar>baz")
+            , (["list"], HDList
+                [ [([], HDHtml $ string "1")]
+                , [([], HDHtml $ string "2")]
+                , [([], HDHtml $ string "3")]
+                ])
+            , (["just"], HDMaybe $ Just
+                [ ([], HDHtml $ string "just")
+                ])
+            , (["nothing"], HDMaybe Nothing)
+            , (["template"], HDTemplate temp)
+            , (["var"], HDHtml $ string "var")
+            , (["url"], HDUrl Home)
+            , (["urlp"], HDUrlParams Home [("foo", "bar")])
+            , (["true"], HDBool True)
+            , (["false"], HDBool False)
+            ]
     rend <- renderHamletRT rt scope render
     toString (renderHtml rend) @?=
         "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
@@ -675,3 +673,10 @@ $#a third one|]
     celper "" [$cassius|$# this is a comment
 $# another comment
 $#a third one|]
+
+caseDoubleForalls :: Assertion
+caseDoubleForalls = do
+    let list = map show [1..2]
+    helper "12" $(hamletFileDebug "double-foralls.hamlet")
+instance Show Url where
+    show _ = "FIXME remove this instance show Url"

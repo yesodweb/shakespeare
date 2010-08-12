@@ -6,6 +6,7 @@ module Text.Hamlet.RT
     ( -- * Public API
       HamletRT (..)
     , HamletData (..)
+    , HamletMap
     , HamletException (..)
     , parseHamletRT
     , renderHamletRT
@@ -23,15 +24,16 @@ import Text.Hamlet.Quasi (Html (..))
 import Data.List (intercalate)
 import Text.Blaze.Builder.Utf8 (fromString)
 
+type HamletMap url = [([String], HamletData url)]
+
 data HamletData url
     = HDHtml Html
     | HDUrl url
     | HDUrlParams url [(String, String)]
     | HDTemplate HamletRT
     | HDBool Bool
-    | HDMaybe (Maybe (HamletData url))
-    | HDList [HamletData url]
-    | HDMap [(String, HamletData url)]
+    | HDMaybe (Maybe (HamletMap url))
+    | HDList [HamletMap url]
 
 data SimpleDoc = SDRaw String
                | SDVar [String]
@@ -92,7 +94,7 @@ parseHamletRT set s =
 
 renderHamletRT :: Failure HamletException m
                => HamletRT
-               -> HamletData url
+               -> HamletMap url
                -> (url -> [(String, String)] -> String)
                -> m Html
 renderHamletRT = renderHamletRT' False
@@ -100,20 +102,20 @@ renderHamletRT = renderHamletRT' False
 renderHamletRT' :: Failure HamletException m
                 => Bool
                 -> HamletRT
-                -> HamletData url
+                -> HamletMap url
                 -> (url -> [(String, String)] -> String)
                 -> m Html
-renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
+renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
     liftM mconcat $ mapM (go scope0) docs
   where
     go _ (SDRaw s) = return $ Html $ fromString s
     go scope (SDVar n) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         case v of
             HDHtml h -> return h
             _ -> fa $ showName n ++ ": expected HDHtml"
     go scope (SDUrl p n) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         case (p, v) of
             (False, HDUrl u) -> return $ Html $ fromString $ renderUrl u []
             (True, HDUrlParams u q) ->
@@ -121,56 +123,45 @@ renderHamletRT' tempAsHtml (HamletRT docs) (HDMap scope0) renderUrl =
             (False, _) -> fa $ showName n ++ ": expected HDUrl"
             (True, _) -> fa $ showName n ++ ": expected HDUrlParams"
     go scope (SDTemplate n) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         case (tempAsHtml, v) of
-            (False, HDTemplate h) -> renderHamletRT' tempAsHtml h (HDMap scope) renderUrl
+            (False, HDTemplate h) -> renderHamletRT' tempAsHtml h scope renderUrl
             (False, _) -> fa $ showName n ++ ": expected HDTemplate"
             (True, HDHtml h) -> return h
             (True, _) -> fa $ showName n ++ ": expected HDHtml"
     go scope (SDForall n ident docs') = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         case v of
             HDList os ->
                 liftM mconcat $ forM os $ \o -> do
-                    let scope' = HDMap $ (ident, o) : scope
+                    let scope' = map (\(x, y) -> (ident : x, y)) o ++ scope
                     renderHamletRT' tempAsHtml (HamletRT docs') scope' renderUrl
             _ -> fa $ showName n ++ ": expected HDList"
     go scope (SDMaybe n ident jdocs ndocs) = do
-        v <- lookup' n n $ HDMap scope
+        v <- lookup' n n scope
         (scope', docs') <-
             case v of
                 HDMaybe Nothing -> return (scope, ndocs)
                 HDMaybe (Just o) -> do
-                    let scope' = (ident, o) : scope
+                    let scope' = map (\(x, y) -> (ident : x, y)) o ++ scope
                     return (scope', jdocs)
                 _ -> fa $ showName n ++ ": expected HDMaybe"
-        renderHamletRT' tempAsHtml (HamletRT docs') (HDMap scope') renderUrl
+        renderHamletRT' tempAsHtml (HamletRT docs') scope' renderUrl
     go scope (SDCond [] docs') =
-        renderHamletRT' tempAsHtml (HamletRT docs') (HDMap scope) renderUrl
+        renderHamletRT' tempAsHtml (HamletRT docs') scope renderUrl
     go scope (SDCond ((b, docs'):cs) els) = do
-        v <- lookup' b b $ HDMap scope
+        v <- lookup' b b scope
         case v of
             HDBool True ->
-                renderHamletRT' tempAsHtml (HamletRT docs') (HDMap scope) renderUrl
+                renderHamletRT' tempAsHtml (HamletRT docs') scope renderUrl
             HDBool False -> go scope (SDCond cs els)
             _ -> fa $ showName b ++ ": expected HDBool"
-    lookup' orig k x = do
-        y <- lookup'' orig k x
-        case y of
-            HDMap m ->
-                case lookup "" m of
-                    Nothing -> fa $ showName orig ++ ": expected a scalar"
-                    Just z -> return z
-            _ -> return y
-    lookup'' _ [] x = return x
-    lookup'' orig (n:ns) (HDMap m) =
-        case lookup n m of
-            Nothing -> fa $ showName orig ++ " not found"
-            Just o -> lookup'' orig ns o
-    lookup'' orig ns _ =
-        fa $ showName orig ++ ": expected a map" ++ ", rem: " ++ show ns
-renderHamletRT' _ _ _ _ =
-    fa "renderHamletRT' must be given a HDMap"
+    lookup' :: Failure HamletException m
+            => [String] -> [String] -> HamletMap url -> m (HamletData url)
+    lookup' orig k m =
+        case lookup k m of
+            Nothing -> fa $ showName orig ++ ": not found"
+            Just x -> return x
 
 fa :: Failure HamletException m => String -> m a
 fa = failure . HamletRenderException
