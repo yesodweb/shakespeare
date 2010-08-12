@@ -14,10 +14,10 @@ import Control.Arrow
 import Data.Either
 import Control.Monad (forM)
 
-unsafeRenderTemplate :: Show url => FilePath -> HamletMap url
+unsafeRenderTemplate :: FilePath -> HamletMap url
                      -> (url -> [(String, String)] -> String) -> Html
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
-    contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    contents <- fmap BSU.toString $ S8.readFile fp
     temp <- parseHamletRT defaultHamletSettings contents
     renderHamletRT' True temp hd render
 
