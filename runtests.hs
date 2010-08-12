@@ -73,6 +73,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "juliusFile" caseJuliusFile
     , testCase "juliusFileDebug" caseJuliusFileDebug
     , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
+    , testCase "comments" caseComments
     ]
 
 data Url = Home | Sub SubUrl
@@ -665,3 +666,12 @@ caseJuliusFileDebugChange = do
     writeFile "external2.julius" "var $var$ = 2;"
     jelper "var somevar = 2;" $(juliusFileDebug "external2.julius")
     writeFile "external2.julius" "var $var$ = 1;"
+
+caseComments :: Assertion
+caseComments = do
+    helper "" [$hamlet|$# this is a comment
+$# another comment
+$#a third one|]
+    celper "" [$cassius|$# this is a comment
+$# another comment
+$#a third one|]

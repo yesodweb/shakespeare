@@ -71,6 +71,7 @@ parseLine set = do
     ss <- fmap sum $ many ((char ' ' >> return 1) <|>
                            (char '\t' >> return 4))
     x <- doctype <|>
+         comment <|>
          backslash <|>
          try controlIf <|>
          try controlElseIf <|>
@@ -92,6 +93,11 @@ parseLine set = do
     doctype = do
         try $ string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
+    comment = do
+        _ <- try $ string "$#"
+        _ <- many $ noneOf "\r\n"
+        eol
+        return $ LineContent []
     backslash = do
         _ <- char '\\'
         (eol >> return (LineContent [ContentRaw "\n"]))

@@ -123,7 +123,8 @@ data Nest = Nest Line [Nest]
     deriving Show
 
 parseLines :: Parser [(Int, Line)]
-parseLines = fmap (catMaybes) $ many (parseEmptyLine <|> parseLine)
+parseLines = fmap (catMaybes)
+           $ many (parseEmptyLine <|> try parseComment <|> parseLine)
 
 eol :: Parser ()
 eol =
@@ -131,6 +132,14 @@ eol =
 
 parseEmptyLine :: Parser (Maybe (Int, Line))
 parseEmptyLine = eol >> return Nothing
+
+parseComment :: Parser (Maybe (Int, Line))
+parseComment = do
+    _ <- many $ oneOf " \t"
+    _ <- string "$#"
+    _ <- many $ noneOf "\r\n"
+    eol <|> return ()
+    return Nothing
 
 parseLine :: Parser (Maybe (Int, Line))
 parseLine = do
