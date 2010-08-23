@@ -158,7 +158,7 @@ parseLine = do
         _ <- char '^'
         return $ LineMix d
     parsePair key = do
-        _ <- char ':'
+        _ <- try $ string ": "
         _ <- spaces
         val <- many1 $ parseContent True
         return $ LinePair key $ trim val
@@ -168,10 +168,14 @@ parseLine = do
 parseContent :: Bool -> Parser Content
 parseContent allowColon = do
     (char '$' >> (parseDollar <|> parseVar)) <|>
-      (char '@' >> (parseAt <|> parseUrl)) <|> do
+      (char '@' >> (parseAt <|> parseUrl)) <|> safeColon <|> do
         s <- many1 $ noneOf $ (if allowColon then id else (:) ':') "\r\n$@"
         return $ ContentRaw s
   where
+    safeColon = try $ do
+        _ <- char ':'
+        notFollowedBy $ oneOf " \t"
+        return $ ContentRaw ":"
     parseAt = char '@' >> return (ContentRaw "@")
     parseUrl = do
         c <- (char '?' >> return ContentUrlParam) <|> return ContentUrl

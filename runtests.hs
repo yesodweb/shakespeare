@@ -75,6 +75,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
     , testCase "comments" caseComments
     , testCase "hamletFileDebug double foralls" caseDoubleForalls
+    , testCase "cassius pseudo-class" casePseudo
     ]
 
 data Url = Home | Sub SubUrl
@@ -680,3 +681,10 @@ caseDoubleForalls = do
     helper "12" $(hamletFileDebug "double-foralls.hamlet")
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
+
+casePseudo :: Assertion
+casePseudo = do
+    flip celper [$cassius|
+a:visited
+    color: blue
+|] "a:visited{color:blue}"
