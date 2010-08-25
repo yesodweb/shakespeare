@@ -63,10 +63,10 @@ parseContents = many1 parseContent
 
 parseContent :: Parser Content
 parseContent = do
-    (char '$' >> (parseDollar <|> parseVar)) <|>
+    (char '%' >> (parsePercent <|> parseVar)) <|>
       (char '@' >> (parseAt <|> parseUrl)) <|> do
       (char '^' >> (parseCaret <|> parseMix)) <|> do
-        s <- many1 $ noneOf "$@^"
+        s <- many1 $ noneOf "%@^"
         return $ ContentRaw s
   where
     parseCaret = char '^' >> return (ContentRaw "^")
@@ -80,10 +80,10 @@ parseContent = do
         d <- parseDeref
         _ <- char '@'
         return $ c d
-    parseDollar = char '$' >> return (ContentRaw "$")
+    parsePercent = char '%' >> return (ContentRaw "%")
     parseVar = do
         d <- parseDeref
-        _ <- char '$'
+        _ <- char '%'
         return $ ContentVar d
 
 parseDeref :: Parser Deref

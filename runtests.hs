@@ -621,7 +621,7 @@ caseJulius = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
     flip jelper [$julius|שלום
-$var$
+%var%
 @Home@
 @?urlp@
 ^jmixin^
@@ -660,11 +660,11 @@ caseJuliusFileDebug = do
 caseJuliusFileDebugChange :: Assertion
 caseJuliusFileDebugChange = do
     let var = "somevar"
-    writeFile "external2.julius" "var $var$ = 1;"
+    writeFile "external2.julius" "var %var% = 1;"
     jelper "var somevar = 1;" $(juliusFileDebug "external2.julius")
-    writeFile "external2.julius" "var $var$ = 2;"
+    writeFile "external2.julius" "var %var% = 2;"
     jelper "var somevar = 2;" $(juliusFileDebug "external2.julius")
-    writeFile "external2.julius" "var $var$ = 1;"
+    writeFile "external2.julius" "var %var% = 1;"
 
 caseComments :: Assertion
 caseComments = do
