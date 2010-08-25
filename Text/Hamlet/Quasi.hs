@@ -24,9 +24,10 @@ import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import qualified Data.ByteString.UTF8 as BSU
+import qualified Data.ByteString.Lazy.UTF8 as BSLU
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
-import Text.Blaze.Builder.Core (Builder, fromByteString)
+import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
 import Text.Blaze.Builder.Html (fromHtmlEscapedString)
 import Data.Maybe (fromMaybe)
 import Data.String
@@ -217,6 +218,10 @@ maybeH (Just v) f _ = f v
 
 newtype Html = Html Builder
     deriving Monoid
+instance Show Html where
+    show (Html b) = show $ BSLU.toString $ toLazyByteString b
+instance Eq Html where
+    (Html a) == (Html b) = toLazyByteString a == toLazyByteString b
 
 -- | An function generating an 'Html' given a URL-rendering function.
 type Hamlet url = (url -> [(String, String)] -> String) -> Html
