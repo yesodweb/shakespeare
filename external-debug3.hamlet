@@ -1,0 +1,4 @@
+$forall list a
+    $a$
+$forall list b
+    $b$

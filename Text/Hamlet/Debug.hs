@@ -95,7 +95,7 @@ combineDVals ((x1, y1):rest) =
     nomatch = filter (\(x, _) -> x /= x1) rest
     combine' (a, x) (b, y)
         | a == b = (a, combine x y)
-        | otherwise = error $ "Bad parameters to combine: " ++ show ((a, x), (b, y))
+        | otherwise = error $ "Bad parameters to combine': " ++ show ((a, x), (b, y))
     combine (DList x) (DList y) = DList $ combineDVals $ x ++ y
     combine (DMaybe x) (DMaybe y) = DMaybe $ combineDVals $ x ++ y
     combine x y
