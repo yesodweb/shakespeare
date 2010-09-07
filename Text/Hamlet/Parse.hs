@@ -315,7 +315,9 @@ compressDoc (DocContent x:rest) = DocContent x : compressDoc rest
 parseDoc :: HamletSettings -> String -> Result [Doc]
 parseDoc set s = do
     ls <- parseLines set s
-    let ns = nestLines ls
+    let notEmpty (_, LineContent []) = False
+        notEmpty _ = True
+    let ns = nestLines $ filter notEmpty ls
     ds <- nestToDoc set ns
     return $ compressDoc ds
 

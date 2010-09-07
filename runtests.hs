@@ -77,6 +77,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamletFileDebug double foralls" caseDoubleForalls
     , testCase "cassius pseudo-class" casePseudo
     , testCase "different binding names" caseDiffBindNames
+    , testCase "blank line" caseBlankLine
     ]
 
 data Url = Home | Sub SubUrl
@@ -693,4 +694,18 @@ a:visited
 caseDiffBindNames :: Assertion
 caseDiffBindNames = do
     let list = words "1 2 3"
-    helper "123123" $(hamletFileDebug "external-debug3.hamlet")
+    -- FIXME helper "123123" $(hamletFileDebug "external-debug3.hamlet")
+    error "test has been disabled"
+
+caseBlankLine :: Assertion
+caseBlankLine = do
+    helper "<p>foo</p>" [$hamlet|
+%p
+
+    foo
+|]
+    celper "foo{bar:baz}" [$cassius|
+foo
+
+    bar: baz
+|]
