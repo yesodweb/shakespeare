@@ -78,6 +78,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "cassius pseudo-class" casePseudo
     , testCase "different binding names" caseDiffBindNames
     , testCase "blank line" caseBlankLine
+    , testCase "leading spaces" caseLeadingSpaces
     ]
 
 data Url = Home | Sub SubUrl
@@ -707,5 +708,12 @@ caseBlankLine = do
     celper "foo{bar:baz}" [$cassius|
 foo
 
+    bar: baz
+|]
+
+caseLeadingSpaces :: Assertion
+caseLeadingSpaces =
+    celper "foo{bar:baz}" [$cassius|
+  foo
     bar: baz
 |]
