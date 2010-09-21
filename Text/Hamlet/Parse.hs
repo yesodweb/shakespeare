@@ -75,9 +75,9 @@ parseLine set = do
          backslash <|>
          try controlIf <|>
          try controlElseIf <|>
-         try (string "$else" >> eol >> return LineElse) <|>
+         try (string "$else" >> many (oneOf " \t") >> eol >> return LineElse) <|>
          try controlMaybe <|>
-         try (string "$nothing" >> eol >> return LineNothing) <|>
+         try (string "$nothing" >> many (oneOf " \t") >> eol >> return LineNothing) <|>
          try controlForall <|>
          tag <|>
          (do
@@ -106,12 +106,14 @@ parseLine set = do
         _ <- string "$if"
         spaces
         x <- deref False
+        _ <- many $ oneOf " \t"
         eol
         return $ LineIf x
     controlElseIf = do
         _ <- string "$elseif"
         spaces
         x <- deref False
+        _ <- many $ oneOf " \t"
         eol
         return $ LineElseIf x
     controlMaybe = do
@@ -120,6 +122,7 @@ parseLine set = do
         x <- deref False
         spaces
         y <- ident
+        _ <- many $ oneOf " \t"
         eol
         return $ LineMaybe x y
     controlForall = do
@@ -128,6 +131,7 @@ parseLine set = do
         x <- deref False
         spaces
         y <- ident
+        _ <- many $ oneOf " \t"
         eol
         return $ LineForall x y
     tag = do

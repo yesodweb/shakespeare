@@ -717,3 +717,15 @@ caseLeadingSpaces =
   foo
     bar: baz
 |]
+
+caseTrailingSpaces :: Assertion
+caseTrailingSpaces = helper "" [$hamlet|
+$if   True   
+$elseif   False   
+$else   
+$maybe Nothing   x 
+$nothing  
+$forall   empty    x   
+|]
+  where
+    empty = []
