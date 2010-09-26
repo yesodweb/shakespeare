@@ -147,19 +147,21 @@ xhamlet = hamletWithSettings xhtmlHamletSettings
 -- Please see accompanying documentation for a description of Hamlet syntax.
 hamletWithSettings :: HamletSettings -> QuasiQuoter
 hamletWithSettings set =
-    QuasiQuoter (hamletFromString set)
-      $ error "Cannot quasi-quote Hamlet to patterns"
+    QuasiQuoter
+        { quoteExp = hamletFromString set
+        }
 
 -- | A quasi-quoter that converts Hamlet syntax into a 'Html' ().
 --
 -- Please see accompanying documentation for a description of Hamlet syntax.
 hamletWithSettings' :: HamletSettings -> QuasiQuoter
 hamletWithSettings' set =
-    QuasiQuoter (\s -> do
-        x <- hamletFromString set s
-        id' <- [|(\y _ -> y) :: String -> [(String, String)] -> String|]
-        return $ x `AppE` id')
-    $ error "Cannot quasi-quote Hamlet to patterns"
+    QuasiQuoter
+        { quoteExp = \s -> do
+            x <- hamletFromString set s
+            id' <- [|(\y _ -> y) :: String -> [(String, String)] -> String|]
+            return $ x `AppE` id'
+        }
 
 hamletFromString :: HamletSettings -> String -> Q Exp
 hamletFromString set s = do
