@@ -1,7 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE EmptyDataDecls #-}
 module Text.Hamlet.Quasi
     ( hamlet
     , xhamlet
@@ -14,6 +17,7 @@ module Text.Hamlet.Quasi
     , xhamletFile
     , hamletFileWithSettings
     , ToHtml (..)
+    , HamletValue (..)
     , varName
     , Html (..)
     , Hamlet
@@ -44,47 +48,45 @@ instance ToHtml Html where
 
 type Scope = [(Ident, Exp)]
 
-docsToExp :: Exp -> Scope -> [Doc] -> Q Exp
-docsToExp render scope docs = do
-    exps <- mapM (docToExp render scope) docs
-    me <- [|mempty|]
-    ma <- [|mappend|]
-    let ma' x y = InfixE (Just x) ma $ Just y
-    return $
-        case exps of
-            [] -> me
-            [x] -> x
-            _ -> foldr1 ma' exps
+docsToExp :: Scope -> [Doc] -> Q Exp
+docsToExp scope docs = do
+    exps <- mapM (docToExp scope) docs
+    let stmts = map (BindS $ TupP []) exps
+    rnull <- [|return ()|]
+    return $ case exps of
+        [] -> rnull
+        [x] -> x
+        _ -> DoE $ stmts ++ [NoBindS rnull]
 
-docToExp :: Exp -> Scope -> Doc -> Q Exp
-docToExp render scope (DocForall list ident@(Ident name) inside) = do
+docToExp :: Scope -> Doc -> Q Exp
+docToExp scope (DocForall list ident@(Ident name) inside) = do
     let list' = deref scope list
     name' <- newName name
     let scope' = (ident, VarE name') : scope
-    mh <- [|\a -> mconcat . map a|]
-    inside' <- docsToExp render scope' inside
+    mh <- [|mapM_|]
+    inside' <- docsToExp scope' inside
     let lam = LamE [VarP name'] inside'
     return $ mh `AppE` lam `AppE` list'
-docToExp render scope (DocMaybe val ident@(Ident name) inside mno) = do
+docToExp scope (DocMaybe val ident@(Ident name) inside mno) = do
     let val' = deref scope val
     name' <- newName name
     let scope' = (ident, VarE name') : scope
-    inside' <- docsToExp render scope' inside
+    inside' <- docsToExp scope' inside
     let inside'' = LamE [VarP name'] inside'
     ninside' <- case mno of
                     Nothing -> [|Nothing|]
                     Just no -> do
-                        no' <- docsToExp render scope no
+                        no' <- docsToExp scope no
                         j <- [|Just|]
                         return $ j `AppE` no'
     mh <- [|maybeH|]
     return $ mh `AppE` val' `AppE` inside'' `AppE` ninside'
-docToExp render scope (DocCond conds final) = do
+docToExp scope (DocCond conds final) = do
     conds' <- mapM go conds
     final' <- case final of
                 Nothing -> [|Nothing|]
                 Just f -> do
-                    f' <- docsToExp render scope f
+                    f' <- docsToExp scope f
                     j <- [|Just|]
                     return $ j `AppE` f'
     ch <- [|condH|]
@@ -93,35 +95,38 @@ docToExp render scope (DocCond conds final) = do
     go :: (Deref, [Doc]) -> Q Exp
     go (d, docs) = do
         let d' = deref scope d
-        docs' <- docsToExp render scope docs
+        docs' <- docsToExp scope docs
         return $ TupE [d', docs']
-docToExp render v (DocContent c) = contentToExp render v c
+docToExp v (DocContent c) = contentToExp v c
 
-contentToExp :: Exp -> Scope -> Content -> Q Exp
-contentToExp _ _ (ContentRaw s) = do
-    os <- [|Html . fromByteString . S8.pack|]
+contentToExp :: Scope -> Content -> Q Exp
+contentToExp _ (ContentRaw s) = do
+    os <- [|htmlToHamletMonad . Html . fromByteString . S8.pack|]
     let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
     return $ os `AppE` s'
-contentToExp _ scope (ContentVar d) = do
-    str <- [|toHtml|]
+contentToExp scope (ContentVar d) = do
+    str <- [|htmlToHamletMonad . toHtml|]
     return $ str `AppE` deref scope d
-contentToExp render scope (ContentUrl hasParams d) = do
+contentToExp scope (ContentUrl hasParams d) = do
     ou <- if hasParams
-            then [|\r (u, p) -> Html $ fromHtmlEscapedString $ r u p|]
-            else [|\r u -> Html $ fromHtmlEscapedString $ r u []|]
+            then [|\(u, p) -> urlToHamletMonad u p|]
+            else [|\u -> urlToHamletMonad u []|]
     let d' = deref scope d
-    return $ ou `AppE` render `AppE` d'
-contentToExp render scope (ContentEmbed d) = do
+    return $ ou `AppE` d'
+contentToExp scope (ContentEmbed d) = do
     let d' = deref scope d
-    return (d' `AppE` render)
+    fhv <- [|fromHamletValue|]
+    return $ fhv `AppE` d'
 
 -- | Calls 'hamletWithSettings'' with 'defaultHamletSettings'.
 hamlet' :: QuasiQuoter
 hamlet' = hamletWithSettings' defaultHamletSettings
+{-# DEPRECATED hamlet' "Use hamlet directly now" #-}
 
 -- | Calls 'hamletWithSettings'' using XHTML 1.0 Strict settings.
 xhamlet' :: QuasiQuoter
 xhamlet' = hamletWithSettings' xhtmlHamletSettings
+{-# DEPRECATED xhamlet' "Use xhamlet directly now" #-}
 
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
@@ -152,18 +157,18 @@ hamletWithSettings' :: HamletSettings -> QuasiQuoter
 hamletWithSettings' set =
     QuasiQuoter (\s -> do
         x <- hamletFromString set s
-        id' <- [|id|]
+        id' <- [|(\y _ -> y) :: String -> [(String, String)] -> String|]
         return $ x `AppE` id')
     $ error "Cannot quasi-quote Hamlet to patterns"
 
 hamletFromString :: HamletSettings -> String -> Q Exp
 hamletFromString set s = do
-  case parseDoc set s of
-    Error s' -> error s'
-    Ok d -> do
-        render <- newName "_render"
-        func <- docsToExp (VarE render) [] d
-        return $ LamE [VarP render] func
+    case parseDoc set s of
+        Error s' -> error s'
+        Ok d -> do
+            thv <- [|toHamletValue|]
+            exp' <- docsToExp [] d
+            return $ thv `AppE` exp'
 
 hamletFileWithSettings :: HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings set fp = do
@@ -203,16 +208,16 @@ strToExp "" = error "strToExp on empty string"
 -- a true exists, then the corresponding right action is performed. Only the
 -- first is performed. In there are no true values, then the second argument is
 -- performed, if supplied.
-condH :: [(Bool, Html)] -> Maybe Html -> Html
-condH [] Nothing = mempty
+condH :: Monad m => [(Bool, m ())] -> Maybe (m ()) -> m ()
+condH [] Nothing = return ()
 condH [] (Just x) = x
 condH ((True, y):_) _ = y
 condH ((False, _):rest) z = condH rest z
 
 -- | Runs the second argument with the value in the first, if available.
 -- Otherwise, runs the third argument, if available.
-maybeH :: Maybe v -> (v -> Html) -> Maybe Html -> Html
-maybeH Nothing _ Nothing = mempty
+maybeH :: Monad m => Maybe v -> (v -> m ()) -> Maybe (m ()) -> m ()
+maybeH Nothing _ Nothing = return ()
 maybeH Nothing _ (Just x) = x
 maybeH (Just v) f _ = f v
 
@@ -225,3 +230,41 @@ instance Eq Html where
 
 -- | An function generating an 'Html' given a URL-rendering function.
 type Hamlet url = (url -> [(String, String)] -> String) -> Html
+
+class Monad (HamletMonad a) => HamletValue a where
+    data HamletMonad a :: * -> *
+    type HamletUrl a
+    toHamletValue :: HamletMonad a () -> a
+    htmlToHamletMonad :: Html -> HamletMonad a ()
+    urlToHamletMonad :: HamletUrl a -> [(String, String)] -> HamletMonad a ()
+    fromHamletValue :: a -> HamletMonad a ()
+
+type Render url = url -> [(String, String)] -> String
+instance HamletValue (Hamlet url) where
+    newtype HamletMonad (Hamlet url) a =
+        HMonad { runHMonad :: Render url -> (Html, a) }
+    type HamletUrl (Hamlet url) = url
+    toHamletValue = fmap fst . runHMonad
+    htmlToHamletMonad x = HMonad $ const (x, ())
+    urlToHamletMonad url pairs = HMonad $ \r ->
+        (Html $ fromHtmlEscapedString $ r url pairs, ())
+    fromHamletValue f = HMonad $ \r -> (f r, ())
+instance Monad (HamletMonad (Hamlet url)) where
+    return x = HMonad $ const (mempty, x)
+    (HMonad f) >>= g = HMonad $ \render ->
+        let (html1, x) = f render
+            (html2, y) = runHMonad (g x) render
+         in (html1 `mappend` html2, y)
+data NoConstructor
+instance HamletValue Html where
+    newtype HamletMonad Html a = HtmlMonad { runHtmlMonad :: (Html, a) }
+    type HamletUrl Html = NoConstructor
+    toHamletValue = fst . runHtmlMonad
+    htmlToHamletMonad x = HtmlMonad (x, ())
+    urlToHamletMonad = error "urlToHamletMonad on NoConstructor"
+    fromHamletValue h = HtmlMonad (h, ())
+instance Monad (HamletMonad Html) where
+    return x = HtmlMonad (mempty, x)
+    HtmlMonad (html1, x) >>= g = HtmlMonad $
+        let HtmlMonad (html2, y) = g x
+         in (html1 `mappend` html2, y)

@@ -21,6 +21,7 @@ module Text.Hamlet
     , Hamlet
       -- * Typeclass
     , ToHtml (..)
+    , HamletValue (..)
       -- * Construction/rendering
     , renderHamlet
     , renderHtml

@@ -459,6 +459,12 @@ caseHamlet' = do
     helper "<br>" $ const $ [$hamlet'|%br|]
     helper "<br/>" $ const $ [$xhamlet'|%br|]
 
+    -- new with generalized stuff
+    helper' "foo" [$hamlet|foo|]
+    helper' "foo" [$xhamlet|foo|]
+    helper "<br>" $ const $ [$hamlet|%br|]
+    helper "<br/>" $ const $ [$xhamlet|%br|]
+
 caseHamletDebug :: Assertion
 caseHamletDebug = do
     helper "<p>foo</p>\n<p>bar</p>\n" [$hamletDebug|
