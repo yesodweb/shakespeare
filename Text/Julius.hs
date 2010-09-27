@@ -118,10 +118,7 @@ contentsToJulius a = do
     return $ LamE [VarP r] d
 
 julius :: QuasiQuoter
-julius =
-    QuasiQuoter juliusFromString p
-  where
-    p = error "julius quasi-quoter for patterns does not exist"
+julius = QuasiQuoter { quoteExp = juliusFromString }
 
 juliusFromString :: String -> Q Exp
 juliusFromString s = do

@@ -268,9 +268,8 @@ contentsToCassius a = do
 
 cassiusMixin :: QuasiQuoter
 cassiusMixin =
-    QuasiQuoter e p
+    QuasiQuoter { quoteExp = e }
   where
-    p = error "cassiusMixin quasi-quoter for patterns does not exist"
     e s = do
         let a = either (error . show) id
               $ parse parseLines s s
@@ -288,10 +287,7 @@ cassiusMixin =
 newtype CassiusMixin url = CassiusMixin { unCassiusMixin :: Cassius url }
 
 cassius :: QuasiQuoter
-cassius =
-    QuasiQuoter cassiusFromString p
-  where
-    p = error "cassius quasi-quoter for patterns does not exist"
+cassius = QuasiQuoter { quoteExp = cassiusFromString }
 
 cassiusFromString :: String -> Q Exp
 cassiusFromString s = do
