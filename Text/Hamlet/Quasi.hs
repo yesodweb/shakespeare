@@ -51,12 +51,10 @@ type Scope = [(Ident, Exp)]
 docsToExp :: Scope -> [Doc] -> Q Exp
 docsToExp scope docs = do
     exps <- mapM (docToExp scope) docs
-    let stmts = map (BindS $ TupP []) exps
-    rnull <- [|return ()|]
-    return $ case exps of
-        [] -> rnull
-        [x] -> x
-        _ -> DoE $ stmts ++ [NoBindS rnull]
+    case exps of
+        [] -> [|return ()|]
+        [x] -> return x
+        _ -> return $ DoE $ map NoBindS exps
 
 docToExp :: Scope -> Doc -> Q Exp
 docToExp scope (DocForall list ident@(Ident name) inside) = do
