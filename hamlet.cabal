@@ -44,7 +44,7 @@ library
                    , utf8-string      >= 0.3.4   && < 0.4
                    , template-haskell
                    , blaze-builder    >= 0.1     && < 0.2
-                   , neither          >= 0.0.1   && < 0.1
+                   , neither          >= 0.0.1   && < 0.2
                    , parsec           >= 2       && < 4
                    , failure          >= 0.1.0   && < 0.2
     exposed-modules: Text.Hamlet
