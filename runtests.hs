@@ -7,8 +7,8 @@ import Test.HUnit hiding (Test)
 import Text.Hamlet
 import Text.Cassius
 import Text.Julius
-import Data.ByteString.Lazy.UTF8 (toString)
 import Data.List (intercalate)
+import Text.Utf8
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -148,7 +148,7 @@ theArg = Arg
 helper :: String -> Hamlet Url -> Assertion
 helper res h = do
     let x = renderHamlet render h
-    res @=? toString x
+    res @=? lbsToChars x
 
 caseEmpty :: Assertion
 caseEmpty = helper "" [$hamlet||]
@@ -450,7 +450,7 @@ caseHamletLiterals = helper "123" [$hamlet|$show.123$|]
 helper' :: String -> Html -> Assertion
 helper' res h = do
     let x = renderHtml h
-    res @=? toString x
+    res @=? lbsToChars x
 
 caseHamlet' :: Assertion
 caseHamlet' = do
@@ -515,7 +515,7 @@ caseHamletRT = do
             , (["false"], HDBool False)
             ]
     rend <- renderHamletRT rt scope render
-    toString (renderHtml rend) @?=
+    lbsToChars (renderHtml rend) @?=
         "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
 
 caseHamletFileDebugChange :: Assertion
@@ -558,7 +558,7 @@ caseHamletFileDebugFeatures = do
 celper :: String -> Cassius Url -> Assertion
 celper res h = do
     let x = renderCassius render h
-    res @=? toString x
+    res @=? lbsToChars x
 
 mixin :: CassiusMixin a
 mixin = [$cassiusMixin|
@@ -623,7 +623,7 @@ jmixin = [$julius|var x;|]
 jelper :: String -> Julius Url -> Assertion
 jelper res h = do
     let x = renderJulius render h
-    res @=? toString x
+    res @=? lbsToChars x
 
 caseJulius :: Assertion
 caseJulius = do

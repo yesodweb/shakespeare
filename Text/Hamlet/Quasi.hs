@@ -27,14 +27,13 @@ import Text.Hamlet.Parse
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
-import qualified Data.ByteString.UTF8 as BSU
-import qualified Data.ByteString.Lazy.UTF8 as BSLU
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
 import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
 import Text.Blaze.Builder.Html (fromHtmlEscapedString)
 import Data.Maybe (fromMaybe)
 import Data.String
+import Text.Utf8
 
 instance IsString Html where
     fromString = Html . fromHtmlEscapedString
@@ -100,7 +99,7 @@ docToExp v (DocContent c) = contentToExp v c
 contentToExp :: Scope -> Content -> Q Exp
 contentToExp _ (ContentRaw s) = do
     os <- [|htmlToHamletMonad . Html . fromByteString . S8.pack|]
-    let s' = LitE $ StringL $ S8.unpack $ BSU.fromString s
+    let s' = LitE $ StringL $ charsToOctets s
     return $ os `AppE` s'
 contentToExp scope (ContentVar d) = do
     str <- [|htmlToHamletMonad . toHtml|]
@@ -172,7 +171,7 @@ hamletFromString set s = do
 
 hamletFileWithSettings :: HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings set fp = do
-    contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
     hamletFromString set contents
 
 -- | Calls 'hamletFileWithSettings' with 'defaultHamletSettings'.
@@ -224,7 +223,7 @@ maybeH (Just v) f _ = f v
 newtype Html = Html Builder
     deriving Monoid
 instance Show Html where
-    show (Html b) = show $ BSLU.toString $ toLazyByteString b
+    show (Html b) = show $ lbsToChars $ toLazyByteString b
 instance Eq Html where
     (Html a) == (Html b) = toLazyByteString a == toLazyByteString b
 

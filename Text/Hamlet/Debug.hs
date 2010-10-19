@@ -9,21 +9,21 @@ import Text.Hamlet.RT
 import Language.Haskell.TH.Syntax
 import qualified Data.ByteString.Char8 as S8
 import System.IO.Unsafe (unsafePerformIO)
-import qualified Data.ByteString.UTF8 as BSU
 import Control.Arrow
 import Data.Either
 import Control.Monad (forM)
+import Text.Utf8
 
 unsafeRenderTemplate :: FilePath -> HamletMap url
                      -> (url -> [(String, String)] -> String) -> Html
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
-    contents <- fmap BSU.toString $ S8.readFile fp
+    contents <- fmap bsToChars $ S8.readFile fp
     temp <- parseHamletRT defaultHamletSettings contents
     renderHamletRT' True temp hd render
 
 hamletFileDebug :: FilePath -> Q Exp
 hamletFileDebug fp = do
-    contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
     HamletRT docs <- qRunIO $ parseHamletRT defaultHamletSettings contents
     urt <- [|unsafeRenderTemplate|]
     render <- newName "render"

@@ -17,10 +17,10 @@ import Language.Haskell.TH.Syntax
 import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
 import Text.Blaze.Builder.Utf8 (fromString)
 import qualified Data.ByteString.Char8 as S8
-import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid
 import System.IO.Unsafe (unsafePerformIO)
+import Text.Utf8
 
 renderJavascript :: Javascript -> L.ByteString
 renderJavascript (Javascript b) = toLazyByteString b
@@ -127,7 +127,7 @@ juliusFromString s = do
 
 contentToJavascript :: Name -> Content -> Q Exp
 contentToJavascript _ (ContentRaw s') = do
-    let d = S8.unpack $ BSU.fromString s'
+    let d = charsToOctets s'
     ts <- [|Javascript . fromByteString . S8.pack|]
     return $ ts `AppE` LitE (StringL d)
 contentToJavascript _ (ContentVar d) = do
@@ -156,7 +156,7 @@ derefToExp (DerefLeaf v@(s:_))
 
 juliusFile :: FilePath -> Q Exp
 juliusFile fp = do
-    contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
     juliusFromString contents
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
@@ -186,7 +186,7 @@ vtToExp (d, vt) = do
 
 juliusFileDebug :: FilePath -> Q Exp
 juliusFileDebug fp = do
-    s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseContents s s
         b = concatMap getVars a
     c <- mapM vtToExp b
@@ -195,7 +195,7 @@ juliusFileDebug fp = do
 
 juliusRuntime :: FilePath -> [(Deref, JDData url)] -> Julius url
 juliusRuntime fp cd render' = unsafePerformIO $ do
-    s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseContents s s
     return $ mconcat $ map go a
   where

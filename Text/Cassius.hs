@@ -28,12 +28,12 @@ import Text.Blaze.Builder.Utf8 (fromString)
 import Data.Maybe (catMaybes)
 import Prelude hiding (either)
 import qualified Data.ByteString.Char8 as S8
-import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid
 import Data.Word (Word8)
 import Data.Bits
 import System.IO.Unsafe (unsafePerformIO)
+import Text.Utf8
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -298,7 +298,7 @@ cassiusFromString s = do
 
 contentToCss :: Name -> Content -> Q Exp
 contentToCss _ (ContentRaw s') = do
-    let d = S8.unpack $ BSU.fromString s'
+    let d = charsToOctets s'
     ts <- [|Css . fromByteString . S8.pack|]
     return $ ts `AppE` LitE (StringL d)
 contentToCss _ (ContentVar d) = do
@@ -328,7 +328,7 @@ derefToExp (DerefLeaf v@(s:_))
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
-    contents <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
     cassiusFromString contents
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
@@ -363,7 +363,7 @@ vtToExp (d, vt) = do
 
 cassiusFileDebug :: FilePath -> Q Exp
 cassiusFileDebug fp = do
-    s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseLines s s
         b = concatMap (getVars . snd) a
     c <- mapM vtToExp b
@@ -372,7 +372,7 @@ cassiusFileDebug fp = do
 
 cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
 cassiusRuntime fp cd render' = unsafePerformIO $ do
-    s <- fmap BSU.toString $ qRunIO $ S8.readFile fp
+    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseLines s s
     let b = either (error . unlines) id
           $ sequenceA $ map (nestToDec True) $ nestLines a
