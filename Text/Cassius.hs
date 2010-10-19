@@ -16,7 +16,6 @@ module Text.Cassius
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
-import Data.Neither (AEither (..), either)
 import Data.Traversable (sequenceA)
 import Control.Applicative ((<$>))
 import Data.List (intercalate)
@@ -26,7 +25,6 @@ import Language.Haskell.TH.Syntax
 import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
 import Text.Blaze.Builder.Utf8 (fromString)
 import Data.Maybe (catMaybes)
-import Prelude hiding (either)
 import qualified Data.ByteString.Char8 as S8
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid
@@ -34,6 +32,7 @@ import Data.Word (Word8)
 import Data.Bits
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Utf8
+import Control.Applicative (Applicative (..))
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -271,8 +270,7 @@ cassiusMixin =
     QuasiQuoter { quoteExp = e }
   where
     e s = do
-        let a = either (error . show) id
-              $ parse parseLines s s
+        let a = either (error . show) id $ parse parseLines s s
         let b = flip map a $ \(_, l) ->
                     case l of
                         LinePair x y -> CPSimple x y
@@ -292,7 +290,7 @@ cassius = QuasiQuoter { quoteExp = cassiusFromString }
 cassiusFromString :: String -> Q Exp
 cassiusFromString s = do
     let a = either (error . show) id $ parse parseLines s s
-    let b = either (error . unlines) id
+    let b = aeither (error . unlines) id
           $ sequenceA $ map (nestToDec True) $ nestLines a
     contentsToCassius $ concatMap render $ concatMap flatDec b
 
@@ -374,7 +372,7 @@ cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
 cassiusRuntime fp cd render' = unsafePerformIO $ do
     s <- fmap bsToChars $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseLines s s
-    let b = either (error . unlines) id
+    let b = aeither (error . unlines) id
           $ sequenceA $ map (nestToDec True) $ nestLines a
     return $ mconcat $ map go $ concatMap render $ concatMap flatDec b
   where
@@ -397,3 +395,17 @@ cassiusRuntime fp cd render' = unsafePerformIO $ do
         case lookup d cd of
             Just (CDMixin (CassiusMixin m)) -> m render'
             _ -> error $ show d ++ ": expected CDMixin"
+
+data AEither a b = ALeft a | ARight b
+instance Functor (AEither a) where
+    fmap _ (ALeft a) = ALeft a
+    fmap f (ARight b) = ARight $ f b
+instance Monoid a => Applicative (AEither a) where
+    pure = ARight
+    ALeft x <*> ALeft y = ALeft $ x `mappend` y
+    ALeft x <*> _ = ALeft x
+    _ <*> ALeft y = ALeft y
+    ARight x <*> ARight y = ARight $ x y
+aeither :: (a -> c) -> (b -> c) -> AEither a b -> c
+aeither f _ (ALeft a) = f a
+aeither _ f (ARight b) = f b
