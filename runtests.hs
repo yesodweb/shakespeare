@@ -80,6 +80,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "blank line" caseBlankLine
     , testCase "leading spaces" caseLeadingSpaces
     , testCase "cassius all spaces" caseCassiusAllSpaces
+    , testCase "cassius whitespace and colons" caseCassiusWhitespaceColons
     ]
 
 data Url = Home | Sub SubUrl
@@ -561,12 +562,6 @@ celper res h = do
     let x = renderCassius render h
     res @=? lbsToChars x
 
-mixin :: CassiusMixin a
-mixin = [$cassiusMixin|
-a: b
-c: d
-|]
-
 caseCassius :: Assertion
 caseCassius = do
     let var = "var"
@@ -576,17 +571,16 @@ foo
     color: $colorRed$
     background: $colorBlack$
     bar: baz
-    bin
+bin
         color: $(((Color 127) 100) 5)$
         bar: bar
         unicode-test: שלום
         f$var$x: someval
         background-image: url(@Home@)
         urlp: url(@?urlp@)
-    ^mixin^
 |] $ concat
-        [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
-        , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
+        [ "foo{color:#F00;background:#000;bar:baz}"
+        , "bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
         , "background-image:url(url);urlp:url(url?p=q)}"
         ]
 
@@ -595,8 +589,8 @@ caseCassiusFile = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
     flip celper $(cassiusFile "external1.cassius") $ concat
-        [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
-        , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
+        [ "foo{color:#F00;background:#000;bar:baz}"
+        , "bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
         , "background-image:url(url);urlp:url(url?p=q)}"
         ]
 
@@ -605,8 +599,8 @@ caseCassiusFileDebug = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
     flip celper $(cassiusFileDebug "external1.cassius") $ concat
-        [ "foo{color:#F00;background:#000;bar:baz;a:b;c:d}"
-        , "foo bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
+        [ "foo{color:#F00;background:#000;bar:baz}"
+        , "bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
         , "background-image:url(url);urlp:url(url?p=q)}"
         ]
 
@@ -739,7 +733,15 @@ $forall   empty    x
 
 caseCassiusAllSpaces :: Assertion
 caseCassiusAllSpaces = do
-    celper "h1{color:green}" [$cassius|
+    celper "h1{color:green }" [$cassius|
     h1
         color: green 
+    |]
+
+caseCassiusWhitespaceColons :: Assertion
+caseCassiusWhitespaceColons = do
+    celper "h1:hover{color:green ;font-family:sans-serif}" [$cassius|
+    h1:hover
+        color: green 
+        font-family:sans-serif
     |]

@@ -5,8 +5,6 @@ module Text.Cassius
     ( Cassius
     , Css (..)
     , renderCassius
-    , CassiusMixin
-    , cassiusMixin
     , cassius
     , Color (..)
     , colorRed
@@ -16,8 +14,6 @@ module Text.Cassius
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
-import Data.Traversable (sequenceA)
-import Control.Applicative ((<$>))
 import Data.List (intercalate)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -32,7 +28,6 @@ import Data.Word (Word8)
 import Data.Bits
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Utf8
-import Control.Applicative (Applicative (..))
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -76,15 +71,8 @@ class ToCss a where
     toCss :: a -> String
 instance ToCss [Char] where toCss = id
 
-data ContentPair = CPSimple Contents Contents
-                 | CPMixin Deref
-    deriving Show
 contentPairToContents :: ContentPair -> Contents
-contentPairToContents (CPSimple x y) = concat [x, ContentRaw ":" : y]
-contentPairToContents (CPMixin deref) = [ContentMix deref]
-
-data FlatDec = FlatDec Contents [ContentPair]
-    deriving Show
+contentPairToContents (x, y) = concat [x, ContentRaw ":" : y]
 
 data Deref = DerefLeaf String
            | DerefBranch Deref Deref
@@ -104,67 +92,61 @@ data Content = ContentRaw String
              | ContentVar Deref
              | ContentUrl Deref
              | ContentUrlParam Deref
-             | ContentMix Deref
     deriving Show
 type Contents = [Content]
+type ContentPair = (Contents, Contents)
+type Block = (Contents, [ContentPair])
 
-data DecS = Attrib Contents Contents
-          | Block Contents [DecS]
-          | MixinDec Deref
-    deriving Show
+parseBlocks :: Parser [Block]
+parseBlocks = catMaybes `fmap` many parseBlock
 
-data Line = LinePair Contents Contents
-          | LineSingle Contents
-          | LineMix Deref
-    deriving Show
+parseEmptyLine :: Parser ()
+parseEmptyLine = do
+    try $ skipMany $ oneOf " \t"
+    parseComment <|> eol
 
-data Nest = Nest Line [Nest]
-    deriving Show
+parseComment :: Parser ()
+parseComment = do
+    skipMany $ oneOf " \t"
+    _ <- string "$#"
+    _ <- manyTill anyChar $ eol <|> eof
+    return ()
 
-parseLines :: Parser [(Int, Line)]
-parseLines = fmap (catMaybes)
-           $ many (parseEmptyLine <|> try parseComment <|> parseLine)
+parseIndent :: Parser Int
+parseIndent =
+    sum `fmap` many ((char ' ' >> return 1) <|> (char '\t' >> return 4))
+
+parseBlock :: Parser (Maybe Block)
+parseBlock = do
+    indent <- parseIndent
+    (emptyBlock >> return Nothing)
+        <|> (eof >> if indent > 0 then return Nothing else fail "")
+        <|> realBlock indent
+  where
+    emptyBlock = parseEmptyLine
+    realBlock indent = do
+        name <- many1 $ parseContent True
+        eol
+        pairs <- fmap catMaybes $ many $ parsePair' indent
+        case pairs of
+            [] -> return Nothing
+            _ -> return $ Just (name, pairs)
+    parsePair' indent = try (parseEmptyLine >> return Nothing)
+                    <|> try (Just `fmap` parsePair indent)
+
+parsePair :: Int -> Parser (Contents, Contents)
+parsePair minIndent = do
+    indent <- parseIndent
+    if indent <= minIndent then fail "not indented" else return ()
+    key <- manyTill (parseContent False) $ char ':'
+    spaces
+    value <- manyTill (parseContent True) $ eol <|> eof
+    return (key, value)
 
 eol :: Parser ()
-eol =
-    (char '\n' >> return ()) <|> (string "\r\n" >> return ())
+eol = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
-parseEmptyLine :: Parser (Maybe (Int, Line))
-parseEmptyLine = eol >> return Nothing
-
-parseComment :: Parser (Maybe (Int, Line))
-parseComment = do
-    _ <- many $ oneOf " \t"
-    _ <- string "$#"
-    _ <- many $ noneOf "\r\n"
-    eol <|> return ()
-    return Nothing
-
-parseLine :: Parser (Maybe (Int, Line))
-parseLine = do
-    ss <- fmap sum $ many ((char ' ' >> return 1) <|>
-                           (char '\t' >> return 4))
-    x <- parseLineMix <|> do
-            key' <- many1 $ parseContent False
-            let key = trim key'
-            parsePair key <|> return (LineSingle key)
-    eol <|> eof
-    return $ Just (ss, x)
-  where
-    parseLineMix = do
-        _ <- char '^'
-        d <- parseDeref
-        _ <- char '^'
-        return $ LineMix d
-    parsePair key = do
-        _ <- try $ string ": "
-        _ <- spaces
-        val <- many1 $ parseContent True
-        return $ LinePair key $ trim val
-    --trim = reverse . dropWhile isSpace . reverse
-    trim = id -- FIXME
-
-parseContent :: Bool -> Parser Content
+parseContent :: Bool -> Parser Content -- FIXME check for comments
 parseContent allowColon = do
     (char '$' >> (parseDollar <|> parseVar)) <|>
       (char '@' >> (parseAt <|> parseUrl)) <|> safeColon <|> do
@@ -200,49 +182,8 @@ parseDeref =
         return $ foldr1 DerefBranch $ x : xs
     ident = many1 (alphaNum <|> char '_' <|> char '\'')
 
-nestLines :: [(Int, Line)] -> [Nest]
-nestLines [] = []
-nestLines ((i, l):rest) =
-    let (deeper, rest') = span (\(i', _) -> i' > i) rest
-     in Nest l (nestLines deeper) : nestLines rest'
-
-nestToDec :: Bool -> Nest -> AEither [String] DecS
-nestToDec _ (Nest LineMix{} (_:_)) =
-    ALeft ["Mixins may not have nested content"]
-nestToDec True (Nest LineMix{} []) =
-    ALeft ["Cannot have LineMix at top level"]
-nestToDec False (Nest (LineMix deref) []) =
-    ARight $ MixinDec deref
-nestToDec _ (Nest LinePair{} (_:_)) =
-    ALeft ["Only LineSingle may have nested content"]
-nestToDec _ (Nest LineSingle{} []) =
-    ALeft ["A LineSingle must have nested content"]
-nestToDec True (Nest LinePair{} _) =
-    ALeft ["Cannot have a LinePair at top level"]
-nestToDec _ (Nest (LineSingle name) nests) =
-    Block name <$> sequenceA (map (nestToDec False) nests)
-nestToDec _ (Nest (LinePair key val) []) = ARight $ Attrib key val
-
-flatDec :: DecS -> [FlatDec]
-flatDec Attrib{} = error "flatDec Attrib"
-flatDec MixinDec{} = error "flatDec MixinDec"
-flatDec (Block name decs) =
-    let as = concatMap getAttrib decs
-        bs = concatMap getBlock decs
-        a = case as of
-                [] -> id
-                _ -> (:) (FlatDec name as)
-        b = concatMap flatDec bs
-     in a b
-  where
-    getAttrib (Attrib x y) = [CPSimple x y]
-    getAttrib (MixinDec d) = [CPMixin d]
-    getAttrib Block{} = []
-    getBlock (Block n d) = [Block (concat [name, ContentRaw " " : n]) d]
-    getBlock _ = []
-
-render :: FlatDec -> Contents
-render (FlatDec n pairs) =
+render :: Block -> Contents
+render (n, pairs) =
     let inner = intercalate [ContentRaw ";"]
               $ map contentPairToContents pairs
      in concat [n, [ContentRaw "{"], inner, [ContentRaw "}"]]
@@ -265,34 +206,13 @@ contentsToCassius a = do
                 return $ mc `AppE` ListE c
     return $ LamE [VarP r] d
 
-cassiusMixin :: QuasiQuoter
-cassiusMixin =
-    QuasiQuoter { quoteExp = e }
-  where
-    e s = do
-        let a = either (error . show) id $ parse parseLines s s
-        let b = flip map a $ \(_, l) ->
-                    case l of
-                        LinePair x y -> CPSimple x y
-                        LineMix deref -> CPMixin deref
-                        LineSingle _ -> error "Mixins cannot contain singles"
-        d <- contentsToCassius
-           $ intercalate [ContentRaw ";"]
-           $ map contentPairToContents b
-        sm <- [|CassiusMixin|]
-        return $ sm `AppE` d
-
-newtype CassiusMixin url = CassiusMixin { unCassiusMixin :: Cassius url }
-
 cassius :: QuasiQuoter
 cassius = QuasiQuoter { quoteExp = cassiusFromString }
 
 cassiusFromString :: String -> Q Exp
-cassiusFromString s = do
-    let a = either (error . show) id $ parse parseLines s s
-    let b = aeither (error . unlines) id
-          $ sequenceA $ map (nestToDec True) $ nestLines a
-    contentsToCassius $ concatMap render $ concatMap flatDec b
+cassiusFromString s =
+    contentsToCassius
+  $ concatMap render $ either (error . show) id $ parse parseBlocks s s
 
 contentToCss :: Name -> Content -> Q Exp
 contentToCss _ (ContentRaw s') = do
@@ -309,9 +229,6 @@ contentToCss r (ContentUrlParam d) = do
     ts <- [|Css . fromString|]
     up <- [|\r' (u, p) -> r' u p|]
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
-contentToCss r (ContentMix d) = do
-    un <- [|unCassiusMixin|]
-    return $ un `AppE` derefToExp d `AppE` VarE r
 
 derefToExp :: Deref -> Exp
 derefToExp (DerefBranch x y) =
@@ -329,24 +246,17 @@ cassiusFile fp = do
     contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
     cassiusFromString contents
 
-data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
+data VarType = VTPlain | VTUrl | VTUrlParam
 
-getVars :: Line -> [(Deref, VarType)]
-getVars (LinePair x y) = concatMap getVars' $ x ++ y
-getVars (LineSingle x) = concatMap getVars' x
-getVars (LineMix x) = [(x, VTMixin)]
-
-getVars' :: Content -> [(Deref, VarType)]
-getVars' ContentRaw{} = []
-getVars' (ContentVar d) = [(d, VTPlain)]
-getVars' (ContentUrl d) = [(d, VTUrl)]
-getVars' (ContentUrlParam d) = [(d, VTUrlParam)]
-getVars' (ContentMix d) = [(d, VTMixin)]
+getVars :: Content -> [(Deref, VarType)]
+getVars ContentRaw{} = []
+getVars (ContentVar d) = [(d, VTPlain)]
+getVars (ContentUrl d) = [(d, VTUrl)]
+getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
 data CDData url = CDPlain String
                 | CDUrl url
                 | CDUrlParam (url, [(String, String)])
-                | CDMixin (CassiusMixin url)
 
 vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
@@ -357,24 +267,20 @@ vtToExp (d, vt) = do
     c VTPlain = [|CDPlain . toCss|]
     c VTUrl = [|CDUrl|]
     c VTUrlParam = [|CDUrlParam|]
-    c VTMixin = [|CDMixin|]
 
 cassiusFileDebug :: FilePath -> Q Exp
 cassiusFileDebug fp = do
     s <- fmap bsToChars $ qRunIO $ S8.readFile fp
-    let a = either (error . show) id $ parse parseLines s s
-        b = concatMap (getVars . snd) a
-    c <- mapM vtToExp b
+    let a = concatMap render $ either (error . show) id $ parse parseBlocks s s
+    c <- mapM vtToExp $ concatMap getVars a
     cr <- [|cassiusRuntime|]
     return $ cr `AppE` (LitE $ StringL fp) `AppE` ListE c
 
 cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
 cassiusRuntime fp cd render' = unsafePerformIO $ do
     s <- fmap bsToChars $ qRunIO $ S8.readFile fp
-    let a = either (error . show) id $ parse parseLines s s
-    let b = aeither (error . unlines) id
-          $ sequenceA $ map (nestToDec True) $ nestLines a
-    return $ mconcat $ map go $ concatMap render $ concatMap flatDec b
+    let a = either (error . show) id $ parse parseBlocks s s
+    return $ mconcat $ map go $ concatMap render a
   where
     go :: Content -> Css
     go (ContentRaw s) = Css $ fromString s
@@ -391,21 +297,3 @@ cassiusRuntime fp cd render' = unsafePerformIO $ do
             Just (CDUrlParam (u, p)) ->
                 Css $ fromString $ render' u p
             _ -> error $ show d ++ ": expected CDUrlParam"
-    go (ContentMix d) =
-        case lookup d cd of
-            Just (CDMixin (CassiusMixin m)) -> m render'
-            _ -> error $ show d ++ ": expected CDMixin"
-
-data AEither a b = ALeft a | ARight b
-instance Functor (AEither a) where
-    fmap _ (ALeft a) = ALeft a
-    fmap f (ARight b) = ARight $ f b
-instance Monoid a => Applicative (AEither a) where
-    pure = ARight
-    ALeft x <*> ALeft y = ALeft $ x `mappend` y
-    ALeft x <*> _ = ALeft x
-    _ <*> ALeft y = ALeft y
-    ARight x <*> ARight y = ARight $ x y
-aeither :: (a -> c) -> (b -> c) -> AEither a b -> c
-aeither f _ (ALeft a) = f a
-aeither _ f (ARight b) = f b
