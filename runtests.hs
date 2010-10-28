@@ -79,6 +79,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "different binding names" caseDiffBindNames
     , testCase "blank line" caseBlankLine
     , testCase "leading spaces" caseLeadingSpaces
+    , testCase "cassius all spaces" caseCassiusAllSpaces
     ]
 
 data Url = Home | Sub SubUrl
@@ -735,3 +736,10 @@ $forall   empty    x
 |]
   where
     empty = []
+
+caseCassiusAllSpaces :: Assertion
+caseCassiusAllSpaces = do
+    celper "h1{color:green}" [$cassius|
+    h1
+        color: green 
+    |]
