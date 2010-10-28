@@ -457,10 +457,10 @@ helper' res h = do
 
 caseHamlet' :: Assertion
 caseHamlet' = do
-    helper' "foo" [$hamlet'|foo|]
-    helper' "foo" [$xhamlet'|foo|]
-    helper "<br>" $ const $ [$hamlet'|%br|]
-    helper "<br/>" $ const $ [$xhamlet'|%br|]
+    helper' "foo" [$hamlet|foo|]
+    helper' "foo" [$xhamlet|foo|]
+    helper "<br>" $ const $ [$hamlet|%br|]
+    helper "<br/>" $ const $ [$xhamlet|%br|]
 
     -- new with generalized stuff
     helper' "foo" [$hamlet|foo|]

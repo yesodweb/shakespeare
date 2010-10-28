@@ -8,8 +8,6 @@
 module Text.Hamlet.Quasi
     ( hamlet
     , xhamlet
-    , hamlet'
-    , xhamlet'
     , hamletDebug
     , hamletWithSettings
     , hamletWithSettings'
@@ -114,16 +112,6 @@ contentToExp scope (ContentEmbed d) = do
     let d' = deref scope d
     fhv <- [|fromHamletValue|]
     return $ fhv `AppE` d'
-
--- | Calls 'hamletWithSettings'' with 'defaultHamletSettings'.
-hamlet' :: QuasiQuoter
-hamlet' = hamletWithSettings' defaultHamletSettings
-{-# DEPRECATED hamlet' "Use hamlet directly now" #-}
-
--- | Calls 'hamletWithSettings'' using XHTML 1.0 Strict settings.
-xhamlet' :: QuasiQuoter
-xhamlet' = hamletWithSettings' xhtmlHamletSettings
-{-# DEPRECATED xhamlet' "Use xhamlet directly now" #-}
 
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
