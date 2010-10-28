@@ -146,9 +146,9 @@ parsePair minIndent = do
 eol :: Parser ()
 eol = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
-parseContent :: Bool -> Parser Content -- FIXME check for comments
+parseContent :: Bool -> Parser Content
 parseContent allowColon = do
-    (char '$' >> (parseDollar <|> parseVar)) <|>
+    (char '$' >> (parseComment <|> parseDollar <|> parseVar)) <|>
       (char '@' >> (parseAt <|> parseUrl)) <|> safeColon <|> do
         s <- many1 $ noneOf $ (if allowColon then id else (:) ':') "\r\n$@"
         return $ ContentRaw s
@@ -168,6 +168,8 @@ parseContent allowColon = do
         d <- parseDeref
         _ <- char '$'
         return $ ContentVar d
+    parseComment = char '#' >> skipMany (noneOf "\r\n")
+                            >> return (ContentRaw "")
 
 parseDeref :: Parser Deref
 parseDeref =

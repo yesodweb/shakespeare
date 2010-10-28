@@ -81,6 +81,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "leading spaces" caseLeadingSpaces
     , testCase "cassius all spaces" caseCassiusAllSpaces
     , testCase "cassius whitespace and colons" caseCassiusWhitespaceColons
+    , testCase "cassius trailing comments" caseCassiusTrailingComments
     ]
 
 data Url = Home | Sub SubUrl
@@ -743,5 +744,14 @@ caseCassiusWhitespaceColons = do
     celper "h1:hover{color:green ;font-family:sans-serif}" [$cassius|
     h1:hover
         color: green 
+        font-family:sans-serif
+    |]
+
+caseCassiusTrailingComments :: Assertion
+caseCassiusTrailingComments = do
+    celper "h1:hover {color:green ;font-family:sans-serif}" [$cassius|
+    h1:hover $# Please ignore this
+        color: green $# This is a comment.
+        $# Obviously this is ignored too.
         font-family:sans-serif
     |]
