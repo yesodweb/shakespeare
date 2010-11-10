@@ -42,9 +42,9 @@ import Text.Hamlet.Debug
 import qualified Data.ByteString as S
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid (mappend)
-import Text.Blaze.Builder.Core (toLazyByteString, fromByteString)
-import Text.Blaze.Builder.Html (fromHtmlEscapedString)
-import Text.Blaze.Builder.Utf8 (fromString)
+import Blaze.ByteString.Builder (toLazyByteString, fromByteString)
+import Blaze.ByteString.Builder.Html.Utf8 (fromHtmlEscapedString)
+import Blaze.ByteString.Builder.Char.Utf8 (fromString)
 
 -- | Converts a 'Hamlet' to lazy bytestring.
 renderHamlet :: (url -> [(String, String)] -> String) -> Hamlet url -> L.ByteString

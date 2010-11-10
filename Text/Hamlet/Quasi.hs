@@ -27,8 +27,8 @@ import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
-import Text.Blaze.Builder.Core (Builder, fromByteString, toLazyByteString)
-import Text.Blaze.Builder.Html (fromHtmlEscapedString)
+import Blaze.ByteString.Builder (Builder, fromByteString, toLazyByteString)
+import Blaze.ByteString.Builder.Html.Utf8 (fromHtmlEscapedString)
 import Data.Maybe (fromMaybe)
 import Data.String
 import Text.Utf8

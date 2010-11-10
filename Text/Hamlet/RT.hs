@@ -22,7 +22,7 @@ import Control.Failure
 import Text.Hamlet.Parse
 import Text.Hamlet.Quasi (Html (..))
 import Data.List (intercalate)
-import Text.Blaze.Builder.Utf8 (fromString)
+import Blaze.ByteString.Builder.Char.Utf8 (fromString)
 
 type HamletMap url = [([String], HamletData url)]
 
