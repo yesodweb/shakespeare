@@ -21,6 +21,8 @@ import qualified Data.ByteString.Lazy as L
 import Data.Monoid
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Utf8
+import qualified Data.Text as TS
+import qualified Data.Text.Lazy as TL
 
 renderJavascript :: Javascript -> L.ByteString
 renderJavascript (Javascript b) = toLazyByteString b
@@ -32,9 +34,11 @@ newtype Javascript = Javascript Builder
     deriving Monoid
 type Julius url = (url -> [(String, String)] -> String) -> Javascript
 
-class ToJavascript a where
+class ToJavascript a where -- FIXME use Text instead of String for efficiency? or a builder directly?
     toJavascript :: a -> String
 instance ToJavascript [Char] where toJavascript = id
+instance ToJavascript TS.Text where toJavascript = TS.unpack
+instance ToJavascript TL.Text where toJavascript = TL.unpack
 
 data Deref = DerefLeaf String
            | DerefBranch Deref Deref

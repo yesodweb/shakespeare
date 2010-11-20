@@ -28,10 +28,13 @@ import Data.Char (isUpper, isDigit)
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
 import Blaze.ByteString.Builder (Builder, fromByteString, toLazyByteString)
-import Blaze.ByteString.Builder.Html.Utf8 (fromHtmlEscapedString)
+import Blaze.ByteString.Builder.Html.Utf8
+    (fromHtmlEscapedString, fromHtmlEscapedText, fromHtmlEscapedLazyText)
 import Data.Maybe (fromMaybe)
 import Data.String
 import Text.Utf8
+import qualified Data.Text as TS
+import qualified Data.Text.Lazy as TL
 
 instance IsString Html where
     fromString = Html . fromHtmlEscapedString
@@ -42,6 +45,10 @@ instance ToHtml String where
     toHtml = Html . fromHtmlEscapedString
 instance ToHtml Html where
     toHtml = id
+instance ToHtml TS.Text where
+    toHtml = Html . fromHtmlEscapedText
+instance ToHtml TL.Text where
+    toHtml = Html . fromHtmlEscapedLazyText
 
 type Scope = [(Ident, Exp)]
 

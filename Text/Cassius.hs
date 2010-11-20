@@ -28,6 +28,8 @@ import Data.Word (Word8)
 import Data.Bits
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Utf8
+import qualified Data.Text as TS
+import qualified Data.Text.Lazy as TL
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -67,9 +69,11 @@ newtype Css = Css Builder
     deriving Monoid
 type Cassius url = (url -> [(String, String)] -> String) -> Css
 
-class ToCss a where
+class ToCss a where -- FIXME use Text instead of String for efficiency? or a builder directly?
     toCss :: a -> String
 instance ToCss [Char] where toCss = id
+instance ToCss TS.Text where toCss = TS.unpack
+instance ToCss TL.Text where toCss = TL.unpack
 
 contentPairToContents :: ContentPair -> Contents
 contentPairToContents (x, y) = concat [x, ContentRaw ":" : y]
