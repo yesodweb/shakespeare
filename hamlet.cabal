@@ -1,5 +1,5 @@
 name:            hamlet
-version:         0.6.0.2
+version:         0.6.0.3
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -45,7 +45,7 @@ library
                    , blaze-builder    >= 0.2     && < 0.3
                    , parsec           >= 2       && < 4
                    , failure          >= 0.1.0   && < 0.2
-                   , text             >= 0.7     && < 0.11
+                   , text             >= 0.7     && < 0.12
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
                      Text.Cassius
