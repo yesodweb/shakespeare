@@ -364,6 +364,8 @@ debugHamletSettings = HamletSettings "<!DOCTYPE html>" False True
 
 data CloseStyle = NoClose | CloseInside | CloseSeparate
 
+-- FIXME A breaking change, but move closeTag to be a record in the
+-- HamletSettings datatype. Would allow more precise XML encodings.
 closeTag :: HamletSettings -> String -> CloseStyle
 closeTag h s =
     if canBeEmpty s

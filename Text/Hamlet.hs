@@ -20,13 +20,18 @@ module Text.Hamlet
       -- * Typeclass
     , ToHtml (..)
     , HamletValue (..)
-      -- * Construction/rendering
-    , renderHamlet
-    , renderHtml
+      -- * Construction
     , preEscapedString
     , string
     , unsafeByteString
     , cdata
+      -- * Rendering
+      -- ** ByteString
+    , renderHamlet
+    , renderHtml
+      -- ** Text
+    , renderHamletText
+    , renderHtmlText
       -- * Runtime Hamlet
     , HamletRT
     , HamletData (..)
@@ -45,13 +50,24 @@ import Data.Monoid (mappend)
 import Blaze.ByteString.Builder (toLazyByteString, fromByteString)
 import Blaze.ByteString.Builder.Html.Utf8 (fromHtmlEscapedString)
 import Blaze.ByteString.Builder.Char.Utf8 (fromString)
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.Encoding as T
+import qualified Data.Text.Encoding.Error as T
 
 -- | Converts a 'Hamlet' to lazy bytestring.
 renderHamlet :: (url -> [(String, String)] -> String) -> Hamlet url -> L.ByteString
 renderHamlet render h = renderHtml $ h render
 
+renderHamletText :: (url -> [(String, String)] -> String) -> Hamlet url
+                 -> T.Text
+renderHamletText render h =
+    T.decodeUtf8With T.lenientDecode $ renderHtml $ h render
+
 renderHtml :: Html -> L.ByteString
 renderHtml (Html h) = toLazyByteString h
+
+renderHtmlText :: Html -> T.Text
+renderHtmlText (Html h) = T.decodeUtf8With T.lenientDecode $ toLazyByteString h
 
 -- | Wrap an 'Html' for embedding in an XML file.
 cdata :: Html -> Html
