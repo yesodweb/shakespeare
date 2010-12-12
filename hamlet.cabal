@@ -28,7 +28,7 @@ description:
     >         %p
     >             %a!href=@page.person@ See the page.
     >         ^footer^
-category:        Web
+category:        Web, Yesod
 stability:       unstable
 cabal-version:   >= 1.6
 build-type:      Simple
