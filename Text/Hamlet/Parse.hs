@@ -73,13 +73,14 @@ parseLine set = do
     x <- doctype <|>
          comment <|>
          backslash <|>
-         try controlIf <|>
-         try controlElseIf <|>
-         try (string "$else" >> many (oneOf " \t") >> eol >> return LineElse) <|>
-         try controlMaybe <|>
-         try (string "$nothing" >> many (oneOf " \t") >> eol >> return LineNothing) <|>
-         try controlForall <|>
+         controlIf <|>
+         controlElseIf <|>
+         (try (string "$else") >> many (oneOf " \t") >> eol >> return LineElse) <|>
+         controlMaybe <|>
+         (try (string "$nothing") >> many (oneOf " \t") >> eol >> return LineNothing) <|>
+         controlForall <|>
          tag <|>
+         (eol' >> return (LineContent [])) <|>
          (do
             cs <- content InContent
             isEof <- (eof >> return True) <|> return False
@@ -103,21 +104,21 @@ parseLine set = do
         (eol >> return (LineContent [ContentRaw "\n"]))
             <|> (LineContent <$> content InContent)
     controlIf = do
-        _ <- string "$if"
+        _ <- try $ string "$if"
         spaces
         x <- deref False
         _ <- many $ oneOf " \t"
         eol
         return $ LineIf x
     controlElseIf = do
-        _ <- string "$elseif"
+        _ <- try $ string "$elseif"
         spaces
         x <- deref False
         _ <- many $ oneOf " \t"
         eol
         return $ LineElseIf x
     controlMaybe = do
-        _ <- string "$maybe"
+        _ <- try $ string "$maybe"
         spaces
         x <- deref False
         spaces
@@ -126,7 +127,7 @@ parseLine set = do
         eol
         return $ LineMaybe x y
     controlForall = do
-        _ <- string "$forall"
+        _ <- try $ string "$forall"
         spaces
         x <- deref False
         spaces

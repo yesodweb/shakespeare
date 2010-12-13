@@ -706,11 +706,13 @@ caseBlankLine = do
 %p
 
     foo
+
 |]
     celper "foo{bar:baz}" [$cassius|
 foo
 
     bar: baz
+
 |]
 
 caseLeadingSpaces :: Assertion
