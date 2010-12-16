@@ -10,6 +10,7 @@ module Text.Hamlet.Parse
     , defaultHamletSettings
     , xhtmlHamletSettings
     , debugHamletSettings
+    , CloseStyle (..)
     )
     where
 
@@ -19,6 +20,8 @@ import Control.Arrow
 import Data.Data
 import Data.List (intercalate)
 import Text.ParserCombinators.Parsec hiding (Line)
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -268,7 +271,7 @@ nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
     let closeStyle =
             if not (null content) || not (null inside)
                 then CloseSeparate
-                else closeTag set tn
+                else hamletCloseStyle set tn
     let end = case closeStyle of
                 CloseSeparate ->
                     DocContent $ ContentRaw $ "</" ++ tn ++ ">"
@@ -341,45 +344,59 @@ data HamletSettings = HamletSettings
       -- | The value to replace a \"!!!\" with. Do not include the trailing
       -- newline.
       hamletDoctype :: String
-      -- | 'True' means to close empty tags (eg, img) with a trailing slash, ie
-      -- XML-style empty tags. 'False' uses HTML-style.
-    , hamletCloseEmpties :: Bool
-      -- | Should we put a newline after closing a tag?
+      -- | Should we put a newline after closing a tag? Mostly useful for debug
+      -- output.
     , hamletCloseNewline :: Bool
+      -- | How a tag should be closed. Use this to switch between HTML, XHTML
+      -- or even XML output.
+    , hamletCloseStyle :: String -> CloseStyle
     }
+
+htmlEmptyTags :: Set String
+htmlEmptyTags = Set.fromAscList
+    [ "area"
+    , "base"
+    , "basefont"
+    , "br"
+    , "col"
+    , "frame"
+    , "hr"
+    , "img"
+    , "input"
+    , "isindex"
+    , "link"
+    , "meta"
+    , "param"
+    ]
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
-defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False False
+defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False htmlCloseStyle
 
 xhtmlHamletSettings :: HamletSettings
 xhtmlHamletSettings =
-    HamletSettings doctype True False
+    HamletSettings doctype False xhtmlCloseStyle
   where
     doctype =
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
       "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
 
 debugHamletSettings :: HamletSettings
-debugHamletSettings = HamletSettings "<!DOCTYPE html>" False True
+debugHamletSettings = HamletSettings "<!DOCTYPE html>" True htmlCloseStyle
+
+htmlCloseStyle :: String -> CloseStyle
+htmlCloseStyle s =
+    if Set.member s htmlEmptyTags
+        then NoClose
+        else CloseSeparate
+
+xhtmlCloseStyle :: String -> CloseStyle
+xhtmlCloseStyle s =
+    if Set.member s htmlEmptyTags
+        then CloseInside
+        else CloseSeparate
 
 data CloseStyle = NoClose | CloseInside | CloseSeparate
-
--- FIXME A breaking change, but move closeTag to be a record in the
--- HamletSettings datatype. Would allow more precise XML encodings.
-closeTag :: HamletSettings -> String -> CloseStyle
-closeTag h s =
-    if canBeEmpty s
-        then CloseSeparate
-        else (if hamletCloseEmpties h then CloseInside else NoClose)
-  where
-    canBeEmpty "img" = False
-    canBeEmpty "link" = False
-    canBeEmpty "meta" = False
-    canBeEmpty "br" = False
-    canBeEmpty "hr" = False
-    canBeEmpty "input" = False
-    canBeEmpty _ = True
 
 parseConds :: HamletSettings
            -> ([(Deref, [Doc])] -> [(Deref, [Doc])])
