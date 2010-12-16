@@ -82,6 +82,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "cassius all spaces" caseCassiusAllSpaces
     , testCase "cassius whitespace and colons" caseCassiusWhitespaceColons
     , testCase "cassius trailing comments" caseCassiusTrailingComments
+    , testCase "hamlet angle bracket syntax" caseHamletAngleBrackets
     ]
 
 data Url = Home | Sub SubUrl
@@ -757,3 +758,11 @@ caseCassiusTrailingComments = do
         $# Obviously this is ignored too.
         font-family:sans-serif
     |]
+
+caseHamletAngleBrackets :: Assertion
+caseHamletAngleBrackets =
+    helper "<p class=\"foo\" height=\"100\"><span id=\"bar\" width=\"50\">HELLO</span></p>"
+        [$hamlet|
+<p.foo height="100"
+    <span #bar width=50>HELLO
+|]

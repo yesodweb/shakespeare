@@ -83,6 +83,7 @@ parseLine set = do
          (try (string "$nothing") >> many (oneOf " \t") >> eol >> return LineNothing) <|>
          controlForall <|>
          tag <|>
+         angle <|>
          (eol' >> return (LineContent [])) <|>
          (do
             cs <- content InContent
@@ -139,8 +140,8 @@ parseLine set = do
         eol
         return $ LineForall x y
     tag = do
-        x <- tagName <|> tagIdent <|> tagClass <|> tagAttrib
-        xs <- many $ tagIdent <|> tagClass <|> tagAttrib
+        x <- tagName <|> tagIdent <|> tagClass <|> tagAttrib True
+        xs <- many $ tagIdent <|> tagClass <|> tagAttrib True
         c <- (eol >> return []) <|> (do
             _ <- many1 $ oneOf " \t"
             content InContent)
@@ -175,12 +176,12 @@ parseLine set = do
             _ <- char '^'
             return $ ContentEmbed s)
     contentReg InContent = ContentRaw <$> many1 (noneOf "$@^\r\n")
-    contentReg NotInQuotes = ContentRaw <$> many1 (noneOf "$@^#.! \t\n\r")
+    contentReg NotInQuotes = ContentRaw <$> many1 (noneOf "$@^#.! \t\n\r>")
     contentReg InQuotes =
         (do
             _ <- char '\\'
             ContentRaw . return <$> anyChar
-        ) <|> (ContentRaw <$> many1 (noneOf "$@^\\\"\n\r"))
+        ) <|> (ContentRaw <$> many1 (noneOf "$@^\\\"\n\r>"))
     tagName = do
         _ <- char '%'
         s <- many1 $ noneOf " \t.#!\r\n"
@@ -190,10 +191,10 @@ parseLine set = do
         content cr
     tagIdent = char '#' >> TagIdent <$> tagAttribValue
     tagClass = char '.' >> TagClass <$> tagAttribValue
-    tagAttrib = do
-        _ <- char '!'
+    tagAttrib needBang = do
+        if needBang then (char '!' >> return ()) else return ()
         cond <- (Just <$> tagAttribCond) <|> return Nothing
-        s <- many1 $ noneOf " \t.!=\r\n"
+        s <- many1 $ noneOf " \t.!=\r\n>"
         v <- (do
             _ <- char '='
             s' <- tagAttribValue
@@ -219,11 +220,23 @@ parseLine set = do
         xs <- many $ delim >> derefSingle
         return $ foldr1 DerefBranch $ x : xs
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
+    angle = do
+        _ <- char '<'
+        name <- many1 $ noneOf " \t.#\r\n"
+        xs <- many $ (try (many $ oneOf " \t") >> (tagIdent <|> tagClass <|> tagAttrib False))
+        c <- (eol >> return []) <|> (do
+            _ <- char '>'
+            c <- content InContent
+            eol
+            return c)
+        let (tn, attr, classes) = tag' $ TagName name : xs
+        return $ LineTag tn attr c classes
 
 data TagPiece = TagName String
               | TagIdent [Content]
               | TagClass [Content]
               | TagAttrib (Maybe Deref, String, [Content])
+    deriving Show
 
 data ContentRule = InQuotes | NotInQuotes | InContent
 
