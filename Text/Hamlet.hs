@@ -15,7 +15,7 @@ module Text.Hamlet
     , defaultHamletSettings
     , xhtmlHamletSettings
       -- * Datatypes
-    , Html (..)
+    , Html
     , Hamlet
       -- * Typeclass
     , ToHtml (..)
@@ -44,15 +44,14 @@ import Text.Hamlet.Parse
 import Text.Hamlet.Quasi
 import Text.Hamlet.RT
 import Text.Hamlet.Debug
-import qualified Data.ByteString as S
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid (mappend)
-import Blaze.ByteString.Builder (toLazyByteString, fromByteString)
-import Blaze.ByteString.Builder.Html.Utf8 (fromHtmlEscapedString)
-import Blaze.ByteString.Builder.Char.Utf8 (fromString)
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T
 import qualified Data.Text.Encoding.Error as T
+import Text.Blaze.Renderer.Utf8 (renderHtml)
+import qualified Text.Blaze.Renderer.Text as BT
+import Text.Blaze (preEscapedText, preEscapedString, string, unsafeByteString)
 
 -- | Converts a 'Hamlet' to lazy bytestring.
 renderHamlet :: (url -> [(String, String)] -> String) -> Hamlet url -> L.ByteString
@@ -63,26 +62,14 @@ renderHamletText :: (url -> [(String, String)] -> String) -> Hamlet url
 renderHamletText render h =
     T.decodeUtf8With T.lenientDecode $ renderHtml $ h render
 
-renderHtml :: Html -> L.ByteString
-renderHtml (Html h) = toLazyByteString h
-
 renderHtmlText :: Html -> T.Text
-renderHtmlText (Html h) = T.decodeUtf8With T.lenientDecode $ toLazyByteString h
+renderHtmlText = BT.renderHtml
 
 -- | Wrap an 'Html' for embedding in an XML file.
 cdata :: Html -> Html
 cdata h =
-    Html (fromByteString "<![CDATA[")
+    preEscapedText "<![CDATA["
     `mappend`
     h
     `mappend`
-    Html (fromByteString "]]>")
-
-preEscapedString :: String -> Html
-preEscapedString = Html . fromString
-
-string :: String -> Html
-string = Html . fromHtmlEscapedString
-
-unsafeByteString :: S.ByteString -> Html
-unsafeByteString = Html . fromByteString
+    preEscapedText "]]>"

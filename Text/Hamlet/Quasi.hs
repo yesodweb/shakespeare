@@ -17,7 +17,7 @@ module Text.Hamlet.Quasi
     , ToHtml (..)
     , HamletValue (..)
     , varName
-    , Html (..)
+    , Html
     , Hamlet
     ) where
 
@@ -27,28 +27,22 @@ import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
-import Blaze.ByteString.Builder (Builder, fromByteString, toLazyByteString)
-import Blaze.ByteString.Builder.Html.Utf8
-    (fromHtmlEscapedString, fromHtmlEscapedText, fromHtmlEscapedLazyText)
 import Data.Maybe (fromMaybe)
-import Data.String
 import Text.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-
-instance IsString Html where
-    fromString = Html . fromHtmlEscapedString
+import Text.Blaze (Html, preEscapedString, preEscapedText)
 
 class ToHtml a where
     toHtml :: a -> Html
 instance ToHtml String where
-    toHtml = Html . fromHtmlEscapedString
+    toHtml = preEscapedString
 instance ToHtml Html where
     toHtml = id
 instance ToHtml TS.Text where
-    toHtml = Html . fromHtmlEscapedText
+    toHtml = preEscapedText
 instance ToHtml TL.Text where
-    toHtml = Html . fromHtmlEscapedLazyText
+    toHtml = toHtml . TL.unpack -- FIXME preEscapedLazyText
 
 type Scope = [(Ident, Exp)]
 
@@ -103,8 +97,8 @@ docToExp v (DocContent c) = contentToExp v c
 
 contentToExp :: Scope -> Content -> Q Exp
 contentToExp _ (ContentRaw s) = do
-    os <- [|htmlToHamletMonad . Html . fromByteString . S8.pack|]
-    let s' = LitE $ StringL $ charsToOctets s
+    os <- [|preEscapedString|]
+    let s' = LitE $ StringL s
     return $ os `AppE` s'
 contentToExp scope (ContentVar d) = do
     str <- [|htmlToHamletMonad . toHtml|]
@@ -215,13 +209,6 @@ maybeH Nothing _ Nothing = return ()
 maybeH Nothing _ (Just x) = x
 maybeH (Just v) f _ = f v
 
-newtype Html = Html Builder
-    deriving Monoid
-instance Show Html where
-    show (Html b) = show $ lbsToChars $ toLazyByteString b
-instance Eq Html where
-    (Html a) == (Html b) = toLazyByteString a == toLazyByteString b
-
 -- | An function generating an 'Html' given a URL-rendering function.
 type Hamlet url = (url -> [(String, String)] -> String) -> Html
 
@@ -241,7 +228,7 @@ instance HamletValue (Hamlet url) where
     toHamletValue = fmap fst . runHMonad
     htmlToHamletMonad x = HMonad $ const (x, ())
     urlToHamletMonad url pairs = HMonad $ \r ->
-        (Html $ fromHtmlEscapedString $ r url pairs, ())
+        (preEscapedString $ r url pairs, ())
     fromHamletValue f = HMonad $ \r -> (f r, ())
 instance Monad (HamletMonad (Hamlet url)) where
     return x = HMonad $ const (mempty, x)
