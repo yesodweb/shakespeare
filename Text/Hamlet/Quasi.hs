@@ -31,16 +31,16 @@ import Data.Maybe (fromMaybe)
 import Text.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import Text.Blaze (Html, preEscapedString, preEscapedText)
+import Text.Blaze (Html, preEscapedString, string, text)
 
 class ToHtml a where
     toHtml :: a -> Html
 instance ToHtml String where
-    toHtml = preEscapedString
+    toHtml = string
 instance ToHtml Html where
     toHtml = id
 instance ToHtml TS.Text where
-    toHtml = preEscapedText
+    toHtml = text
 instance ToHtml TL.Text where
     toHtml = toHtml . TL.unpack -- FIXME preEscapedLazyText
 
@@ -97,7 +97,7 @@ docToExp v (DocContent c) = contentToExp v c
 
 contentToExp :: Scope -> Content -> Q Exp
 contentToExp _ (ContentRaw s) = do
-    os <- [|preEscapedString|]
+    os <- [|htmlToHamletMonad . preEscapedString|]
     let s' = LitE $ StringL s
     return $ os `AppE` s'
 contentToExp scope (ContentVar d) = do
@@ -228,7 +228,7 @@ instance HamletValue (Hamlet url) where
     toHamletValue = fmap fst . runHMonad
     htmlToHamletMonad x = HMonad $ const (x, ())
     urlToHamletMonad url pairs = HMonad $ \r ->
-        (preEscapedString $ r url pairs, ())
+        (string $ r url pairs, ())
     fromHamletValue f = HMonad $ \r -> (f r, ())
 instance Monad (HamletMonad (Hamlet url)) where
     return x = HMonad $ const (mempty, x)
