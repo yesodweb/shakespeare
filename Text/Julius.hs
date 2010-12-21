@@ -4,6 +4,7 @@
 module Text.Julius
     ( Julius
     , Javascript (..)
+    , ToJavascript (..)
     , renderJulius
     , julius
     , juliusFile
