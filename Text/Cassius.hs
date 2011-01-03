@@ -18,8 +18,8 @@ import Data.List (intercalate)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Blaze.ByteString.Builder (Builder, fromByteString, toLazyByteString)
-import Blaze.ByteString.Builder.Char.Utf8 (fromString)
+import Language.Haskell.TH
+import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText, singleton)
 import Data.Maybe (catMaybes)
 import qualified Data.ByteString.Char8 as S8
 import qualified Data.ByteString.Lazy as L
@@ -30,6 +30,9 @@ import System.IO.Unsafe (unsafePerformIO)
 import Text.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.List (intersperse)
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -38,7 +41,7 @@ instance ToCss Color where
         let (r1, r2) = toHex r
             (g1, g2) = toHex g
             (b1, b2) = toHex b
-         in '#' :
+         in TL.pack $ '#' :
             if r1 == r2 && g1 == g2 && b1 == b2
                 then [r1, g1, b1]
                 else [r1, r2, g1, g2, b1, b2]
@@ -59,21 +62,38 @@ colorRed = Color 255 0 0
 colorBlack :: Color
 colorBlack = Color 0 0 0
 
-renderCss :: Css -> L.ByteString
-renderCss (Css b) = toLazyByteString b
+renderCss :: Css -> TL.Text
+renderCss =
+    toLazyText . mconcat . map go
+  where
+    go (Css' x y) = mconcat
+        [ x
+        , singleton '{'
+        , mconcat $ intersperse (singleton ';') $ map go' $ Map.toList y
+        , singleton '}'
+        ]
+    go' (k, v) = mconcat
+        [ fromLazyText k
+        , singleton ':'
+        , v
+        ]
 
-renderCassius :: (url -> [(String, String)] -> String) -> Cassius url -> L.ByteString
+renderCassius :: (url -> [(String, String)] -> String) -> Cassius url -> TL.Text
 renderCassius r s = renderCss $ s r
 
-newtype Css = Css Builder
-    deriving Monoid
+type Css = [Css']
+data Css' = Css'
+    { cssSelectors :: Builder
+    , cssAttributes :: Map TL.Text Builder
+    }
+
 type Cassius url = (url -> [(String, String)] -> String) -> Css
 
-class ToCss a where -- FIXME use Text instead of String for efficiency? or a builder directly?
-    toCss :: a -> String
-instance ToCss [Char] where toCss = id
-instance ToCss TS.Text where toCss = TS.unpack
-instance ToCss TL.Text where toCss = TL.unpack
+class ToCss a where
+    toCss :: a -> TL.Text
+instance ToCss [Char] where toCss = TL.pack
+instance ToCss TS.Text where toCss = TL.fromChunks . return
+instance ToCss TL.Text where toCss = id
 
 contentPairToContents :: ContentPair -> Contents
 contentPairToContents (x, y) = concat [x, ContentRaw ":" : y]
@@ -188,53 +208,51 @@ parseDeref =
         return $ foldr1 DerefBranch $ x : xs
     ident = many1 (alphaNum <|> char '_' <|> char '\'')
 
-render :: Block -> Contents
-render (n, pairs) =
-    let inner = intercalate [ContentRaw ";"]
-              $ map contentPairToContents pairs
-     in concat [n, [ContentRaw "{"], inner, [ContentRaw "}"]]
-
 compressContents :: Contents -> Contents
 compressContents [] = []
 compressContents (ContentRaw x:ContentRaw y:z) =
     compressContents $ ContentRaw (x ++ y) : z
 compressContents (x:y) = x : compressContents y
 
-contentsToCassius :: [Content] -> Q Exp
-contentsToCassius a = do
+blocksToCassius :: [(Contents, [ContentPair])] -> Q Exp
+blocksToCassius a = do
     r <- newName "_render"
-    c <- mapM (contentToCss r) $ compressContents a
-    d <- case c of
-            [] -> [|mempty|]
-            [x] -> return x
-            _ -> do
-                mc <- [|mconcat|]
-                return $ mc `AppE` ListE c
-    return $ LamE [VarP r] d
+    lamE [varP r] $ listE $ map (blockToCss r) a
 
 cassius :: QuasiQuoter
 cassius = QuasiQuoter { quoteExp = cassiusFromString }
 
 cassiusFromString :: String -> Q Exp
 cassiusFromString s =
-    contentsToCassius
-  $ concatMap render $ either (error . show) id $ parse parseBlocks s s
+    blocksToCassius
+  $ either (error . show) id $ parse parseBlocks s s
 
-contentToCss :: Name -> Content -> Q Exp
-contentToCss _ (ContentRaw s') = do
-    let d = charsToOctets s'
-    ts <- [|Css . fromByteString . S8.pack|]
-    return $ ts `AppE` LitE (StringL d)
-contentToCss _ (ContentVar d) = do
-    ts <- [|Css . fromString . toCss|]
-    return $ ts `AppE` derefToExp d
-contentToCss r (ContentUrl d) = do
-    ts <- [|Css . fromString|]
-    return $ ts `AppE` (VarE r `AppE` derefToExp d `AppE` ListE [])
-contentToCss r (ContentUrlParam d) = do
-    ts <- [|Css . fromString|]
-    up <- [|\r' (u, p) -> r' u p|]
-    return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
+
+blockToCss :: Name -> (Contents, [ContentPair]) -> Q Exp
+blockToCss r (sel, props) = do
+    css' <- [|Css'|]
+    let sel' = contentsToBuilder r sel
+    props' <- [|Map.fromList|] `appE` listE (map go props)
+    return css' `appE` sel' `appE` return props'
+  where
+    go (x, y) = tupE [tlt $ contentsToBuilder r x, contentsToBuilder r y]
+    tlt = appE [|toLazyText|]
+
+contentsToBuilder :: Name -> [Content] -> Q Exp
+contentsToBuilder r contents =
+    appE [|mconcat|] $ listE $ map (contentToBuilder r) contents
+
+contentToBuilder :: Name -> Content -> Q Exp
+contentToBuilder _ (ContentRaw x) =
+    [|fromText . TS.pack|] `appE` litE (StringL x)
+contentToBuilder _ (ContentVar d) =
+    [|fromLazyText . toCss|] `appE` return (derefToExp d)
+contentToBuilder r (ContentUrl u) =
+    [|fromText . TS.pack|] `appE`
+        (varE r `appE` return (derefToExp u) `appE` listE [])
+contentToBuilder r (ContentUrlParam u) =
+    [|fromText . TS.pack|] `appE`
+        ([|uncurry|] `appE` varE r `appE` return (derefToExp u))
 
 derefToExp :: Deref -> Exp
 derefToExp (DerefBranch x y) =
@@ -260,7 +278,7 @@ getVars (ContentVar d) = [(d, VTPlain)]
 getVars (ContentUrl d) = [(d, VTUrl)]
 getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
-data CDData url = CDPlain String
+data CDData url = CDPlain TL.Text
                 | CDUrl url
                 | CDUrlParam (url, [(String, String)])
 
@@ -277,29 +295,35 @@ vtToExp (d, vt) = do
 cassiusFileDebug :: FilePath -> Q Exp
 cassiusFileDebug fp = do
     s <- fmap bsToChars $ qRunIO $ S8.readFile fp
-    let a = concatMap render $ either (error . show) id $ parse parseBlocks s s
-    c <- mapM vtToExp $ concatMap getVars a
+    let a = either (error . show) id $ parse parseBlocks s s
+    c <- mapM vtToExp $ concatMap getVars $ concatMap go a
     cr <- [|cassiusRuntime|]
     return $ cr `AppE` (LitE $ StringL fp) `AppE` ListE c
+  where
+    go (x, y) = x ++ concatMap go' y
+    go' (k, v) = k ++ v
 
 cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
 cassiusRuntime fp cd render' = unsafePerformIO $ do
     s <- fmap bsToChars $ qRunIO $ S8.readFile fp
     let a = either (error . show) id $ parse parseBlocks s s
-    return $ mconcat $ map go $ concatMap render a
+    return $ map go a
   where
-    go :: Content -> Css
-    go (ContentRaw s) = Css $ fromString s
-    go (ContentVar d) =
+    go :: (Contents, [ContentPair]) -> Css'
+    go (x, y) = Css' (mconcat $ map go' x) $ Map.fromList $ map go'' y
+    go' :: Content -> Builder
+    go' (ContentRaw s) = fromText $ TS.pack s
+    go' (ContentVar d) =
         case lookup d cd of
-            Just (CDPlain s) -> Css $ fromString s
+            Just (CDPlain s) -> fromLazyText s
             _ -> error $ show d ++ ": expected CDPlain"
-    go (ContentUrl d) =
+    go' (ContentUrl d) =
         case lookup d cd of
-            Just (CDUrl u) -> Css $ fromString $ render' u []
+            Just (CDUrl u) -> fromText $ TS.pack $ render' u []
             _ -> error $ show d ++ ": expected CDUrl"
-    go (ContentUrlParam d) =
+    go' (ContentUrlParam d) =
         case lookup d cd of
             Just (CDUrlParam (u, p)) ->
-                Css $ fromString $ render' u p
+                fromText $ TS.pack $ render' u p
             _ -> error $ show d ++ ": expected CDUrlParam"
+    go'' (k, v) = (toLazyText $ mconcat $ map go' k, mconcat $ map go' v)

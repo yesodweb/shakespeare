@@ -14,20 +14,18 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Blaze.ByteString.Builder (Builder, fromByteString, toLazyByteString)
-import Blaze.ByteString.Builder.Char.Utf8 (fromString)
+import Data.Text.Lazy.Builder (Builder, fromText, toLazyText)
 import qualified Data.ByteString.Char8 as S8
-import qualified Data.ByteString.Lazy as L
 import Data.Monoid
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 
-renderJavascript :: Javascript -> L.ByteString
-renderJavascript (Javascript b) = toLazyByteString b
+renderJavascript :: Javascript -> TL.Text
+renderJavascript (Javascript b) = toLazyText b
 
-renderJulius :: (url -> [(String, String)] -> String) -> Julius url -> L.ByteString
+renderJulius :: (url -> [(String, String)] -> String) -> Julius url -> TL.Text
 renderJulius r s = renderJavascript $ s r
 
 newtype Javascript = Javascript Builder
@@ -131,17 +129,16 @@ juliusFromString s = do
 
 contentToJavascript :: Name -> Content -> Q Exp
 contentToJavascript _ (ContentRaw s') = do
-    let d = charsToOctets s'
-    ts <- [|Javascript . fromByteString . S8.pack|]
-    return $ ts `AppE` LitE (StringL d)
+    ts <- [|Javascript . fromText . TS.pack|]
+    return $ ts `AppE` LitE (StringL s')
 contentToJavascript _ (ContentVar d) = do
-    ts <- [|Javascript . fromString . toJavascript|]
+    ts <- [|Javascript . fromText . TS.pack . toJavascript|]
     return $ ts `AppE` derefToExp d
 contentToJavascript r (ContentUrl d) = do
-    ts <- [|Javascript . fromString|]
+    ts <- [|Javascript . fromText . TS.pack|]
     return $ ts `AppE` (VarE r `AppE` derefToExp d `AppE` ListE [])
 contentToJavascript r (ContentUrlParam d) = do
-    ts <- [|Javascript . fromString|]
+    ts <- [|Javascript . fromText . TS.pack|]
     up <- [|\r' (u, p) -> r' u p|]
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
 contentToJavascript r (ContentMix d) = do
@@ -204,19 +201,19 @@ juliusRuntime fp cd render' = unsafePerformIO $ do
     return $ mconcat $ map go a
   where
     go :: Content -> Javascript
-    go (ContentRaw s) = Javascript $ fromString s
+    go (ContentRaw s) = Javascript $ fromText $ TS.pack s
     go (ContentVar d) =
         case lookup d cd of
-            Just (JDPlain s) -> Javascript $ fromString s
+            Just (JDPlain s) -> Javascript $ fromText $ TS.pack s
             _ -> error $ show d ++ ": expected JDPlain"
     go (ContentUrl d) =
         case lookup d cd of
-            Just (JDUrl u) -> Javascript $ fromString $ render' u []
+            Just (JDUrl u) -> Javascript $ fromText $ TS.pack $ render' u []
             _ -> error $ show d ++ ": expected JDUrl"
     go (ContentUrlParam d) =
         case lookup d cd of
             Just (JDUrlParam (u, p)) ->
-                Javascript $ fromString $ render' u p
+                Javascript $ fromText $ TS.pack $ render' u p
             _ -> error $ show d ++ ": expected JDUrlParam"
     go (ContentMix d) =
         case lookup d cd of

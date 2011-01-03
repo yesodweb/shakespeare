@@ -9,6 +9,7 @@ import Text.Cassius
 import Text.Julius
 import Data.List (intercalate)
 import Text.Utf8
+import qualified Data.Text.Lazy as T
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -151,8 +152,8 @@ theArg = Arg
 
 helper :: String -> Hamlet Url -> Assertion
 helper res h = do
-    let x = renderHamlet render h
-    res @=? lbsToChars x
+    let x = renderHamletText render h
+    T.pack res @=? x
 
 caseEmpty :: Assertion
 caseEmpty = helper "" [$hamlet||]
@@ -452,9 +453,7 @@ caseHamletLiterals :: Assertion
 caseHamletLiterals = helper "123" [$hamlet|$show.123$|]
 
 helper' :: String -> Html -> Assertion
-helper' res h = do
-    let x = renderHtml h
-    res @=? lbsToChars x
+helper' res h = T.pack res @=? renderHtmlText h
 
 caseHamlet' :: Assertion
 caseHamlet' = do
@@ -519,8 +518,8 @@ caseHamletRT = do
             , (["false"], HDBool False)
             ]
     rend <- renderHamletRT rt scope render
-    lbsToChars (renderHtml rend) @?=
-        "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
+    renderHtmlText rend @?=
+        T.pack "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
 
 caseHamletFileDebugChange :: Assertion
 caseHamletFileDebugChange = do
@@ -562,7 +561,7 @@ caseHamletFileDebugFeatures = do
 celper :: String -> Cassius Url -> Assertion
 celper res h = do
     let x = renderCassius render h
-    res @=? lbsToChars x
+    T.pack res @=? x
 
 caseCassius :: Assertion
 caseCassius = do
@@ -581,9 +580,11 @@ bin
         background-image: url(@Home@)
         urlp: url(@?urlp@)
 |] $ concat
-        [ "foo{color:#F00;background:#000;bar:baz}"
-        , "bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
-        , "background-image:url(url);urlp:url(url?p=q)}"
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
         ]
 
 caseCassiusFile :: Assertion
@@ -591,9 +592,11 @@ caseCassiusFile = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
     flip celper $(cassiusFile "external1.cassius") $ concat
-        [ "foo{color:#F00;background:#000;bar:baz}"
-        , "bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
-        , "background-image:url(url);urlp:url(url?p=q)}"
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
         ]
 
 caseCassiusFileDebug :: Assertion
@@ -601,9 +604,11 @@ caseCassiusFileDebug = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
     flip celper $(cassiusFileDebug "external1.cassius") $ concat
-        [ "foo{color:#F00;background:#000;bar:baz}"
-        , "bin{color:#7F6405;bar:bar;unicode-test:שלום;fvarx:someval;"
-        , "background-image:url(url);urlp:url(url?p=q)}"
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
         ]
 
 caseCassiusFileDebugChange :: Assertion
@@ -618,9 +623,7 @@ caseCassiusFileDebugChange = do
 jmixin = [$julius|var x;|]
 
 jelper :: String -> Julius Url -> Assertion
-jelper res h = do
-    let x = renderJulius render h
-    res @=? lbsToChars x
+jelper res h = T.pack res @=? renderJulius render h
 
 caseJulius :: Assertion
 caseJulius = do
