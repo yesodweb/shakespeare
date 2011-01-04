@@ -7,23 +7,22 @@ import Text.Hamlet.Parse
 import Text.Hamlet.Quasi
 import Text.Hamlet.RT
 import Language.Haskell.TH.Syntax
-import qualified Data.ByteString.Char8 as S8
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Arrow
 import Data.Either
 import Control.Monad (forM)
-import Text.Utf8
+import qualified Data.Text.Lazy as T
 
 unsafeRenderTemplate :: FilePath -> HamletMap url
                      -> (url -> [(String, String)] -> String) -> Html
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
-    contents <- fmap bsToChars $ S8.readFile fp
+    contents <- fmap T.unpack $ readUtf8File fp
     temp <- parseHamletRT defaultHamletSettings contents
     renderHamletRT' True temp hd render
 
 hamletFileDebug :: FilePath -> Q Exp
 hamletFileDebug fp = do
-    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
+    contents <- fmap T.unpack $ qRunIO $ readUtf8File fp
     HamletRT docs <- qRunIO $ parseHamletRT defaultHamletSettings contents
     urt <- [|unsafeRenderTemplate|]
     render <- newName "render"

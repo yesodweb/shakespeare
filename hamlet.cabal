@@ -55,7 +55,6 @@ library
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
                      Text.Hamlet.Debug
-                     Text.Utf8
     ghc-options:     -Wall
 
 executable             runtests

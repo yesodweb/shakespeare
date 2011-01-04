@@ -8,7 +8,6 @@ import Text.Hamlet
 import Text.Cassius
 import Text.Julius
 import Data.List (intercalate)
-import Text.Utf8
 import qualified Data.Text.Lazy as T
 
 main :: IO ()

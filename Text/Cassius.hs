@@ -3,8 +3,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Text.Cassius
     ( Cassius
-    , Css (..)
+    , Css
     , renderCassius
+    , renderCss
     , cassius
     , Color (..)
     , colorRed
@@ -14,22 +15,19 @@ module Text.Cassius
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
-import Data.List (intercalate)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText, singleton)
 import Data.Maybe (catMaybes)
-import qualified Data.ByteString.Char8 as S8
-import qualified Data.ByteString.Lazy as L
 import Data.Monoid
 import Data.Word (Word8)
 import Data.Bits
 import System.IO.Unsafe (unsafePerformIO)
-import Text.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
+import Text.Hamlet.Quasi (readUtf8File)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.List (intersperse)
@@ -83,8 +81,8 @@ renderCassius r s = renderCss $ s r
 
 type Css = [Css']
 data Css' = Css'
-    { cssSelectors :: Builder
-    , cssAttributes :: Map TL.Text Builder
+    { _cssSelectors :: Builder
+    , _cssAttributes :: Map TL.Text Builder
     }
 
 type Cassius url = (url -> [(String, String)] -> String) -> Css
@@ -94,9 +92,6 @@ class ToCss a where
 instance ToCss [Char] where toCss = TL.pack
 instance ToCss TS.Text where toCss = TL.fromChunks . return
 instance ToCss TL.Text where toCss = id
-
-contentPairToContents :: ContentPair -> Contents
-contentPairToContents (x, y) = concat [x, ContentRaw ":" : y]
 
 data Deref = DerefLeaf String
            | DerefBranch Deref Deref
@@ -172,7 +167,7 @@ eol = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
 parseContent :: Bool -> Parser Content
 parseContent allowColon = do
-    (char '$' >> (parseComment <|> parseDollar <|> parseVar)) <|>
+    (char '$' >> (parseComment' <|> parseDollar <|> parseVar)) <|>
       (char '@' >> (parseAt <|> parseUrl)) <|> safeColon <|> do
         s <- many1 $ noneOf $ (if allowColon then id else (:) ':') "\r\n$@"
         return $ ContentRaw s
@@ -192,7 +187,7 @@ parseContent allowColon = do
         d <- parseDeref
         _ <- char '$'
         return $ ContentVar d
-    parseComment = char '#' >> skipMany (noneOf "\r\n")
+    parseComment' = char '#' >> skipMany (noneOf "\r\n")
                             >> return (ContentRaw "")
 
 parseDeref :: Parser Deref
@@ -207,12 +202,6 @@ parseDeref =
         xs <- many $ delim >> derefSingle
         return $ foldr1 DerefBranch $ x : xs
     ident = many1 (alphaNum <|> char '_' <|> char '\'')
-
-compressContents :: Contents -> Contents
-compressContents [] = []
-compressContents (ContentRaw x:ContentRaw y:z) =
-    compressContents $ ContentRaw (x ++ y) : z
-compressContents (x:y) = x : compressContents y
 
 blocksToCassius :: [(Contents, [ContentPair])] -> Q Exp
 blocksToCassius a = do
@@ -267,7 +256,7 @@ derefToExp (DerefLeaf v@(s:_))
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
-    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
+    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     cassiusFromString contents
 
 data VarType = VTPlain | VTUrl | VTUrlParam
@@ -294,7 +283,7 @@ vtToExp (d, vt) = do
 
 cassiusFileDebug :: FilePath -> Q Exp
 cassiusFileDebug fp = do
-    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
+    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
     c <- mapM vtToExp $ concatMap getVars $ concatMap go a
     cr <- [|cassiusRuntime|]
@@ -305,7 +294,7 @@ cassiusFileDebug fp = do
 
 cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
 cassiusRuntime fp cd render' = unsafePerformIO $ do
-    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
+    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
     return $ map go a
   where

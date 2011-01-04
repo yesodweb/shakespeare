@@ -19,19 +19,26 @@ module Text.Hamlet.Quasi
     , varName
     , Html
     , Hamlet
+    , readUtf8File
     ) where
 
 import Text.Hamlet.Parse
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
-import qualified Data.ByteString.Char8 as S8
 import Data.Monoid (Monoid (..))
 import Data.Maybe (fromMaybe)
-import Text.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.IO as TIO
+import qualified System.IO as SIO
 import Text.Blaze (Html, preEscapedString, string, text)
+
+readUtf8File :: FilePath -> IO TL.Text
+readUtf8File fp = do
+    h <- SIO.openFile fp SIO.ReadMode
+    SIO.hSetEncoding h SIO.utf8
+    TIO.hGetContents h
 
 class ToHtml a where
     toHtml :: a -> Html
@@ -160,7 +167,7 @@ hamletFromString set s = do
 
 hamletFileWithSettings :: HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings set fp = do
-    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
+    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     hamletFromString set contents
 
 -- | Calls 'hamletFileWithSettings' with 'defaultHamletSettings'.

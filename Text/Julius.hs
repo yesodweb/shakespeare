@@ -15,12 +15,11 @@ import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText)
-import qualified Data.ByteString.Char8 as S8
 import Data.Monoid
 import System.IO.Unsafe (unsafePerformIO)
-import Text.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
+import Text.Hamlet.Quasi (readUtf8File)
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -157,8 +156,8 @@ derefToExp (DerefLeaf v@(s:_))
 
 juliusFile :: FilePath -> Q Exp
 juliusFile fp = do
-    contents <- fmap bsToChars $ qRunIO $ S8.readFile fp
-    juliusFromString contents
+    contents <- qRunIO $ readUtf8File fp
+    juliusFromString $ TL.unpack contents
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
 
@@ -187,7 +186,7 @@ vtToExp (d, vt) = do
 
 juliusFileDebug :: FilePath -> Q Exp
 juliusFileDebug fp = do
-    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
+    s <- qRunIO $ fmap TL.unpack $ readUtf8File fp
     let a = either (error . show) id $ parse parseContents s s
         b = concatMap getVars a
     c <- mapM vtToExp b
@@ -196,7 +195,7 @@ juliusFileDebug fp = do
 
 juliusRuntime :: FilePath -> [(Deref, JDData url)] -> Julius url
 juliusRuntime fp cd render' = unsafePerformIO $ do
-    s <- fmap bsToChars $ qRunIO $ S8.readFile fp
+    s <- fmap TL.unpack $ readUtf8File fp
     let a = either (error . show) id $ parse parseContents s s
     return $ mconcat $ map go a
   where
