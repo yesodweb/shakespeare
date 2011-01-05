@@ -37,7 +37,7 @@ import Text.Blaze (Html, preEscapedString, string, text)
 readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do
     h <- SIO.openFile fp SIO.ReadMode
-    SIO.hSetEncoding h SIO.utf8
+    SIO.hSetEncoding h SIO.utf8_bom
     TIO.hGetContents h
 
 class ToHtml a where
