@@ -34,7 +34,7 @@ cabal-version:   >= 1.6
 build-type:      Simple
 homepage:        http://docs.yesodweb.com/
 
-flag buildtests
+flag test
   description: Build the executable to run unit tests
   default: False
 
@@ -58,7 +58,7 @@ library
     ghc-options:     -Wall
 
 executable             runtests
-    if flag(buildtests)
+    if flag(test)
         Buildable: True
         cpp-options:   -DTEST
         build-depends: QuickCheck >= 2 && < 3,

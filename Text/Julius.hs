@@ -21,6 +21,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Hamlet.Quasi (readUtf8File)
+import Data.List (intercalate)
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -38,14 +39,15 @@ instance ToJavascript [Char] where toJavascript = id
 instance ToJavascript TS.Text where toJavascript = TS.unpack
 instance ToJavascript TL.Text where toJavascript = TL.unpack
 
-data Deref = DerefLeaf String
+data Deref = DerefLeaf [String] String
            | DerefBranch Deref Deref
     deriving (Show, Eq)
 
 instance Lift Deref where
-    lift (DerefLeaf s) = do
+    lift (DerefLeaf v s) = do
         dl <- [|DerefLeaf|]
-        return $ dl `AppE` (LitE $ StringL s)
+        v' <- lift v
+        return $ dl `AppE` v' `AppE` (LitE $ StringL s)
     lift (DerefBranch x y) = do
         x' <- lift x
         y' <- lift y
@@ -93,13 +95,21 @@ parseDeref =
     deref
   where
     derefParens = between (char '(') (char ')') deref
-    derefSingle = derefParens <|> fmap DerefLeaf ident
+    derefSingle = derefParens <|> ident
     deref = do
-        let delim = (char '.' <|> (many1 (char ' ') >> return ' '))
+        let delim = many1 (char ' ') >> return ' '
         x <- derefSingle
         xs <- many $ delim >> derefSingle
         return $ foldr1 DerefBranch $ x : xs
-    ident = many1 (alphaNum <|> char '_' <|> char '\'')
+    ident = do
+        mods <- many modul
+        func <- many1 (alphaNum <|> char '_' <|> char '\'')
+        return $ DerefLeaf mods func
+    modul = try $ do
+        c <- upper
+        cs <- many (alphaNum <|> char '_')
+        _ <- char '.'
+        return $ c : cs
 
 compressContents :: Contents -> Contents
 compressContents [] = []
@@ -149,11 +159,19 @@ derefToExp (DerefBranch x y) =
     let x' = derefToExp x
         y' = derefToExp y
      in x' `AppE` y'
-derefToExp (DerefLeaf "") = error "Illegal empty ident"
-derefToExp (DerefLeaf v@(s:_))
-    | all isDigit v = LitE $ IntegerL $ read v
+derefToExp (DerefLeaf _ "") = error "Illegal empty ident"
+derefToExp (DerefLeaf mods v@(s:_))
+    | all isDigit v =
+        if null mods
+            then LitE $ IntegerL $ read v
+            else error "Cannot have qualified numeric literals"
     | isUpper s = ConE $ mkName v
     | otherwise = VarE $ mkName v
+  where
+    name =
+        if null mods
+            then mkName v
+            else Name (mkOccName v) (NameQ $ mkModName $ intercalate "." mods)
 
 juliusFile :: FilePath -> Q Exp
 juliusFile fp = do
