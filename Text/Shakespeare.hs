@@ -21,7 +21,7 @@ import Data.Data (Data)
 import Data.Typeable (Typeable)
 
 newtype Ident = Ident String
-    deriving (Show, Eq, Read, Data, Typeable, Lift)
+    deriving (Show, Eq, Read, Data, Typeable)
 
 type Scope = [(Ident, Exp)]
 
@@ -32,6 +32,8 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefBranch Deref Deref
     deriving (Show, Eq, Read, Data, Typeable)
 
+instance Lift Ident where
+    lift (Ident s) = [|Ident|] `appE` lift s
 instance Lift Deref where
     lift (DerefModulesIdent v s) = do
         dl <- [|DerefModulesIdent|]
@@ -65,7 +67,7 @@ parseDeref =
         let delim = (many1 (char ' ') >> return ())
                     <|> lookAhead (char '(' >> return ())
         x <- derefSingle
-        xs <- many $ delim >> derefSingle
+        xs <- many $ try (delim >> derefSingle)
         return $ foldr1 DerefBranch $ x : xs
     numeric = do
         n <- (char '-' >> return "-") <|> return ""
