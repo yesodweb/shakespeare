@@ -4,6 +4,7 @@ import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 
+import Prelude hiding (reverse)
 import Text.Hamlet
 import Text.Cassius
 import Text.Julius

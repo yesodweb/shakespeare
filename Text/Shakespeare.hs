@@ -8,7 +8,7 @@ module Text.Shakespeare
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH (appE)
-import Data.Char (isUpper, isDigit)
+import Data.Char (isUpper)
 import Text.ParserCombinators.Parsec
 import Data.List (intercalate)
 import Data.Ratio (numerator, denominator, (%))
@@ -66,6 +66,7 @@ parseDeref =
         _ <- char '.'
         return $ c : cs
 
+read' :: Read a => String -> String -> a
 read' t s =
     case reads s of
         (x, _):_ -> x
@@ -75,8 +76,8 @@ derefToExp :: Deref -> Exp
 derefToExp (DerefBranch x y) = derefToExp x `AppE` derefToExp y
 derefToExp (DerefLeaf _ "") = error "Illegal empty ident"
 derefToExp (DerefLeaf mods v@(s:_))
-    | isUpper s = ConE $ mkName v
-    | otherwise = VarE $ mkName v
+    | isUpper s = ConE name
+    | otherwise = VarE name
   where
     name =
         if null mods

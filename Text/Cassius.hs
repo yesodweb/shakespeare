@@ -16,7 +16,6 @@ module Text.Cassius
 
 import Text.Shakespeare
 import Text.ParserCombinators.Parsec hiding (Line)
-import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
