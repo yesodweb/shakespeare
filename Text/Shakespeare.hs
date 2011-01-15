@@ -1,9 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- | General parsers, functions and datatypes for all three languages.
 module Text.Shakespeare
     ( Deref
+    , Ident (..)
+    , Scope
     , parseDeref
     , derefToExp
+    , flattenDeref
     ) where
 
 import Language.Haskell.TH.Syntax
@@ -12,18 +17,31 @@ import Data.Char (isUpper)
 import Text.ParserCombinators.Parsec
 import Data.List (intercalate)
 import Data.Ratio (numerator, denominator, (%))
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 
-data Deref = DerefLeaf [String] String
+newtype Ident = Ident String
+    deriving (Show, Eq, Read, Data, Typeable, Lift)
+
+type Scope = [(Ident, Exp)]
+
+data Deref = DerefModulesIdent [String] Ident
+           | DerefIdent Ident
            | DerefIntegral Integer
            | DerefRational Rational
            | DerefBranch Deref Deref
-    deriving (Show, Eq)
+    deriving (Show, Eq, Read, Data, Typeable)
 
 instance Lift Deref where
-    lift (DerefLeaf v s) = do
-        dl <- [|DerefLeaf|]
+    lift (DerefModulesIdent v s) = do
+        dl <- [|DerefModulesIdent|]
         v' <- lift v
-        return $ dl `AppE` v' `AppE` (LitE $ StringL s)
+        s' <- lift s
+        return $ dl `AppE` v' `AppE` s'
+    lift (DerefIdent s) = do
+        dl <- [|DerefIdent|]
+        s' <- lift s
+        return $ dl `AppE` s'
     lift (DerefBranch x y) = do
         x' <- lift x
         y' <- lift y
@@ -59,7 +77,11 @@ parseDeref =
     ident = do
         mods <- many modul
         func <- many1 (alphaNum <|> char '_' <|> char '\'')
-        return $ DerefLeaf mods func
+        let func' = Ident func
+        return $
+            if null mods
+                then DerefIdent func'
+                else DerefModulesIdent mods func'
     modul = try $ do
         c <- upper
         cs <- many (alphaNum <|> char '_')
@@ -72,16 +94,25 @@ read' t s =
         (x, _):_ -> x
         [] -> error $ t ++ " read failed: " ++ s
 
-derefToExp :: Deref -> Exp
-derefToExp (DerefBranch x y) = derefToExp x `AppE` derefToExp y
-derefToExp (DerefLeaf _ "") = error "Illegal empty ident"
-derefToExp (DerefLeaf mods v@(s:_))
-    | isUpper s = ConE name
-    | otherwise = VarE name
-  where
-    name =
-        if null mods
-            then mkName v
-            else Name (mkOccName v) (NameQ $ mkModName $ intercalate "." mods)
-derefToExp (DerefIntegral i) = LitE $ IntegerL i
-derefToExp (DerefRational r) = LitE $ RationalL r
+expType :: Ident -> Name -> Exp
+expType (Ident (c:_)) = if isUpper c then ConE else VarE
+expType (Ident "") = error "Bad Ident"
+
+derefToExp :: Scope -> Deref -> Exp
+derefToExp s (DerefBranch x y) = derefToExp s x `AppE` derefToExp s y
+derefToExp _ (DerefModulesIdent mods i@(Ident s)) =
+    expType i $ Name (mkOccName s) (NameQ $ mkModName $ intercalate "." mods)
+derefToExp scope (DerefIdent i@(Ident s)) =
+    case lookup i scope of
+        Just e -> e
+        Nothing -> expType i $ mkName s
+derefToExp _ (DerefIntegral i) = LitE $ IntegerL i
+derefToExp _ (DerefRational r) = LitE $ RationalL r
+
+-- FIXME shouldn't we use something besides a list here?
+flattenDeref :: Deref -> Maybe [String]
+flattenDeref (DerefIdent (Ident x)) = Just [x]
+flattenDeref (DerefBranch (DerefIdent (Ident x)) y) = do
+    y' <- flattenDeref y
+    Just $ y' ++ [x]
+flattenDeref _ = Nothing

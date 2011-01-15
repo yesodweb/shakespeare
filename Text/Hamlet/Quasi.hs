@@ -22,6 +22,7 @@ module Text.Hamlet.Quasi
     , readUtf8File
     ) where
 
+import Text.Shakespeare
 import Text.Hamlet.Parse
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
@@ -51,8 +52,6 @@ instance ToHtml TS.Text where
 instance ToHtml TL.Text where
     toHtml = toHtml . TL.unpack -- FIXME preEscapedLazyText
 
-type Scope = [(Ident, Exp)]
-
 docsToExp :: Scope -> [Doc] -> Q Exp
 docsToExp scope docs = do
     exps <- mapM (docToExp scope) docs
@@ -63,7 +62,7 @@ docsToExp scope docs = do
 
 docToExp :: Scope -> Doc -> Q Exp
 docToExp scope (DocForall list ident@(Ident name) inside) = do
-    let list' = deref scope list
+    let list' = derefToExp scope list
     name' <- newName name
     let scope' = (ident, VarE name') : scope
     mh <- [|mapM_|]
@@ -71,7 +70,7 @@ docToExp scope (DocForall list ident@(Ident name) inside) = do
     let lam = LamE [VarP name'] inside'
     return $ mh `AppE` lam `AppE` list'
 docToExp scope (DocMaybe val ident@(Ident name) inside mno) = do
-    let val' = deref scope val
+    let val' = derefToExp scope val
     name' <- newName name
     let scope' = (ident, VarE name') : scope
     inside' <- docsToExp scope' inside
@@ -97,7 +96,7 @@ docToExp scope (DocCond conds final) = do
   where
     go :: (Deref, [Doc]) -> Q Exp
     go (d, docs) = do
-        let d' = deref scope d
+        let d' = derefToExp scope d
         docs' <- docsToExp scope docs
         return $ TupE [d', docs']
 docToExp v (DocContent c) = contentToExp v c
@@ -109,15 +108,15 @@ contentToExp _ (ContentRaw s) = do
     return $ os `AppE` s'
 contentToExp scope (ContentVar d) = do
     str <- [|htmlToHamletMonad . toHtml|]
-    return $ str `AppE` deref scope d
+    return $ str `AppE` derefToExp scope d
 contentToExp scope (ContentUrl hasParams d) = do
     ou <- if hasParams
             then [|\(u, p) -> urlToHamletMonad u p|]
             else [|\u -> urlToHamletMonad u []|]
-    let d' = deref scope d
+    let d' = derefToExp scope d
     return $ ou `AppE` d'
 contentToExp scope (ContentEmbed d) = do
-    let d' = deref scope d
+    let d' = derefToExp scope d
     fhv <- [|fromHamletValue|]
     return $ fhv `AppE` d'
 
@@ -177,16 +176,6 @@ hamletFile = hamletFileWithSettings defaultHamletSettings
 -- | Calls 'hamletFileWithSettings' using XHTML 1.0 Strict settings.
 xhamletFile :: FilePath -> Q Exp
 xhamletFile = hamletFileWithSettings xhtmlHamletSettings
-
-deref :: Scope -> Deref -> Exp
-deref scope (DerefBranch x y) =
-    let x' = deref scope x
-        y' = deref scope y
-     in x' `AppE` y'
-deref scope (DerefLeaf d@(Ident dName)) =
-    case lookup d scope of
-        Nothing -> varName scope dName
-        Just exp' -> exp'
 
 varName :: Scope -> String -> Exp
 varName _ "" = error "Illegal empty varName"

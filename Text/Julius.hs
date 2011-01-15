@@ -106,16 +106,16 @@ contentToJavascript _ (ContentRaw s') = do
     return $ ts `AppE` LitE (StringL s')
 contentToJavascript _ (ContentVar d) = do
     ts <- [|Javascript . fromText . TS.pack . toJavascript|]
-    return $ ts `AppE` derefToExp d
+    return $ ts `AppE` derefToExp [] d
 contentToJavascript r (ContentUrl d) = do
     ts <- [|Javascript . fromText . TS.pack|]
-    return $ ts `AppE` (VarE r `AppE` derefToExp d `AppE` ListE [])
+    return $ ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE [])
 contentToJavascript r (ContentUrlParam d) = do
     ts <- [|Javascript . fromText . TS.pack|]
     up <- [|\r' (u, p) -> r' u p|]
-    return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
+    return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d)
 contentToJavascript r (ContentMix d) = do
-    return $ derefToExp d `AppE` VarE r
+    return $ derefToExp [] d `AppE` VarE r
 
 juliusFile :: FilePath -> Q Exp
 juliusFile fp = do
@@ -140,7 +140,7 @@ vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
     d' <- lift d
     c' <- c vt
-    return $ TupE [d', c' `AppE` derefToExp d]
+    return $ TupE [d', c' `AppE` derefToExp [] d]
   where
     c VTPlain = [|JDPlain . toJavascript|]
     c VTUrl = [|JDUrl|]

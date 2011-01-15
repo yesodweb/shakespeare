@@ -208,13 +208,13 @@ contentToBuilder :: Name -> Content -> Q Exp
 contentToBuilder _ (ContentRaw x) =
     [|fromText . TS.pack|] `appE` litE (StringL x)
 contentToBuilder _ (ContentVar d) =
-    [|fromLazyText . toCss|] `appE` return (derefToExp d)
+    [|fromLazyText . toCss|] `appE` return (derefToExp [] d)
 contentToBuilder r (ContentUrl u) =
     [|fromText . TS.pack|] `appE`
-        (varE r `appE` return (derefToExp u) `appE` listE [])
+        (varE r `appE` return (derefToExp [] u) `appE` listE [])
 contentToBuilder r (ContentUrlParam u) =
     [|fromText . TS.pack|] `appE`
-        ([|uncurry|] `appE` varE r `appE` return (derefToExp u))
+        ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
@@ -237,7 +237,7 @@ vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
     d' <- lift d
     c' <- c vt
-    return $ TupE [d', c' `AppE` derefToExp d]
+    return $ TupE [d', c' `AppE` derefToExp [] d]
   where
     c VTPlain = [|CDPlain . toCss|]
     c VTUrl = [|CDUrl|]

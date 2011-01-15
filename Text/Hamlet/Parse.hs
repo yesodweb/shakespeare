@@ -1,8 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Text.Hamlet.Parse
     ( Result (..)
-    , Deref (..)
-    , Ident (..)
     , Content (..)
     , Doc (..)
     , parseDoc
@@ -14,6 +12,7 @@ module Text.Hamlet.Parse
     )
     where
 
+import Text.Shakespeare
 import Control.Applicative ((<$>), Applicative (..))
 import Control.Monad
 import Control.Arrow
@@ -35,12 +34,6 @@ instance Functor Result where
 instance Applicative Result where
     pure = return
     (<*>) = ap
-
-data Deref = DerefLeaf Ident
-           | DerefBranch Deref Deref
-    deriving (Show, Eq, Read, Data, Typeable)
-newtype Ident = Ident String
-    deriving (Show, Eq, Read, Data, Typeable)
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -110,21 +103,21 @@ parseLine set = do
     controlIf = do
         _ <- try $ string "$if"
         spaces
-        x <- deref False
+        x <- parseDeref
         _ <- many $ oneOf " \t"
         eol
         return $ LineIf x
     controlElseIf = do
         _ <- try $ string "$elseif"
         spaces
-        x <- deref False
+        x <- parseDeref
         _ <- many $ oneOf " \t"
         eol
         return $ LineElseIf x
     controlMaybe = do
         _ <- try $ string "$maybe"
         spaces
-        x <- deref False
+        x <- parseDeref
         spaces
         y <- ident
         _ <- many $ oneOf " \t"
@@ -133,7 +126,7 @@ parseLine set = do
     controlForall = do
         _ <- try $ string "$forall"
         spaces
-        x <- deref False
+        x <- parseDeref
         spaces
         y <- ident
         _ <- many $ oneOf " \t"
@@ -159,20 +152,20 @@ parseLine set = do
     contentDollar = do
         _ <- char '$'
         (char '$' >> return (ContentRaw "$")) <|> (do
-            s <- deref True
+            s <- parseDeref
             _ <- char '$'
             return $ ContentVar s)
     contentAt = do
         _ <- char '@'
         (char '@' >> return (ContentRaw "@")) <|> (do
             x <- (char '?' >> return True) <|> return False
-            s <- deref True
+            s <- parseDeref
             _ <- char '@'
             return $ ContentUrl x s)
     contentCarrot = do
         _ <- char '^'
         (char '^' >> return (ContentRaw "^")) <|> (do
-            s <- deref True
+            s <- parseDeref
             _ <- char '^'
             return $ ContentEmbed s)
     contentReg InContent = ContentRaw <$> many1 (noneOf "$@^\r\n")
@@ -202,7 +195,7 @@ parseLine set = do
         return $ TagAttrib (cond, s, v)
     tagAttribCond = do
         _ <- char ':'
-        d <- deref True
+        d <- parseDeref
         _ <- char ':'
         return d
     tag' = foldr tag'' ("div", [], [])
@@ -210,15 +203,6 @@ parseLine set = do
     tag'' (TagIdent s) (x, y, z) = (x, (Nothing, "id", s) : y, z)
     tag'' (TagClass s) (x, y, z) = (x, y, s : z)
     tag'' (TagAttrib s) (x, y, z) = (x, s : y, z)
-    derefParens = between (char '(') (char ')') $ deref True
-    derefSingle = derefParens <|> fmap DerefLeaf ident
-    deref spaceAllowed = do
-        let delim = if spaceAllowed
-                        then (char '.' <|> (many1 (char ' ') >> return ' '))
-                        else char '.'
-        x <- derefSingle
-        xs <- many $ delim >> derefSingle
-        return $ foldr1 DerefBranch $ x : xs
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
     angle = do
         _ <- char '<'

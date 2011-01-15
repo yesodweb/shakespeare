@@ -14,6 +14,7 @@ module Text.Hamlet.RT
     , SimpleDoc (..)
     ) where
 
+import Text.Shakespeare
 import Data.Monoid (mconcat)
 import Control.Monad (liftM, forM)
 import Control.Exception (Exception)
@@ -59,23 +60,23 @@ parseHamletRT set s =
         Ok x -> liftM HamletRT $ mapM convert x
   where
     convert x@(DocForall deref (Ident ident) docs) = do
-        deref' <- flattenDeref x deref
+        deref' <- flattenDeref' x deref
         docs' <- mapM convert docs
         return $ SDForall deref' ident docs'
     convert x@(DocMaybe deref (Ident ident) jdocs ndocs) = do
-        deref' <- flattenDeref x deref
+        deref' <- flattenDeref' x deref
         jdocs' <- mapM convert jdocs
         ndocs' <- maybe (return []) (mapM convert) ndocs
         return $ SDMaybe deref' ident jdocs' ndocs'
     convert (DocContent (ContentRaw s')) = return $ SDRaw s'
     convert x@(DocContent (ContentVar deref)) = do
-        y <- flattenDeref x deref
+        y <- flattenDeref' x deref
         return $ SDVar y
     convert x@(DocContent (ContentUrl p deref)) = do
-        y <- flattenDeref x deref
+        y <- flattenDeref' x deref
         return $ SDUrl p y
     convert x@(DocContent (ContentEmbed deref)) = do
-        y <- flattenDeref x deref
+        y <- flattenDeref' x deref
         return $ SDTemplate y
     convert x@(DocCond conds els) = do
         conds' <- mapM go conds
@@ -83,14 +84,9 @@ parseHamletRT set s =
         return $ SDCond conds' els'
       where
         go (deref, docs') = do
-            deref' <- flattenDeref x deref
+            deref' <- flattenDeref' x deref
             docs'' <- mapM convert docs'
             return (deref', docs'')
-    flattenDeref _ (DerefLeaf (Ident x)) = return [x]
-    flattenDeref orig (DerefBranch (DerefLeaf (Ident x)) y) = do
-        y' <- flattenDeref orig y
-        return $ y' ++ [x]
-    flattenDeref orig _ = failure $ HamletUnsupportedDocException orig
 
 renderHamletRT :: Failure HamletException m
                => HamletRT
@@ -168,3 +164,9 @@ fa = failure . HamletRenderException
 
 showName :: [String] -> String
 showName = intercalate "." . reverse
+
+flattenDeref' :: Failure HamletException f => Doc -> Deref -> f [String]
+flattenDeref' orig deref =
+    case flattenDeref deref of
+        Nothing -> failure $ HamletUnsupportedDocException orig
+        Just x -> return x
