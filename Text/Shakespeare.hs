@@ -7,9 +7,11 @@ module Text.Shakespeare
     ) where
 
 import Language.Haskell.TH.Syntax
+import Language.Haskell.TH (appE)
 import Data.Char (isUpper, isDigit)
 import Text.ParserCombinators.Parsec
 import Data.List (intercalate)
+import Data.Ratio (numerator, denominator, (%))
 
 data Deref = DerefLeaf [String] String
            | DerefIntegral Integer
@@ -27,6 +29,13 @@ instance Lift Deref where
         y' <- lift y
         db <- [|DerefBranch|]
         return $ db `AppE` x' `AppE` y'
+    lift (DerefIntegral i) = [|DerefIntegral|] `appE` lift i
+    lift (DerefRational r) = do
+        n <- lift $ numerator r
+        d <- lift $ denominator r
+        per <- [|(%)|]
+        dr <- [|DerefRational|]
+        return $ dr `AppE` (InfixE (Just n) per (Just d))
 
 parseDeref :: Parser Deref
 parseDeref =

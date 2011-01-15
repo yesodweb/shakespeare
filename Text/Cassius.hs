@@ -14,6 +14,7 @@ module Text.Cassius
     , cassiusFileDebug
     ) where
 
+import Text.Shakespeare
 import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -92,20 +93,6 @@ class ToCss a where
 instance ToCss [Char] where toCss = TL.pack
 instance ToCss TS.Text where toCss = TL.fromChunks . return
 instance ToCss TL.Text where toCss = id
-
-data Deref = DerefLeaf String
-           | DerefBranch Deref Deref
-    deriving (Show, Eq)
-
-instance Lift Deref where
-    lift (DerefLeaf s) = do
-        dl <- [|DerefLeaf|]
-        return $ dl `AppE` (LitE $ StringL s)
-    lift (DerefBranch x y) = do
-        x' <- lift x
-        y' <- lift y
-        db <- [|DerefBranch|]
-        return $ db `AppE` x' `AppE` y'
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -190,19 +177,6 @@ parseContent allowColon = do
     parseComment' = char '#' >> skipMany (noneOf "\r\n")
                             >> return (ContentRaw "")
 
-parseDeref :: Parser Deref
-parseDeref =
-    deref
-  where
-    derefParens = between (char '(') (char ')') deref
-    derefSingle = derefParens <|> fmap DerefLeaf ident
-    deref = do
-        let delim = (char '.' <|> (many1 (char ' ') >> return ' '))
-        x <- derefSingle
-        xs <- many $ delim >> derefSingle
-        return $ foldr1 DerefBranch $ x : xs
-    ident = many1 (alphaNum <|> char '_' <|> char '\'')
-
 blocksToCassius :: [(Contents, [ContentPair])] -> Q Exp
 blocksToCassius a = do
     r <- newName "_render"
@@ -242,17 +216,6 @@ contentToBuilder r (ContentUrl u) =
 contentToBuilder r (ContentUrlParam u) =
     [|fromText . TS.pack|] `appE`
         ([|uncurry|] `appE` varE r `appE` return (derefToExp u))
-
-derefToExp :: Deref -> Exp
-derefToExp (DerefBranch x y) =
-    let x' = derefToExp x
-        y' = derefToExp y
-     in x' `AppE` y'
-derefToExp (DerefLeaf "") = error "Illegal empty ident"
-derefToExp (DerefLeaf v@(s:_))
-    | all isDigit v = LitE $ IntegerL $ read v
-    | isUpper s = ConE $ mkName v
-    | otherwise = VarE $ mkName v
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do

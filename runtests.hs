@@ -786,8 +786,6 @@ caseHamletModuleNames =
 
 caseCassiusModuleNames :: Assertion
 caseCassiusModuleNames =
-    error "test not implemented"
-    {-
     celper "sel{bar:oof oof 3.14 -5}"
     [$cassius|
 sel
@@ -795,7 +793,6 @@ sel
 |]
   where
     foo = "foo"
-    -}
 
 caseJuliusModuleNames :: Assertion
 caseJuliusModuleNames =
