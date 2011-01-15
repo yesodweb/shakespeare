@@ -21,7 +21,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Hamlet.Quasi (readUtf8File)
-import Data.List (intercalate)
+import Text.Shakespeare
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -38,21 +38,6 @@ class ToJavascript a where -- FIXME use Text instead of String for efficiency? o
 instance ToJavascript [Char] where toJavascript = id
 instance ToJavascript TS.Text where toJavascript = TS.unpack
 instance ToJavascript TL.Text where toJavascript = TL.unpack
-
-data Deref = DerefLeaf [String] String
-           | DerefBranch Deref Deref
-    deriving (Show, Eq)
-
-instance Lift Deref where
-    lift (DerefLeaf v s) = do
-        dl <- [|DerefLeaf|]
-        v' <- lift v
-        return $ dl `AppE` v' `AppE` (LitE $ StringL s)
-    lift (DerefBranch x y) = do
-        x' <- lift x
-        y' <- lift y
-        db <- [|DerefBranch|]
-        return $ db `AppE` x' `AppE` y'
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -89,27 +74,6 @@ parseContent = do
         d <- parseDeref
         _ <- char '%'
         return $ ContentVar d
-
-parseDeref :: Parser Deref
-parseDeref =
-    deref
-  where
-    derefParens = between (char '(') (char ')') deref
-    derefSingle = derefParens <|> ident
-    deref = do
-        let delim = many1 (char ' ') >> return ' '
-        x <- derefSingle
-        xs <- many $ delim >> derefSingle
-        return $ foldr1 DerefBranch $ x : xs
-    ident = do
-        mods <- many modul
-        func <- many1 (alphaNum <|> char '_' <|> char '\'')
-        return $ DerefLeaf mods func
-    modul = try $ do
-        c <- upper
-        cs <- many (alphaNum <|> char '_')
-        _ <- char '.'
-        return $ c : cs
 
 compressContents :: Contents -> Contents
 compressContents [] = []
@@ -153,25 +117,6 @@ contentToJavascript r (ContentUrlParam d) = do
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp d)
 contentToJavascript r (ContentMix d) = do
     return $ derefToExp d `AppE` VarE r
-
-derefToExp :: Deref -> Exp
-derefToExp (DerefBranch x y) =
-    let x' = derefToExp x
-        y' = derefToExp y
-     in x' `AppE` y'
-derefToExp (DerefLeaf _ "") = error "Illegal empty ident"
-derefToExp (DerefLeaf mods v@(s:_))
-    | all isDigit v =
-        if null mods
-            then LitE $ IntegerL $ read v
-            else error "Cannot have qualified numeric literals"
-    | isUpper s = ConE $ mkName v
-    | otherwise = VarE $ mkName v
-  where
-    name =
-        if null mods
-            then mkName v
-            else Name (mkOccName v) (NameQ $ mkModName $ intercalate "." mods)
 
 juliusFile :: FilePath -> Q Exp
 juliusFile fp = do
