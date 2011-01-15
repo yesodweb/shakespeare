@@ -31,7 +31,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "if chain " caseIfChain
     , testCase "else" caseElse
     , testCase "else chain " caseElseChain
-    {- FIXME
     , testCase "elseif" caseElseIf
     , testCase "elseif chain " caseElseIfChain
     , testCase "list" caseList
@@ -45,6 +44,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "nothing chain " caseNothingChain
     , testCase "just" caseJust
     , testCase "just chain " caseJustChain
+    {- FIXME
     , testCase "constructor" caseConstructor
     , testCase "url + params" caseUrlParams
     , testCase "escape" caseEscape
@@ -261,7 +261,6 @@ $forall x <-  list(getArg(getArg(getArg(getArg(getArg (theArg))))))
     @url x@
 |]
 
-{-
 caseScriptNotEmpty :: Assertion
 caseScriptNotEmpty = helper "<script></script>" [$hamlet|%script|]
 
@@ -285,11 +284,11 @@ caseAttribOrder = helper "<meta 1 2 3>" [$hamlet|%meta!1!2!3|]
 caseNothing :: Assertion
 caseNothing = do
     helper "" [$hamlet|
-$maybe nothing.theArg _n
+$maybe _n <- nothing theArg
     nothing
 |]
     helper "nothing" [$hamlet|
-$maybe nothing.theArg _n
+$maybe _n <- nothing theArg
     something
 $nothing
     nothing
@@ -297,22 +296,23 @@ $nothing
 
 caseNothingChain :: Assertion
 caseNothingChain = helper "" [$hamlet|
-$maybe nothing.getArg.getArg.getArg.theArg n
+$maybe n <- nothing(getArg(getArg(getArg theArg)))
     nothing $n$
 |]
 
 caseJust :: Assertion
 caseJust = helper "it's just" [$hamlet|
-$maybe just.theArg n
+$maybe n <- just theArg
     it's $n$
 |]
 
 caseJustChain :: Assertion
 caseJustChain = helper "it's just" [$hamlet|
-$maybe just.getArg.getArg.getArg.theArg n
+$maybe n <- just(getArg(getArg(getArg theArg)))
     it's $n$
 |]
 
+{-
 caseConstructor :: Assertion
 caseConstructor = do
     helper "url" [$hamlet|@Home@|]

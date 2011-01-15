@@ -117,9 +117,11 @@ parseLine set = do
     controlMaybe = do
         _ <- try $ string "$maybe"
         spaces
-        x <- parseDeref
-        spaces
         y <- ident
+        spaces
+        _ <- string "<-"
+        spaces
+        x <- parseDeref
         _ <- many $ oneOf " \t"
         eol
         return $ LineMaybe x y
