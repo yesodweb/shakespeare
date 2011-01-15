@@ -23,7 +23,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "tag" caseTag
     , testCase "var" caseVar
     , testCase "var chain " caseVarChain
-    {- FIXME
     , testCase "url" caseUrl
     , testCase "url chain " caseUrlChain
     , testCase "embed" caseEmbed
@@ -32,6 +31,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "if chain " caseIfChain
     , testCase "else" caseElse
     , testCase "else chain " caseElseChain
+    {- FIXME
     , testCase "elseif" caseElseIf
     , testCase "elseif chain " caseElseIfChain
     , testCase "list" caseList
@@ -181,40 +181,39 @@ caseVarChain :: Assertion
 caseVarChain = do
     helper "&lt;var&gt;" [$hamlet|$var (getArg (getArg (getArg theArg)))$|]
 
-{-
 caseUrl :: Assertion
 caseUrl = do
-    helper (render Home []) [$hamlet|@url.theArg@|]
+    helper (render Home []) [$hamlet|@url theArg@|]
 
 caseUrlChain :: Assertion
 caseUrlChain = do
-    helper (render Home []) [$hamlet|@url.getArg.getArg.getArg.theArg@|]
+    helper (render Home []) [$hamlet|@url (getArg (getArg (getArg theArg)))@|]
 
 caseEmbed :: Assertion
 caseEmbed = do
-    helper "embed" [$hamlet|^embed.theArg^|]
+    helper "embed" [$hamlet|^embed theArg^|]
 
 caseEmbedChain :: Assertion
 caseEmbedChain = do
-    helper "embed" [$hamlet|^embed.getArg.getArg.getArg.theArg^|]
+    helper "embed" [$hamlet|^embed (getArg (getArg (getArg theArg)))^|]
 
 caseIf :: Assertion
 caseIf = do
     helper "if" [$hamlet|
-$if true.theArg
+$if true theArg
     if
 |]
 
 caseIfChain :: Assertion
 caseIfChain = do
     helper "if" [$hamlet|
-$if true.getArg.getArg.getArg.theArg
+$if true (getArg (getArg (getArg theArg)))
     if
 |]
 
 caseElse :: Assertion
 caseElse = helper "else" [$hamlet|
-$if false.theArg
+$if false theArg
     if
 $else
     else
@@ -222,7 +221,7 @@ $else
 
 caseElseChain :: Assertion
 caseElseChain = helper "else" [$hamlet|
-$if false.getArg.getArg.getArg.theArg
+$if false (getArg (getArg (getArg theArg)))
     if
 $else
     else
@@ -230,9 +229,9 @@ $else
 
 caseElseIf :: Assertion
 caseElseIf = helper "elseif" [$hamlet|
-$if false.theArg
+$if false theArg
     if
-$elseif true.theArg
+$elseif true theArg
     elseif
 $else
     else
@@ -240,14 +239,15 @@ $else
 
 caseElseIfChain :: Assertion
 caseElseIfChain = helper "elseif" [$hamlet|
-$if false.getArg.getArg.getArg.theArg
+$if false(getArg(getArg(getArg theArg)))
     if
-$elseif true.getArg.getArg.getArg.theArg
+$elseif true(getArg(getArg(getArg theArg)))
     elseif
 $else
     else
 |]
 
+{-
 caseList :: Assertion
 caseList = do
     helper "xxx" [$hamlet|

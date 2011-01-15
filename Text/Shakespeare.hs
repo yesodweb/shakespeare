@@ -62,7 +62,8 @@ parseDeref =
     derefParens = between (char '(') (char ')') deref
     derefSingle = derefParens <|> numeric <|> ident
     deref = do
-        let delim = many1 (char ' ') >> return ' '
+        let delim = (many1 (char ' ') >> return ())
+                    <|> lookAhead (char '(' >> return ())
         x <- derefSingle
         xs <- many $ delim >> derefSingle
         return $ foldr1 DerefBranch $ x : xs
