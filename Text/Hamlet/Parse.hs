@@ -126,9 +126,11 @@ parseLine set = do
     controlForall = do
         _ <- try $ string "$forall"
         spaces
-        x <- parseDeref
-        spaces
         y <- ident
+        spaces
+        _ <- string "<-"
+        spaces
+        x <- parseDeref
         _ <- many $ oneOf " \t"
         eol
         return $ LineForall x y

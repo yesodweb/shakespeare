@@ -247,21 +247,21 @@ $else
     else
 |]
 
-{-
 caseList :: Assertion
 caseList = do
     helper "xxx" [$hamlet|
-$forall list.theArg _x
+$forall _x <- (list theArg)
     x
 |]
 
 caseListChain :: Assertion
 caseListChain = do
     helper "urlurlurl" [$hamlet|
-$forall list.getArg.getArg.getArg.getArg.getArg.theArg x
-    @url.x@
+$forall x <-  list(getArg(getArg(getArg(getArg(getArg (theArg))))))
+    @url x@
 |]
 
+{-
 caseScriptNotEmpty :: Assertion
 caseScriptNotEmpty = helper "<script></script>" [$hamlet|%script|]
 
