@@ -88,7 +88,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamlet module names" caseHamletModuleNames
     , testCase "cassius module names" caseCassiusModuleNames
     , testCase "julius module names" caseJuliusModuleNames
-    -- FIXME add test for rationals eg [$hamlet|$cos 3.14$|]
     ]
 
 data Url = Home | Sub SubUrl
@@ -779,7 +778,8 @@ caseHamletModuleNames :: Assertion
 caseHamletModuleNames =
     error "test not implemented"
     {-
-    helper "oof" [$hamlet|$Data.List.reverse foo$|]
+    helper "oof oof 3.14 -5"
+    [$hamlet|$Data.List.reverse foo$ $L.reverse foo$ $show 3.14$ $show -5$|]
   where
     foo = "foo"
     -}
@@ -788,9 +788,10 @@ caseCassiusModuleNames :: Assertion
 caseCassiusModuleNames =
     error "test not implemented"
     {-
-    celper "sel{bar:oof}" [$cassius|
+    celper "sel{bar:oof oof 3.14 -5}"
+    [$cassius|
 sel
-    bar:$Data.List.reverse foo$
+    bar: $Data.List.reverse foo$ $L.reverse foo$ $show 3.14$ $show -5$
 |]
   where
     foo = "foo"
@@ -798,6 +799,7 @@ sel
 
 caseJuliusModuleNames :: Assertion
 caseJuliusModuleNames =
-    jelper "oof oof" [$julius|%Data.List.reverse foo% %L.reverse foo%|]
+    jelper "oof oof 3.14 -5"
+    [$julius|%Data.List.reverse foo% %L.reverse foo% %show 3.14% %show -5%|]
   where
     foo = "foo"
