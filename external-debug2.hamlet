@@ -1,29 +1,29 @@
-$var$
-$id var$
-@url@
-@Home@
-@Sub SubUrl@
-@?urlp@
-^template^
+#{var}
+#{id var}
+@{url}
+@{Home}
+@{Sub SubUrl}
+@?{urlp}
+^{template}
 $if id true
     true
-    $id id id id id extra$
+    #{id id id id id extra}
 $if not true
 $else
     not true
-    $id id id (id extra)$
+    #{id id id (id extra)}
 $if not true
 $elseif true
     elseif true
-    $id id(id extra)$
+    #{id id(id extra)}
 $maybe j <- just
-    $j$
-    $id j$
-    $id (id extra)$
+    #{j}
+    #{id j}
+    #{id (id extra)}
 $maybe _ <- nothing
 $nothing
     nothing
-    $id extra$
+    #{id extra}
 $forall l <- list
-    $id id l$
-    $extra$
+    #{id id l}
+    #{extra}

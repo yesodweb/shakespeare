@@ -7,6 +7,9 @@ module Text.Shakespeare
     , Ident (..)
     , Scope
     , parseDeref
+    , parseHash
+    , parseAt
+    , parseCaret
     , derefToExp
     , flattenDeref
     ) where
@@ -119,3 +122,37 @@ flattenDeref (DerefBranch (DerefIdent (Ident x)) y) = do
     y' <- flattenDeref y
     Just $ y' ++ [x]
 flattenDeref _ = Nothing
+
+parseHash :: Parser (Either String Deref)
+parseHash = do
+    _ <- char '#'
+    (char '\\' >> return (Left "#")) <|> (do
+        _ <- char '{'
+        deref <- parseDeref
+        _ <- char '}'
+        return $ Right deref) <|> (do
+            -- Check for hash just before newline
+            _ <- lookAhead (oneOf "\r\n" >> return ()) <|> eof
+            return $ Left ""
+            ) <|> return (Left "#")
+
+parseAt :: Parser (Either String (Deref, Bool))
+parseAt = do
+    _ <- char '@'
+    (char '\\' >> return (Left "@")) <|> (do
+        x <- (char '?' >> return True) <|> return False
+        (do
+            _ <- char '{'
+            deref <- parseDeref
+            _ <- char '}'
+            return $ Right (deref, x))
+                <|> return (Left $ if x then "@?" else "@"))
+
+parseCaret :: Parser (Either String Deref)
+parseCaret = do
+    _ <- char '^'
+    (char '\\' >> return (Left "^")) <|> (do
+        _ <- char '{'
+        deref <- parseDeref
+        _ <- char '}'
+        return $ Right deref) <|> return (Left "^")

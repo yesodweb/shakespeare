@@ -75,7 +75,6 @@ parseLine set = do
          controlMaybe <|>
          (try (string "$nothing") >> many (oneOf " \t") >> eol >> return LineNothing) <|>
          controlForall <|>
-         tag <|>
          angle <|>
          (eol' >> return (LineContent [])) <|>
          (do
@@ -136,60 +135,39 @@ parseLine set = do
         _ <- many $ oneOf " \t"
         eol
         return $ LineForall x y
-    tag = do
-        x <- tagName <|> tagIdent <|> tagClass <|> tagAttrib True
-        xs <- many $ tagIdent <|> tagClass <|> tagAttrib True
-        c <- (eol >> return []) <|> (do
-            _ <- many1 $ oneOf " \t"
-            content InContent)
-        let (tn, attr, classes) = tag' $ x : xs
-        return $ LineTag tn attr c classes
     content cr = do
         x <- many $ content' cr
         case cr of
             InQuotes -> char '"' >> return ()
             NotInQuotes -> return ()
-            InContent -> (char '$' >> eol) <|> eol
+            InContent -> eol
         return x
-    content' cr = try contentDollar <|> contentAt <|> contentCarrot
+    content' cr = try contentHash <|> contentAt <|> contentCaret
                                 <|> contentReg cr
-    contentDollar = do
-        _ <- char '$'
-        (char '$' >> return (ContentRaw "$")) <|> (do
-            s <- parseDeref
-            _ <- char '$'
-            return $ ContentVar s)
+    contentHash = do
+        x <- parseHash
+        case x of
+            Left str -> return $ ContentRaw str
+            Right deref -> return $ ContentVar deref
     contentAt = do
-        _ <- char '@'
-        (char '@' >> return (ContentRaw "@")) <|> (do
-            x <- (char '?' >> return True) <|> return False
-            s <- parseDeref
-            _ <- char '@'
-            return $ ContentUrl x s)
-    contentCarrot = do
-        _ <- char '^'
-        (char '^' >> return (ContentRaw "^")) <|> (do
-            s <- parseDeref
-            _ <- char '^'
-            return $ ContentEmbed s)
-    contentReg InContent = ContentRaw <$> many1 (noneOf "$@^\r\n")
-    contentReg NotInQuotes = ContentRaw <$> many1 (noneOf "$@^#.! \t\n\r>")
-    contentReg InQuotes =
-        (do
-            _ <- char '\\'
-            ContentRaw . return <$> anyChar
-        ) <|> (ContentRaw <$> many1 (noneOf "$@^\\\"\n\r>"))
-    tagName = do
-        _ <- char '%'
-        s <- many1 $ noneOf " \t.#!\r\n"
-        return $ TagName s
+        x <- parseAt
+        return $ case x of
+                    Left str -> ContentRaw str
+                    Right (s, y) -> ContentUrl y s
+    contentCaret = do
+        x <- parseCaret
+        case x of
+            Left str -> return $ ContentRaw str
+            Right deref -> return $ ContentEmbed deref
+    contentReg InContent = (ContentRaw . return) <$> noneOf "#@^\r\n"
+    contentReg NotInQuotes = (ContentRaw . return) <$> noneOf "@^#. \t\n\r>"
+    contentReg InQuotes = (ContentRaw . return) <$> noneOf "#@^\\\"\n\r>"
     tagAttribValue = do
         cr <- (char '"' >> return InQuotes) <|> return NotInQuotes
         content cr
     tagIdent = char '#' >> TagIdent <$> tagAttribValue
     tagClass = char '.' >> TagClass <$> tagAttribValue
-    tagAttrib needBang = do
-        if needBang then (char '!' >> return ()) else return ()
+    tagAttrib = do
         cond <- (Just <$> tagAttribCond) <|> return Nothing
         s <- many1 $ noneOf " \t.!=\r\n>"
         v <- (do
@@ -210,12 +188,13 @@ parseLine set = do
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
     angle = do
         _ <- char '<'
-        name <- many1 $ noneOf " \t.#\r\n"
-        xs <- many $ (try (many $ oneOf " \t") >> (tagIdent <|> tagClass <|> tagAttrib False))
+        name' <- many  $ noneOf " \t.#\r\n!>"
+        let name = if null name' then "div" else name'
+        xs <- many $ try ((many $ oneOf " \t") >> (tagIdent <|> tagClass <|> tagAttrib))
+        _ <- many $ oneOf " \t"
         c <- (eol >> return []) <|> (do
             _ <- char '>'
             c <- content InContent
-            eol
             return c)
         let (tn, attr, classes) = tag' $ TagName name : xs
         return $ LineTag tn attr c classes
