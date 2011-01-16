@@ -18,7 +18,6 @@ module Text.Hamlet
     , Html
     , Hamlet
       -- * Typeclass
-    , ToHtml (..)
     , HamletValue (..)
       -- * Construction
     , preEscapedString

@@ -12,6 +12,7 @@ import Control.Arrow
 import Data.Either
 import Control.Monad (forM)
 import qualified Data.Text.Lazy as T
+import Text.Blaze (toHtml)
 
 unsafeRenderTemplate :: FilePath -> HamletMap url
                      -> (url -> [(String, String)] -> String) -> Html

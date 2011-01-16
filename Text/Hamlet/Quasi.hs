@@ -14,7 +14,6 @@ module Text.Hamlet.Quasi
     , hamletFile
     , xhamletFile
     , hamletFileWithSettings
-    , ToHtml (..)
     , HamletValue (..)
     , varName
     , Html
@@ -29,28 +28,16 @@ import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import Data.Monoid (Monoid (..))
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TIO
 import qualified System.IO as SIO
-import Text.Blaze (Html, preEscapedString, string, text)
+import Text.Blaze (Html, preEscapedString, string, toHtml)
 
 readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do
     h <- SIO.openFile fp SIO.ReadMode
     SIO.hSetEncoding h SIO.utf8_bom
     TIO.hGetContents h
-
-class ToHtml a where
-    toHtml :: a -> Html
-instance ToHtml String where
-    toHtml = string
-instance ToHtml Html where
-    toHtml = id
-instance ToHtml TS.Text where
-    toHtml = text
-instance ToHtml TL.Text where
-    toHtml = toHtml . TL.unpack -- FIXME preEscapedLazyText
 
 docsToExp :: Scope -> [Doc] -> Q Exp
 docsToExp scope docs = do
