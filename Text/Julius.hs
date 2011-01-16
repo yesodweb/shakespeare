@@ -14,7 +14,7 @@ module Text.Julius
 import Text.ParserCombinators.Parsec hiding (Line)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Data.Text.Lazy.Builder (Builder, fromText, toLazyText)
+import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
 import Data.Monoid
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
@@ -32,11 +32,11 @@ newtype Javascript = Javascript Builder
     deriving Monoid
 type Julius url = (url -> [(String, String)] -> String) -> Javascript
 
-class ToJavascript a where -- FIXME use Text instead of String for efficiency? or a builder directly?
-    toJavascript :: a -> String
-instance ToJavascript [Char] where toJavascript = id
-instance ToJavascript TS.Text where toJavascript = TS.unpack
-instance ToJavascript TL.Text where toJavascript = TL.unpack
+class ToJavascript a where
+    toJavascript :: a -> Builder
+instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
+instance ToJavascript TS.Text where toJavascript = fromText
+instance ToJavascript TL.Text where toJavascript = fromLazyText
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -105,7 +105,7 @@ contentToJavascript _ (ContentRaw s') = do
     ts <- [|Javascript . fromText . TS.pack|]
     return $ ts `AppE` LitE (StringL s')
 contentToJavascript _ (ContentVar d) = do
-    ts <- [|Javascript . fromText . TS.pack . toJavascript|]
+    ts <- [|Javascript . toJavascript|]
     return $ ts `AppE` derefToExp [] d
 contentToJavascript r (ContentUrl d) = do
     ts <- [|Javascript . fromText . TS.pack|]
@@ -131,7 +131,7 @@ getVars (ContentUrl d) = [(d, VTUrl)]
 getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 getVars (ContentMix d) = [(d, VTMixin)]
 
-data JDData url = JDPlain String
+data JDData url = JDPlain Builder
                 | JDUrl url
                 | JDUrlParam (url, [(String, String)])
                 | JDMixin (Julius url)
@@ -166,7 +166,7 @@ juliusRuntime fp cd render' = unsafePerformIO $ do
     go (ContentRaw s) = Javascript $ fromText $ TS.pack s
     go (ContentVar d) =
         case lookup d cd of
-            Just (JDPlain s) -> Javascript $ fromText $ TS.pack s
+            Just (JDPlain s) -> Javascript s
             _ -> error $ show d ++ ": expected JDPlain"
     go (ContentUrl d) =
         case lookup d cd of
