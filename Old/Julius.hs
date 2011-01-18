@@ -1,8 +1,10 @@
 module Old.Julius
-    ( oldToNew
+    ( render
+    , parse
     ) where
 
-import Text.ParserCombinators.Parsec hiding (Line)
+import qualified Text.ParserCombinators.Parsec as P
+import Text.ParserCombinators.Parsec hiding (Line, parse)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
@@ -13,30 +15,18 @@ import System.IO.Unsafe (unsafePerformIO)
 import Old.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
+import Text.Shakespeare (Deref (..), Ident (..))
+import Text.Julius (Content (..), Contents)
 
-oldToNew s = concatMap render $ either (error . show) id $ parse parseContents s s
+parse s = either (error . show) id $ P.parse parseContents s s
 
-render (ContentRaw s) = s
-render (ContentVar deref) = concat [ "#{", renderDeref deref, "}" ]
-render (ContentUrl deref) = concat [ "@{", renderDeref deref, "}" ]
-render (ContentUrlParam deref) = concat [ "@?{", renderDeref deref, "}" ]
-render (ContentMix deref) = concat [ "^{", renderDeref deref, "}" ]
+render = concatMap render'
 
-renderDeref (DerefLeaf s) = s
-renderDeref (DerefBranch x (DerefLeaf y)) = concat [renderDeref x, " ", y]
-renderDeref (DerefBranch x y) = concat [renderDeref x, " (", renderDeref y, ")"]
-
-data Deref = DerefLeaf String
-           | DerefBranch Deref Deref
-    deriving (Show, Eq)
-
-data Content = ContentRaw String
-             | ContentVar Deref
-             | ContentUrl Deref
-             | ContentUrlParam Deref
-             | ContentMix Deref
-    deriving Show
-type Contents = [Content]
+render' (ContentRaw s) = s
+render' (ContentVar deref) = concat [ "#{", renderDeref deref, "}" ]
+render' (ContentUrl deref) = concat [ "@{", renderDeref deref, "}" ]
+render' (ContentUrlParam deref) = concat [ "@?{", renderDeref deref, "}" ]
+render' (ContentMix deref) = concat [ "^{", renderDeref deref, "}" ]
 
 parseContents :: Parser Contents
 parseContents = many1 parseContent
@@ -71,7 +61,7 @@ parseDeref =
     deref
   where
     derefParens = between (char '(') (char ')') deref
-    derefSingle = derefParens <|> fmap DerefLeaf ident
+    derefSingle = derefParens <|> fmap (DerefIdent . Ident) ident
     deref = do
         let delim = (char '.' <|> (many1 (char ' ') >> return ' '))
         x <- derefSingle

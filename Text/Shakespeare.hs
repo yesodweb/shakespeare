@@ -1,9 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE CPP #-}
 -- | General parsers, functions and datatypes for all three languages.
 module Text.Shakespeare
+#if HAMLET6TO7
+    ( Deref (..)
+#else
     ( Deref
+#endif
     , Ident (..)
     , Scope
     , parseDeref

@@ -12,6 +12,9 @@ module Text.Julius
     , juliusFileDebug
 #if HAMLET6TO7
     , parseContents
+    , Content (..)
+    , Contents
+    , compressContents
 #endif
     ) where
 
@@ -47,7 +50,7 @@ data Content = ContentRaw String
              | ContentUrl Deref
              | ContentUrlParam Deref
              | ContentMix Deref
-    deriving Show
+    deriving (Show, Eq)
 type Contents = [Content]
 
 parseContents :: Parser Contents

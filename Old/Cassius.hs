@@ -17,6 +17,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Old.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
+import Text.Shakespeare (Deref (..), Ident (..))
 
 oldToNew s = concatMap renderBlock $ either (error . show) id $ parse parseBlocks s s
 
@@ -40,14 +41,6 @@ render (ContentRaw s) = s
 render (ContentVar deref) = concat [ "#{", renderDeref deref, "}" ]
 render (ContentUrl deref) = concat [ "@{", renderDeref deref, "}" ]
 render (ContentUrlParam deref) = concat [ "@?{", renderDeref deref, "}" ]
-
-renderDeref (DerefLeaf s) = s
-renderDeref (DerefBranch x (DerefLeaf y)) = concat [renderDeref x, " ", y]
-renderDeref (DerefBranch x y) = concat [renderDeref x, " (", renderDeref y, ")"]
-
-data Deref = DerefLeaf String
-           | DerefBranch Deref Deref
-    deriving (Show, Eq)
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -137,7 +130,7 @@ parseDeref =
     deref
   where
     derefParens = between (char '(') (char ')') deref
-    derefSingle = derefParens <|> fmap DerefLeaf ident
+    derefSingle = derefParens <|> fmap (DerefIdent . Ident) ident
     deref = do
         let delim = (char '.' <|> (many1 (char ' ') >> return ' '))
         x <- derefSingle
