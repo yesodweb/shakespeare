@@ -72,11 +72,11 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "cassiusFile" caseCassiusFile
     , testCase "cassiusFileDebug" caseCassiusFileDebug
     , testCase "cassiusFileDebugChange" caseCassiusFileDebugChange
-    {-
     , testCase "julius" caseJulius
     , testCase "juliusFile" caseJuliusFile
     , testCase "juliusFileDebug" caseJuliusFileDebug
     , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
+    {-
     , testCase "comments" caseComments
     , testCase "hamletFileDebug double foralls" caseDoubleForalls
     , testCase "cassius pseudo-class" casePseudo
@@ -650,7 +650,6 @@ caseCassiusFileDebugChange = do
     celper "foo{var:2}" $(cassiusFileDebug "external2.cassius")
     writeFile "external2.cassius" "foo\n  #{var}: 1"
 
-{-
 jmixin = [$julius|var x;|]
 
 jelper :: String -> Julius Url -> Assertion
@@ -661,10 +660,10 @@ caseJulius = do
     let var = "var"
     let urlp = (Home, [("p", "q")])
     flip jelper [$julius|שלום
-%var%
-@Home@
-@?urlp@
-^jmixin^
+#{var}
+@{Home}
+@?{urlp}
+^{jmixin}
 |] $ intercalate "\r\n"
         [ "שלום"
         , var
@@ -700,12 +699,13 @@ caseJuliusFileDebug = do
 caseJuliusFileDebugChange :: Assertion
 caseJuliusFileDebugChange = do
     let var = "somevar"
-    writeFile "external2.julius" "var %var% = 1;"
+    writeFile "external2.julius" "var #{var} = 1;"
     jelper "var somevar = 1;" $(juliusFileDebug "external2.julius")
-    writeFile "external2.julius" "var %var% = 2;"
+    writeFile "external2.julius" "var #{var} = 2;"
     jelper "var somevar = 2;" $(juliusFileDebug "external2.julius")
-    writeFile "external2.julius" "var %var% = 1;"
+    writeFile "external2.julius" "var #{var} = 1;"
 
+{-
 caseComments :: Assertion
 caseComments = do
     helper "" [$hamlet|$# this is a comment

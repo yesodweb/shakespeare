@@ -50,29 +50,17 @@ parseContents :: Parser Contents
 parseContents = many1 parseContent
 
 parseContent :: Parser Content
-parseContent = do
-    (char '%' >> (parsePercent <|> parseVar)) <|>
-      (char '@' >> (parseAt <|> parseUrl)) <|> do
-      (char '^' >> (parseCaret <|> parseMix)) <|> do
-        s <- many1 $ noneOf "%@^"
-        return $ ContentRaw s
+parseContent =
+    parseHash' <|> parseAt' <|> parseCaret' <|> parseChar
   where
-    parseCaret = char '^' >> return (ContentRaw "^")
-    parseMix = do
-        d <- parseDeref
-        _ <- char '^'
-        return $ ContentMix d
-    parseAt = char '@' >> return (ContentRaw "@")
-    parseUrl = do
-        c <- (char '?' >> return ContentUrlParam) <|> return ContentUrl
-        d <- parseDeref
-        _ <- char '@'
-        return $ c d
-    parsePercent = char '%' >> return (ContentRaw "%")
-    parseVar = do
-        d <- parseDeref
-        _ <- char '%'
-        return $ ContentVar d
+    parseHash' = either ContentRaw ContentVar `fmap` parseHash
+    parseAt' =
+        either ContentRaw go `fmap` parseAt
+      where
+        go (d, False) = ContentUrl d
+        go (d, True) = ContentUrlParam d
+    parseCaret' = either ContentRaw ContentMix `fmap` parseCaret
+    parseChar = (ContentRaw . return) `fmap` anyChar
 
 compressContents :: Contents -> Contents
 compressContents [] = []

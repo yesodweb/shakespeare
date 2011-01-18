@@ -1,5 +1,5 @@
 שלום
-%var%
-@Home@
-@?urlp@
-^jmixin^
+#{var}
+@{Home}
+@?{urlp}
+^{jmixin}
