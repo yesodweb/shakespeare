@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE CPP #-}
 module Text.Cassius
     ( Cassius
     , Css
@@ -12,6 +13,9 @@ module Text.Cassius
     , colorBlack
     , cassiusFile
     , cassiusFileDebug
+#if HAMLET6TO7
+    , parseBlocks
+#endif
     ) where
 
 import Text.Shakespeare

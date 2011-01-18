@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE CPP #-}
 module Text.Julius
     ( Julius
     , Javascript (..)
@@ -9,6 +10,9 @@ module Text.Julius
     , julius
     , juliusFile
     , juliusFileDebug
+#if HAMLET6TO7
+    , parseContents
+#endif
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
