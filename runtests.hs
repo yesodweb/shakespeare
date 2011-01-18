@@ -76,7 +76,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "juliusFile" caseJuliusFile
     , testCase "juliusFileDebug" caseJuliusFileDebug
     , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
-    {-
     , testCase "comments" caseComments
     , testCase "hamletFileDebug double foralls" caseDoubleForalls
     , testCase "cassius pseudo-class" casePseudo
@@ -91,7 +90,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "cassius module names" caseCassiusModuleNames
     , testCase "julius module names" caseJuliusModuleNames
     , testCase "single dollar at and caret" caseSingleDollarAtCaret
-    -}
     ]
 
 data Url = Home | Sub SubUrl
@@ -705,15 +703,15 @@ caseJuliusFileDebugChange = do
     jelper "var somevar = 2;" $(juliusFileDebug "external2.julius")
     writeFile "external2.julius" "var #{var} = 1;"
 
-{-
 caseComments :: Assertion
 caseComments = do
+    -- FIXME reconsider Hamlet comment syntax?
     helper "" [$hamlet|$# this is a comment
 $# another comment
 $#a third one|]
-    celper "" [$cassius|$# this is a comment
-$# another comment
-$#a third one|]
+    celper "" [$cassius|/* this is a comment */
+/* another comment */
+/*a third one*/|]
 
 caseDoubleForalls :: Assertion
 caseDoubleForalls = do
@@ -738,7 +736,7 @@ caseDiffBindNames = do
 caseBlankLine :: Assertion
 caseBlankLine = do
     helper "<p>foo</p>" [$hamlet|
-%p
+<p
 
     foo
 
@@ -787,9 +785,9 @@ caseCassiusWhitespaceColons = do
 caseCassiusTrailingComments :: Assertion
 caseCassiusTrailingComments = do
     celper "h1:hover {color:green ;font-family:sans-serif}" [$cassius|
-    h1:hover $# Please ignore this
-        color: green $# This is a comment.
-        $# Obviously this is ignored too.
+    h1:hover /* Please ignore this */
+        color: green /* This is a comment. */
+        /* Obviously this is ignored too. */
         font-family:sans-serif
     |]
 
@@ -804,7 +802,9 @@ caseHamletAngleBrackets =
 caseHamletModuleNames :: Assertion
 caseHamletModuleNames =
     helper "oof oof 3.14 -5"
-    [$hamlet|$Data.List.reverse foo$ $L.reverse foo$ $show 3.14$ $show -5$|]
+    [$hamlet|#{Data.List.reverse foo} #
+#{L.reverse foo} #
+#{show 3.14} #{show -5}|]
   where
     foo = "foo"
 
@@ -813,7 +813,7 @@ caseCassiusModuleNames =
     celper "sel{bar:oof oof 3.14 -5}"
     [$cassius|
 sel
-    bar: $Data.List.reverse foo$ $L.reverse foo$ $show 3.14$ $show -5$
+    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}
 |]
   where
     foo = "foo"
@@ -821,7 +821,7 @@ sel
 caseJuliusModuleNames :: Assertion
 caseJuliusModuleNames =
     jelper "oof oof 3.14 -5"
-    [$julius|%Data.List.reverse foo% %L.reverse foo% %show 3.14% %show -5%|]
+    [$julius|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
   where
     foo = "foo"
 
@@ -837,7 +837,8 @@ sel
     helper "#{@{^{" [$hamlet|#\{@\{^\{|]
     celper "sel{att:#{@{^{}" [$cassius|
 sel
-    att: #\{@\{^\{
+    att: #\{@\{^{
 |]
     jelper "#{@{^{" [$julius|#\{@\{^\{|]
--}
+
+-- TODO #{ foo $ bar baz } and #{foo $ bar $ baz}

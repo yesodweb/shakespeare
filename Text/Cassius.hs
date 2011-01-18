@@ -113,8 +113,11 @@ parseEmptyLine = do
 parseComment :: Parser ()
 parseComment = do
     skipMany $ oneOf " \t"
-    _ <- string "$#"
-    _ <- manyTill anyChar $ eol <|> eof
+    _ <- string "/*"
+    _ <- manyTill anyChar $ try $ string "*/"
+    -- FIXME This requires that any line beginning with a comment is entirely a comment
+    skipMany $ oneOf " \t"
+    _ <- eol <|> eof
     return ()
 
 parseIndent :: Parser Int
