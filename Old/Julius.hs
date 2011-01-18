@@ -6,8 +6,6 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Blaze.ByteString.Builder (Builder, fromByteString, toLazyByteString)
-import Blaze.ByteString.Builder.Char.Utf8 (fromString)
 import qualified Data.ByteString.Char8 as S8
 import qualified Data.ByteString.Lazy as L
 import Data.Monoid

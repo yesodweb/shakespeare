@@ -69,6 +69,11 @@ executable             runtests
         Buildable: False
     main-is:         runtests.hs
 
+executable             hamlet6to7
+    cpp-options:       -DHAMLET6TO7
+    build-depends:     QuickCheck >= 2 && < 3
+    main-is:           hamlet6to7.hs
+
 source-repository head
   type:     git
   location: git://github.com/snoyberg/hamlet.git
