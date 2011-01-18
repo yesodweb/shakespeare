@@ -1,5 +1,6 @@
 module Old.Hamlet
-    ( oldToNew
+    ( parse'
+    , render'
     ) where
 
 import Control.Applicative ((<$>), Applicative (..))
@@ -8,29 +9,9 @@ import Control.Arrow
 import Data.Data
 import Data.List (intercalate)
 import Text.ParserCombinators.Parsec hiding (Line)
-
-data Deref = DerefLeaf Ident
-           | DerefBranch Deref Deref
-newtype Ident = Ident String
-
-data Content = ContentRaw String
-             | ContentVar Deref
-             | ContentUrl Bool Deref -- ^ bool: does it include params?
-             | ContentEmbed Deref
-
-data Line = LineForall Deref Ident
-          | LineIf Deref
-          | LineElseIf Deref
-          | LineElse
-          | LineMaybe Deref Ident
-          | LineNothing
-          | LineTag
-            { _lineTagName :: String
-            , _lineAttr :: [(Maybe Deref, String, [Content])]
-            , _lineContent :: [Content]
-            , _lineClasses :: [[Content]]
-            }
-          | LineContent [Content]
+import Text.Shakespeare (Deref (..), Ident (..))
+import Text.Hamlet.Parse (Line (..), Content (..))
+import Old.Utf8 (renderDeref)
 
 renderAttr (mderef, name, val) = concat
     [ " "
@@ -54,10 +35,6 @@ renderContent (ContentVar d) = concat ["#{", renderDeref d, "}"]
 renderContent (ContentUrl False d) = concat ["@{", renderDeref d, "}"]
 renderContent (ContentUrl True d) = concat ["@?{", renderDeref d, "}"]
 renderContent (ContentEmbed d) = concat ["^{", renderDeref d, "}"]
-
-renderDeref (DerefLeaf (Ident s)) = s
-renderDeref (DerefBranch x (DerefLeaf (Ident y))) = concat [renderDeref x, " ", y]
-renderDeref (DerefBranch x y) = concat [renderDeref x, " (", renderDeref y, ")"]
 
 renderLine' (indent, x) = concat [replicate indent ' ', renderLine x, "\n"]
 
@@ -252,7 +229,7 @@ parseLine set = do
     tag'' (TagClass s) (x, y, z) = (x, y, s : z)
     tag'' (TagAttrib s) (x, y, z) = (x, s : y, z)
     derefParens = between (char '(') (char ')') $ deref True
-    derefSingle = derefParens <|> fmap DerefLeaf ident
+    derefSingle = derefParens <|> fmap DerefIdent ident
     deref spaceAllowed = do
         let delim = if spaceAllowed
                         then (char '.' <|> (many1 (char ' ') >> return ' '))
@@ -323,7 +300,9 @@ closeTag h s =
     canBeEmpty "input" = False
     canBeEmpty _ = True
 
-oldToNew s =
+parse' s =
     case parseLines defaultHamletSettings s of
         Error e -> error e
-        Ok x -> concatMap renderLine' x
+        Ok x -> x
+
+render' = concatMap renderLine'

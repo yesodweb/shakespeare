@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE CPP #-}
 module Text.Hamlet.Parse
     ( Result (..)
     , Content (..)
@@ -9,6 +10,10 @@ module Text.Hamlet.Parse
     , xhtmlHamletSettings
     , debugHamletSettings
     , CloseStyle (..)
+#if HAMLET6TO7
+    , parseLines
+    , Line (..)
+#endif
     )
     where
 
@@ -141,7 +146,11 @@ parseLine set = do
             InQuotes -> char '"' >> return ()
             NotInQuotes -> return ()
             InContent -> eol
-        return x
+        return $ cc x
+      where
+        cc [] = []
+        cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
+        cc (a:b) = a : cc b
     content' cr = contentHash <|> contentAt <|> contentCaret
                               <|> contentReg cr
     contentHash = do

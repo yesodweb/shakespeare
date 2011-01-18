@@ -15,7 +15,7 @@ go fp = do
     case reverse $ takeWhile (/= '.') $ reverse fp of
         "julius" -> readFile fp >>= jelper fp7
         "cassius" -> readFile fp >>= celper fp7
-        "hamlet" -> readFile fp >>= write . H.oldToNew >> check checkH
+        "hamlet" -> readFile fp >>= helper fp7
         _ -> return ()
   where
     fp7 = fp ++ ".7"
@@ -43,7 +43,6 @@ celper fp s = do
     let y = C.render' x
     case parse CN.parseBlocks y y of
         Right z
-            -- | CN.compressContents x == JN.compressContents z -> writeFile fp y
             | x == z -> writeFile fp y
             | otherwise -> error $ unlines
                 [ "Mismatch"
@@ -53,7 +52,22 @@ celper fp s = do
                 ]
         _ -> error "Something's wrong"
 
-checkH s =
-    case HN.parseDoc HN.defaultHamletSettings s of
-        HN.Error _ -> False
-        HN.Ok _ -> True
+helper fp s = do
+    let x = H.parse' s
+    let y = H.render' x
+    writeFile fp y
+    case HN.parseLines HN.defaultHamletSettings y of
+        HN.Ok z
+            | x == z -> return ()
+            | otherwise -> error $ unlines
+                [ "Mismatch"
+                , show x
+                , "versus"
+                , show z
+                , "First diff: " ++ firstDiff 0 x z
+                ]
+        _ -> error "Something's wrong"
+
+firstDiff i (x:xs) (z:zs)
+    | x == z = firstDiff (i + 1) xs zs
+    | otherwise = unlines ["Element " ++ show i, show x, show z]

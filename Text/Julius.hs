@@ -78,7 +78,7 @@ compressContents (x:y) = x : compressContents y
 contentsToJulius :: [Content] -> Q Exp
 contentsToJulius a = do
     r <- newName "_render"
-    c <- mapM (contentToJavascript r) $ compressContents a
+    c <- mapM (contentToJavascript r) a
     d <- case c of
             [] -> [|mempty|]
             [x] -> return x
@@ -93,7 +93,7 @@ julius = QuasiQuoter { quoteExp = juliusFromString }
 juliusFromString :: String -> Q Exp
 juliusFromString s = do
     let a = either (error . show) id $ parse parseContents s s
-    contentsToJulius a
+    contentsToJulius $ compressContents a
 
 contentToJavascript :: Name -> Content -> Q Exp
 contentToJavascript _ (ContentRaw s') = do

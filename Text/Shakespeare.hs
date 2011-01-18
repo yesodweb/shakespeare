@@ -38,7 +38,22 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefIntegral Integer
            | DerefRational Rational
            | DerefBranch Deref Deref
+#if HAMLET6TO7
+    deriving (Show, Read, Data, Typeable)
+
+instance Eq Deref where
+    x == y = True -- FIXME
+
+simp :: Deref -> Deref
+simp (DerefBranch x (DerefBranch y z)) = DerefBranch (DerefBranch (simp x) (simp y)) (simp z)
+simp (DerefBranch x y) = DerefBranch (simp x) (simp y)
+simp (DerefRational _) = error "Old Hamlet did not support rationals"
+simp (DerefModulesIdent _ _) = error "Old Hamlet did not support modules"
+simp (DerefIntegral i) = DerefIdent $ Ident $ show i
+simp (DerefIdent i) = DerefIdent i
+#else
     deriving (Show, Eq, Read, Data, Typeable)
+#endif
 
 instance Lift Ident where
     lift (Ident s) = [|Ident|] `appE` lift s
@@ -71,7 +86,11 @@ parseDeref = do
     x <- derefSingle
     res <- deref' $ (:) x
     skipMany $ oneOf " \t"
+#if HAMLET6TO7
+    return $ simp res
+#else
     return res
+#endif
   where
     delim = (many1 (char ' ') >> return())
             <|> lookAhead (char '(' >> return ())
