@@ -68,11 +68,11 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "hamlet runtime" caseHamletRT
     , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
     , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
-    {-
     , testCase "cassius" caseCassius
     , testCase "cassiusFile" caseCassiusFile
     , testCase "cassiusFileDebug" caseCassiusFileDebug
     , testCase "cassiusFileDebugChange" caseCassiusFileDebugChange
+    {-
     , testCase "julius" caseJulius
     , testCase "juliusFile" caseJuliusFile
     , testCase "juliusFileDebug" caseJuliusFileDebug
@@ -588,7 +588,6 @@ caseHamletFileDebugFeatures = do
         , "1e2e3e"
         ]
 
-{-
 celper :: String -> Cassius Url -> Assertion
 celper res h = do
     let x = renderCassius render h
@@ -600,16 +599,16 @@ caseCassius = do
     let urlp = (Home, [("p", "q")])
     flip celper [$cassius|
 foo
-    color: $colorRed$
-    background: $colorBlack$
+    color: #{colorRed}
+    background: #{colorBlack}
     bar: baz
 bin
-        color: $(((Color 127) 100) 5)$
+        color: #{(((Color 127) 100) 5)}
         bar: bar
         unicode-test: שלום
-        f$var$x: someval
-        background-image: url(@Home@)
-        urlp: url(@?urlp@)
+        f#{var}x: someval
+        background-image: url(@{Home})
+        urlp: url(@?{urlp})
 |] $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
         , "bin{"
@@ -645,12 +644,13 @@ caseCassiusFileDebug = do
 caseCassiusFileDebugChange :: Assertion
 caseCassiusFileDebugChange = do
     let var = "var"
-    writeFile "external2.cassius" "foo\n  $var$: 1"
+    writeFile "external2.cassius" "foo\n  #{var}: 1"
     celper "foo{var:1}" $(cassiusFileDebug "external2.cassius")
-    writeFile "external2.cassius" "foo\n  $var$: 2"
+    writeFile "external2.cassius" "foo\n  #{var}: 2"
     celper "foo{var:2}" $(cassiusFileDebug "external2.cassius")
-    writeFile "external2.cassius" "foo\n  $var$: 1"
+    writeFile "external2.cassius" "foo\n  #{var}: 1"
 
+{-
 jmixin = [$julius|var x;|]
 
 jelper :: String -> Julius Url -> Assertion

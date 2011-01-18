@@ -152,29 +152,21 @@ eol :: Parser ()
 eol = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
 parseContent :: Bool -> Parser Content
-parseContent allowColon = do
-    (char '$' >> (parseComment' <|> parseDollar <|> parseVar)) <|>
-      (char '@' >> (parseAt <|> parseUrl)) <|> safeColon <|> do
-        s <- many1 $ noneOf $ (if allowColon then id else (:) ':') "\r\n$@"
-        return $ ContentRaw s
+parseContent allowColon =
+    parseHash' <|> parseAt' <|> parseComment <|> parseChar
   where
-    safeColon = try $ do
-        _ <- char ':'
-        notFollowedBy $ oneOf " \t"
-        return $ ContentRaw ":"
-    parseAt = char '@' >> return (ContentRaw "@")
-    parseUrl = do
-        c <- (char '?' >> return ContentUrlParam) <|> return ContentUrl
-        d <- parseDeref
-        _ <- char '@'
-        return $ c d
-    parseDollar = char '$' >> return (ContentRaw "$")
-    parseVar = do
-        d <- parseDeref
-        _ <- char '$'
-        return $ ContentVar d
-    parseComment' = char '#' >> skipMany (noneOf "\r\n")
-                            >> return (ContentRaw "")
+    parseHash' = either ContentRaw ContentVar `fmap` parseHash
+    parseAt' =
+        either ContentRaw go `fmap` parseAt
+      where
+        go (d, False) = ContentUrl d
+        go (d, True) = ContentUrlParam d
+    parseChar = (ContentRaw . return) `fmap` noneOf restricted
+    restricted = (if allowColon then id else (:) ':') "\r\n"
+    parseComment = do
+        _ <- string "/*"
+        _ <- manyTill anyChar $ try $ string "*/"
+        return $ ContentRaw ""
 
 blocksToCassius :: [(Contents, [ContentPair])] -> Q Exp
 blocksToCassius a = do
