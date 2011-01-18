@@ -1,8 +1,10 @@
 module Old.Cassius
-    ( oldToNew
+    ( parse
+    , render'
     ) where
 
-import Text.ParserCombinators.Parsec hiding (Line)
+import qualified Text.ParserCombinators.Parsec as P
+import Text.ParserCombinators.Parsec hiding (Line, parse)
 import Data.List (intercalate)
 import Data.Char (isUpper, isDigit)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -18,8 +20,10 @@ import Old.Utf8
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare (Deref (..), Ident (..))
+import Text.Cassius (Content (..))
 
-oldToNew s = concatMap renderBlock $ either (error . show) id $ parse parseBlocks s s
+parse s = either (error . show) id $ P.parse parseBlocks s s
+render' = concatMap renderBlock
 
 renderBlock (sel, attrs) = concat
     [ renderConts sel
@@ -42,11 +46,6 @@ render (ContentVar deref) = concat [ "#{", renderDeref deref, "}" ]
 render (ContentUrl deref) = concat [ "@{", renderDeref deref, "}" ]
 render (ContentUrlParam deref) = concat [ "@?{", renderDeref deref, "}" ]
 
-data Content = ContentRaw String
-             | ContentVar Deref
-             | ContentUrl Deref
-             | ContentUrlParam Deref
-    deriving Show
 type Contents = [Content]
 type ContentPair = (Contents, Contents)
 type Block = (Contents, [ContentPair])

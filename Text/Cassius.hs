@@ -15,6 +15,8 @@ module Text.Cassius
     , cassiusFileDebug
 #if HAMLET6TO7
     , parseBlocks
+    , Content (..)
+    , compressBlock
 #endif
     ) where
 
@@ -101,13 +103,22 @@ data Content = ContentRaw String
              | ContentVar Deref
              | ContentUrl Deref
              | ContentUrlParam Deref
-    deriving Show
+    deriving (Show, Eq)
 type Contents = [Content]
 type ContentPair = (Contents, Contents)
 type Block = (Contents, [ContentPair])
 
 parseBlocks :: Parser [Block]
-parseBlocks = catMaybes `fmap` many parseBlock
+parseBlocks = (map compressBlock . catMaybes) `fmap` many parseBlock
+
+compressBlock :: Block -> Block
+compressBlock (x, y) =
+    (cc x, map go y)
+  where
+    go (k, v) = (cc k, cc v)
+    cc [] = []
+    cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
+    cc (a:b) = a : cc b
 
 parseEmptyLine :: Parser ()
 parseEmptyLine = do

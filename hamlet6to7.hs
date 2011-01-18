@@ -14,7 +14,7 @@ go fp = do
     putStrLn $ "Checking " ++ fp
     case reverse $ takeWhile (/= '.') $ reverse fp of
         "julius" -> readFile fp >>= jelper fp7
-        "cassius" -> readFile fp >>= write . C.oldToNew >> check checkC
+        "cassius" -> readFile fp >>= celper fp7
         "hamlet" -> readFile fp >>= write . H.oldToNew >> check checkH
         _ -> return ()
   where
@@ -38,8 +38,21 @@ jelper fp s = do
                 ]
         _ -> error "Something's wrong"
 
-checkJ s = either (const False) (const True) $ parse JN.parseContents s s
-checkC s = either (const False) (const True) $ parse CN.parseBlocks s s
+celper fp s = do
+    let x = C.parse s
+    let y = C.render' x
+    case parse CN.parseBlocks y y of
+        Right z
+            -- | CN.compressContents x == JN.compressContents z -> writeFile fp y
+            | x == z -> writeFile fp y
+            | otherwise -> error $ unlines
+                [ "Mismatch"
+                , show x
+                , "versus"
+                , show z
+                ]
+        _ -> error "Something's wrong"
+
 checkH s =
     case HN.parseDoc HN.defaultHamletSettings s of
         HN.Error _ -> False
