@@ -90,6 +90,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "cassius module names" caseCassiusModuleNames
     , testCase "julius module names" caseJuliusModuleNames
     , testCase "single dollar at and caret" caseSingleDollarAtCaret
+    , testCase "dollar operator" caseDollarOperator
     ]
 
 data Url = Home | Sub SubUrl
@@ -841,4 +842,20 @@ sel
 |]
     jelper "#{@{^{" [$julius|#\{@\{^\{|]
 
--- TODO #{ foo $ bar baz } and #{foo $ bar $ baz}
+caseDollarOperator :: Assertion
+caseDollarOperator = do
+    let val = (1, (2, 3))
+    helper "2" [$hamlet|#{ show $ fst $ snd val }|]
+    helper "2" [$hamlet|#{ show $ fst $ snd $ val}|]
+
+    celper "sel{att:2}" [$cassius|
+sel
+    att: #{ show $ fst $ snd val }
+|]
+    celper "sel{att:2}" [$cassius|
+sel
+    att: #{ show $ fst $ snd $ val}
+|]
+
+    jelper "2" [$julius|#{ show $ fst $ snd val }|]
+    jelper "2" [$julius|#{ show $ fst $ snd $ val}|]

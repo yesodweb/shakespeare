@@ -142,8 +142,8 @@ parseLine set = do
             NotInQuotes -> return ()
             InContent -> eol
         return x
-    content' cr = try contentHash <|> contentAt <|> contentCaret
-                                <|> contentReg cr
+    content' cr = contentHash <|> contentAt <|> contentCaret
+                              <|> contentReg cr
     contentHash = do
         x <- parseHash
         case x of

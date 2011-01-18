@@ -61,17 +61,29 @@ instance Lift Deref where
         return $ dr `AppE` (InfixE (Just n) per (Just d))
 
 parseDeref :: Parser Deref
-parseDeref =
-    deref
+parseDeref = do
+    skipMany $ oneOf " \t"
+    x <- derefSingle
+    res <- deref' $ (:) x
+    skipMany $ oneOf " \t"
+    return res
   where
-    derefParens = between (char '(') (char ')') deref
+    delim = (many1 (char ' ') >> return())
+            <|> lookAhead (char '(' >> return ())
+    derefParens = between (char '(') (char ')') parseDeref
     derefSingle = derefParens <|> numeric <|> ident
-    deref = do
-        let delim = (many1 (char ' ') >> return ())
-                    <|> lookAhead (char '(' >> return ())
-        x <- derefSingle
-        xs <- many $ try (delim >> derefSingle)
-        return $ foldr1 DerefBranch $ x : xs
+    deref' lhs =
+        dollar <|> derefSingle'
+               <|> return (foldr1 DerefBranch $ lhs [])
+      where
+        dollar = do
+            _ <- try $ delim >> char '$'
+            rhs <- parseDeref
+            let lhs' = foldr1 DerefBranch $ lhs []
+            return $ DerefBranch lhs' rhs
+        derefSingle' = do
+            x <- try $ delim >> derefSingle
+            deref' $ lhs . (:) x
     numeric = do
         n <- (char '-' >> return "-") <|> return ""
         x <- many1 digit
