@@ -91,6 +91,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "julius module names" caseJuliusModuleNames
     , testCase "single dollar at and caret" caseSingleDollarAtCaret
     , testCase "dollar operator" caseDollarOperator
+    , testCase "in a row" caseInARow
+    , testCase "embedded slash" caseEmbeddedSlash
     ]
 
 data Url = Home | Sub SubUrl
@@ -467,7 +469,7 @@ caseParens = do
         x = "x"
         y = "y"
     helper "xy" [$hamlet|#{(plus x) y}|]
-    helper "xxy" [$hamlet|#{(plus (plus x) x) y}|]
+    helper "xxy" [$hamlet|#{plus (plus x x) y}|]
     let alist = ["1", "2", "3"]
     helper "123" [$hamlet|
 $forall x <- (id id id id alist)
@@ -859,3 +861,15 @@ sel
 
     jelper "2" [$julius|#{ show $ fst $ snd val }|]
     jelper "2" [$julius|#{ show $ fst $ snd $ val}|]
+
+caseInARow :: Assertion
+caseInARow = do
+    helper "1" [$hamlet|#{ show $ const 1 2 }|]
+
+caseEmbeddedSlash :: Assertion
+caseEmbeddedSlash = do
+    helper "///" [$hamlet|///|]
+    celper "sel{att:///}" [$cassius|
+sel
+    att: ///
+|]

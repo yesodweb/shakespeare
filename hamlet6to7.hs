@@ -21,7 +21,7 @@ go fp = do
         "hs" -> readFile fp >>= hsHelper fp7
         _ -> return ()
   where
-    fp7 = fp ++ ".7"
+    fp7 = fp -- ++ ".7"
     write = writeFile fp7
     check checker = do
         x <- checker `fmap` readFile fp7

@@ -127,8 +127,7 @@ parseEmptyLine = do
 
 parseComment :: Parser ()
 parseComment = do
-    skipMany $ oneOf " \t"
-    _ <- string "/*"
+    _ <- try (skipMany (oneOf " \t") >> string "/*")
     _ <- manyTill anyChar $ try $ string "*/"
     -- FIXME This requires that any line beginning with a comment is entirely a comment
     skipMany $ oneOf " \t"
@@ -182,7 +181,7 @@ parseContent allowColon =
     parseChar = (ContentRaw . return) `fmap` noneOf restricted
     restricted = (if allowColon then id else (:) ':') "\r\n"
     parseComment = do
-        _ <- string "/*"
+        _ <- try $ string "/*"
         _ <- manyTill anyChar $ try $ string "*/"
         return $ ContentRaw ""
 

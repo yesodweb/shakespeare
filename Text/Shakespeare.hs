@@ -98,12 +98,12 @@ parseDeref = do
     derefSingle = derefParens <|> numeric <|> ident
     deref' lhs =
         dollar <|> derefSingle'
-               <|> return (foldr1 DerefBranch $ lhs [])
+               <|> return (foldl1 DerefBranch $ lhs [])
       where
         dollar = do
             _ <- try $ delim >> char '$'
             rhs <- parseDeref
-            let lhs' = foldr1 DerefBranch $ lhs []
+            let lhs' = foldl1 DerefBranch $ lhs []
             return $ DerefBranch lhs' rhs
         derefSingle' = do
             x <- try $ delim >> derefSingle

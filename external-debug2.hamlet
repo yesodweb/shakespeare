@@ -7,15 +7,15 @@
 ^{template}
 $if id true
     true
-    #{id id id id id extra}
+    #{id $ id $ id (id $ id extra)}
 $if not true
 $else
     not true
-    #{id id id (id extra)}
+    #{id $ id $ id (id extra)}
 $if not true
 $elseif true
     elseif true
-    #{id id(id extra)}
+    #{id $ id(id extra)}
 $maybe j <- just
     #{j}
     #{id j}
@@ -25,5 +25,5 @@ $nothing
     nothing
     #{id extra}
 $forall l <- list
-    #{id id l}
+    #{id $ id l}
     #{extra}

@@ -73,6 +73,10 @@ executable             hamlet6to7
     cpp-options:       -DHAMLET6TO7
     build-depends:     QuickCheck >= 2 && < 3
     main-is:           hamlet6to7.hs
+    Other-Modules:     Old.Utf8
+                       Old.Cassius
+                       Old.Hamlet
+                       Old.Julius
 
 source-repository head
   type:     git
