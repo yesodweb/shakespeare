@@ -300,7 +300,7 @@ closeTag h s =
     canBeEmpty "input" = False
     canBeEmpty _ = True
 
-parse' s =
+parse' set s =
     case parseLines defaultHamletSettings s of
         Error e -> error e
         Ok x -> x
