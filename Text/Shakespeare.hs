@@ -37,6 +37,7 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefIdent Ident
            | DerefIntegral Integer
            | DerefRational Rational
+           | DerefString String
            | DerefBranch Deref Deref
 #if HAMLET6TO7
     deriving (Show, Read, Data, Typeable)
@@ -79,6 +80,7 @@ instance Lift Deref where
         per <- [|(%)|]
         dr <- [|DerefRational|]
         return $ dr `AppE` (InfixE (Just n) per (Just d))
+    lift (DerefString s) = [|DerefString|] `appE` lift s
 
 parseDeref :: Parser Deref
 parseDeref = do
@@ -95,7 +97,7 @@ parseDeref = do
     delim = (many1 (char ' ') >> return())
             <|> lookAhead (char '(' >> return ())
     derefParens = between (char '(') (char ')') parseDeref
-    derefSingle = derefParens <|> numeric <|> ident
+    derefSingle = derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'
                <|> return (foldl1 DerefBranch $ lhs [])
@@ -116,6 +118,20 @@ parseDeref = do
             Nothing -> DerefIntegral $ read' "Integral" $ n ++ x
             Just z -> DerefRational $ toRational
                        (read' "Rational" $ n ++ x ++ '.' : z :: Double)
+    strLit = do
+        _ <- char '"'
+        chars <- many quotedChar
+        _ <- char '"'
+        return $ DerefString chars
+    quotedChar = (char '\\' >> escapedChar) <|> noneOf "\""
+    escapedChar =
+        (char 'n' >> return '\n') <|>
+        (char 'r' >> return '\r') <|>
+        (char 'b' >> return '\b') <|>
+        (char 't' >> return '\t') <|>
+        (char '\\' >> return '\\') <|>
+        (char '"' >> return '"') <|>
+        (char '\'' >> return '\'')
     ident = do
         mods <- many modul
         func <- many1 (alphaNum <|> char '_' <|> char '\'')
@@ -150,6 +166,7 @@ derefToExp scope (DerefIdent i@(Ident s)) =
         Nothing -> expType i $ mkName s
 derefToExp _ (DerefIntegral i) = LitE $ IntegerL i
 derefToExp _ (DerefRational r) = LitE $ RationalL r
+derefToExp _ (DerefString s) = LitE $ StringL s
 
 -- FIXME shouldn't we use something besides a list here?
 flattenDeref :: Deref -> Maybe [String]

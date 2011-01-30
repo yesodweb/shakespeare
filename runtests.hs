@@ -93,6 +93,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "dollar operator" caseDollarOperator
     , testCase "in a row" caseInARow
     , testCase "embedded slash" caseEmbeddedSlash
+    , testCase "string literals" caseStringLiterals
     ]
 
 data Url = Home | Sub SubUrl
@@ -873,3 +874,11 @@ caseEmbeddedSlash = do
 sel
     att: ///
 |]
+
+caseStringLiterals :: Assertion
+caseStringLiterals = do
+    helper "string" [$hamlet|#{"string"}|]
+    helper "string" [$hamlet|#{id "string"}|]
+    helper "gnirts" [$hamlet|#{L.reverse $ id "string"}|]
+    helper "str&quot;ing" [$hamlet|#{"str\"ing"}|]
+    helper "str&lt;ing" [$hamlet|#{"str<ing"}|]
