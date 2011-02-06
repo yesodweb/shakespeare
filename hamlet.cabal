@@ -8,15 +8,15 @@ synopsis:        Haml-like template files that are compile-time checked
 description:
     Hamlet gives you a type-safe tool for generating HTML code. It works via Quasi-Quoting, and generating extremely efficient output code. The syntax is white-space sensitive, and it helps you avoid cross-site scripting issues and 404 errors. Please see the documentation at <http://docs.yesodweb.com/hamlet/> for more details.
     .
-    As a quick overview, here is a sample Hamlet template:
+    As a quick overview, here is a sample Hamlet template (note, Haddock is destroying the braces below):
     .
     > !!!
     > <html
     >     <head
     >         <title>Hamlet Demo
     >     <body
-    >         <h1>Information on #{name person}
-    >         <p>#{name person} is #{age person} years old.
+    >         <h1>Information on #&#123;name person&#125;
+    >         <p>#&#123;name person&#125; is #&#123;age person&#125; years old.
     >         <h2
     >             $if isMarried person
     >                 Married
@@ -24,10 +24,10 @@ description:
     >                 Not married
     >         <ul
     >             $forall child <- children person
-    >                 <li>#{child}
+    >                 <li>#&#123;child&#125;
     >         <p
-    >             <a href=@{page person}>See the page.
-    >         ^{footer}
+    >             <a href=@&#123;page person&#125;>See the page.
+    >         ^&#123;footer&#125;
 category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.6
