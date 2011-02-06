@@ -1,5 +1,5 @@
 name:            hamlet
-version:         0.7.0
+version:         0.7.0.1
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -11,23 +11,23 @@ description:
     As a quick overview, here is a sample Hamlet template:
     .
     > !!!
-    > %html
-    >     %head
-    >         %title Hamlet Demo
-    >     %body
-    >         %h1 Information on $name.person$
-    >         %p $*name.person$ is $age.person$ years old.
-    >         %h2
-    >             $if isMarried.person
+    > <html
+    >     <head
+    >         <title>Hamlet Demo
+    >     <body
+    >         <h1>Information on #{name person}
+    >         <p>#{name person} is #{age person} years old.
+    >         <h2
+    >             $if isMarried person
     >                 Married
     >             $else
     >                 Not married
-    >         %ul
-    >             $forall children.person child
-    >                 %li $child$
-    >         %p
-    >             %a!href=@page.person@ See the page.
-    >         ^footer^
+    >         <ul
+    >             $forall child <- children person
+    >                 <li>#{child}
+    >         <p
+    >             <a href=@{page person}>See the page.
+    >         ^{footer}
 category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.6
