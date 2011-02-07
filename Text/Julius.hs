@@ -137,6 +137,7 @@ vtToExp (d, vt) = do
     c' <- c vt
     return $ TupE [d', c' `AppE` derefToExp [] d]
   where
+    c :: VarType -> Q Exp
     c VTPlain = [|JDPlain . toJavascript|]
     c VTUrl = [|JDUrl|]
     c VTUrlParam = [|JDUrlParam|]
