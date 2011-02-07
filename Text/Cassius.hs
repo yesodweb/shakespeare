@@ -248,6 +248,7 @@ vtToExp (d, vt) = do
     c' <- c vt
     return $ TupE [d', c' `AppE` derefToExp [] d]
   where
+    c :: VarType -> Q Exp
     c VTPlain = [|CDPlain . toCss|]
     c VTUrl = [|CDUrl|]
     c VTUrlParam = [|CDUrlParam|]
