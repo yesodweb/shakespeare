@@ -172,8 +172,13 @@ caseStatic :: Assertion
 caseStatic = helper "some static content" [$hamlet|some static content|]
 
 caseTag :: Assertion
-caseTag = helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [$hamlet|
+caseTag = do
+    helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [$hamlet|
 <p .foo
+  <#bar>baz
+|]
+    helper "<p class=\"foo.bar\"><div id=\"bar\">baz</div></p>" [$hamlet|
+<p class=foo.bar
   <#bar>baz
 |]
 

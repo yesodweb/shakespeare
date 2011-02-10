@@ -145,6 +145,7 @@ parseLine set = do
         case cr of
             InQuotes -> char '"' >> return ()
             NotInQuotes -> return ()
+            NotInQuotesAttr -> return ()
             InContent -> eol
         return $ cc x
       where
@@ -170,18 +171,19 @@ parseLine set = do
             Right deref -> return $ ContentEmbed deref
     contentReg InContent = (ContentRaw . return) <$> noneOf "#@^\r\n"
     contentReg NotInQuotes = (ContentRaw . return) <$> noneOf "@^#. \t\n\r>"
+    contentReg NotInQuotesAttr = (ContentRaw . return) <$> noneOf "@^ \t\n\r>"
     contentReg InQuotes = (ContentRaw . return) <$> noneOf "#@^\\\"\n\r>"
-    tagAttribValue = do
-        cr <- (char '"' >> return InQuotes) <|> return NotInQuotes
+    tagAttribValue notInQuotes = do
+        cr <- (char '"' >> return InQuotes) <|> return notInQuotes
         content cr
-    tagIdent = char '#' >> TagIdent <$> tagAttribValue
-    tagClass = char '.' >> TagClass <$> tagAttribValue
+    tagIdent = char '#' >> TagIdent <$> tagAttribValue NotInQuotes
+    tagClass = char '.' >> TagClass <$> tagAttribValue NotInQuotes
     tagAttrib = do
         cond <- (Just <$> tagAttribCond) <|> return Nothing
-        s <- many1 $ noneOf " \t.!=\r\n>"
+        s <- many1 $ noneOf " \t=\r\n>"
         v <- (do
             _ <- char '='
-            s' <- tagAttribValue
+            s' <- tagAttribValue NotInQuotesAttr
             return s') <|> return []
         return $ TagAttrib (cond, s, v)
     tagAttribCond = do
@@ -214,7 +216,7 @@ data TagPiece = TagName String
               | TagAttrib (Maybe Deref, String, [Content])
     deriving Show
 
-data ContentRule = InQuotes | NotInQuotes | InContent
+data ContentRule = InQuotes | NotInQuotes | NotInQuotesAttr | InContent
 
 data Nest = Nest Line [Nest]
 
