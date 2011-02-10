@@ -12,6 +12,8 @@ import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
 import qualified Data.List as L
+import qualified Data.JSON.Types as J
+import qualified Data.Map as Map
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -94,6 +96,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "in a row" caseInARow
     , testCase "embedded slash" caseEmbeddedSlash
     , testCase "string literals" caseStringLiterals
+    , testCase "embed json" caseEmbedJson
     ]
 
 data Url = Home | Sub SubUrl
@@ -887,3 +890,13 @@ caseStringLiterals = do
     helper "gnirts" [$hamlet|#{L.reverse $ id "string"}|]
     helper "str&quot;ing" [$hamlet|#{"str\"ing"}|]
     helper "str&lt;ing" [$hamlet|#{"str<ing"}|]
+
+caseEmbedJson :: Assertion
+caseEmbedJson = do
+    let v = J.ValueObject $ Map.fromList
+                [ ( T.pack "foo", J.ValueArray
+                    [ J.ValueAtom $ J.AtomText $ T.pack "bar"
+                    , J.ValueAtom $ J.AtomNumber 5
+                    ])
+                ]
+    jelper "{\"foo\":[\"bar\",5.0]}" [$julius|#{v}|]
