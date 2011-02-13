@@ -97,6 +97,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "embedded slash" caseEmbeddedSlash
     , testCase "string literals" caseStringLiterals
     , testCase "embed json" caseEmbedJson
+    , testCase "interpolated operators" caseOperators
     ]
 
 data Url = Home | Sub SubUrl
@@ -900,3 +901,7 @@ caseEmbedJson = do
                     ])
                 ]
     jelper "{\"foo\":[\"bar\",5.0]}" [$julius|#{v}|]
+
+caseOperators = do
+    helper "3" [$hamlet|#{show $ (+) 1 2}|]
+    helper "6" [$hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]

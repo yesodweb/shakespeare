@@ -96,8 +96,13 @@ parseDeref = do
   where
     delim = (many1 (char ' ') >> return())
             <|> lookAhead (char '(' >> return ())
+    derefOp = try $ do
+        _ <- char '('
+        x <- many1 $ noneOf " \t\n\r()"
+        _ <- char ')'
+        return $ DerefIdent $ Ident x
     derefParens = between (char '(') (char ')') parseDeref
-    derefSingle = derefParens <|> numeric <|> strLit<|> ident
+    derefSingle = derefOp <|> derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'
                <|> return (foldl1 DerefBranch $ lhs [])
@@ -153,7 +158,7 @@ read' t s =
         [] -> error $ t ++ " read failed: " ++ s
 
 expType :: Ident -> Name -> Exp
-expType (Ident (c:_)) = if isUpper c then ConE else VarE
+expType (Ident (c:_)) = if isUpper c || c == ':' then ConE else VarE
 expType (Ident "") = error "Bad Ident"
 
 derefToExp :: Scope -> Deref -> Exp
