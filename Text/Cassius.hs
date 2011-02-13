@@ -3,16 +3,23 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 module Text.Cassius
-    ( Cassius
+    ( -- * Datatypes
+      Cassius
     , Css
+      -- * Type class
+    , ToCss (..)
+      -- * Rendering
     , renderCassius
     , renderCss
+      -- * Parsing
     , cassius
+    , cassiusFile
+    , cassiusFileDebug
+      -- * ToCss instances
+      -- ** Color
     , Color (..)
     , colorRed
     , colorBlack
-    , cassiusFile
-    , cassiusFileDebug
 #if HAMLET6TO7
     , parseBlocks
     , Content (..)
