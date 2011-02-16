@@ -98,6 +98,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "string literals" caseStringLiterals
     , testCase "embed json" caseEmbedJson
     , testCase "interpolated operators" caseOperators
+    , testCase "HTML comments" caseHtmlComments
     ]
 
 data Url = Home | Sub SubUrl
@@ -905,3 +906,11 @@ caseEmbedJson = do
 caseOperators = do
     helper "3" [$hamlet|#{show $ (+) 1 2}|]
     helper "6" [$hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
+
+caseHtmlComments = do
+    helper "<p>1</p><p>2</p>" [$hamlet|
+<p>1
+<!-- ignored comment -->
+<p
+    2
+|]

@@ -73,6 +73,7 @@ parseLine set = do
                            (char '\t' >> return 4))
     x <- doctype <|>
          comment <|>
+         htmlComment <|>
          backslash <|>
          controlIf <|>
          controlElseIf <|>
@@ -97,6 +98,11 @@ parseLine set = do
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
     comment = do
         _ <- try $ string "$#"
+        _ <- many $ noneOf "\r\n"
+        eol
+        return $ LineContent []
+    htmlComment = do
+        _ <- try $ string "<!--"
         _ <- many $ noneOf "\r\n"
         eol
         return $ LineContent []
