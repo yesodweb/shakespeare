@@ -9,19 +9,22 @@ import Text.Hamlet
 import Text.Cassius
 import Text.Lucius
 import Text.Julius
+import Text.Coffeescript
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
 import qualified Data.List as L
 import qualified Data.JSON.Types as J
 import qualified Data.Map as Map
+import Data.Text.Lazy.Builder (fromText, toLazyText)
 
 main :: IO ()
 main = defaultMain [testSuite]
 
 testSuite :: Test
 testSuite = testGroup "Text.Hamlet"
-    [ testCase "empty" caseEmpty
+    [
+      testCase "empty" caseEmpty
     , testCase "static" caseStatic
     , testCase "tag" caseTag
     , testCase "var" caseVar
@@ -76,8 +79,10 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "cassiusFileDebug" caseCassiusFileDebug
     , testCase "cassiusFileDebugChange" caseCassiusFileDebugChange
     , testCase "julius" caseJulius
+    , testCase "coffee" caseCoffee
     , testCase "juliusFile" caseJuliusFile
-    , testCase "juliusFileDebug" caseJuliusFileDebug
+    , testCase "coffeeFile" caseCoffeeFile
+    , testCase "coffeeFileDebug" caseCoffeeFileDebug
     , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
     , testCase "comments" caseComments
     , testCase "hamletFileDebug double foralls" caseDoubleForalls
@@ -605,11 +610,6 @@ caseHamletFileDebugFeatures = do
         , "1e2e3e"
         ]
 
-celper :: String -> Cassius Url -> Assertion
-celper res h = do
-    let x = renderCassius render h
-    T.pack res @=? x
-
 caseCassius :: Assertion
 caseCassius = do
     let var = "var"
@@ -667,51 +667,98 @@ caseCassiusFileDebugChange = do
     celper "foo{var:2}" $(cassiusFileDebug "external2.cassius")
     writeFile "external2.cassius" "foo\n  #{var}: 1"
 
-jmixin = [$julius|var x;|]
+celper :: String -> Cassius Url -> Assertion
+celper res h = do
+    let x = renderCassius render h
+    T.pack res @=? x
+
+jmixin = [$julius|x = 5|]
+cofmixin = [$coffee|x = 5|]
 
 jelper :: String -> Julius Url -> Assertion
 jelper res h = T.pack res @=? renderJulius render h
 
+cofelper :: String -> Coffee Url -> Assertion
+cofelper res h = do
+  c <- renderCoffee render h
+  T.pack res @=? c
+
+varD = "123;"
+urlp = (Home, [("p", "q")])
+
 caseJulius :: Assertion
 caseJulius = do
-    let var = "var"
-    let urlp = (Home, [("p", "q")])
-    flip jelper [$julius|שלום
-#{var}
-@{Home}
-@?{urlp}
-^{jmixin}
-|] $ intercalate "\r\n"
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ] ++ "\r\n"
+    flip jelper [$julius|'שלום';
+#{varD}
+'@{Home}';
+'@?{urlp}';
+^{jmixin};
+|] $ renderedI "\r\n"
+
+caseCoffee :: Assertion
+caseCoffee = do
+    flip cofelper [$coffee|'שלום'
+%{varD}
+'@{Home}'
+'@?{urlp}'
+^{cofmixin}
+|] $ renderedI "\n"
+
+renderedI nl = intercalate nl
+        [ "'שלום';"
+        , varD
+        , "'url';"
+        , "'url?p=q';"
+        , "x = 5;"
+        ] ++ nl
 
 caseJuliusFile :: Assertion
 caseJuliusFile = do
-    let var = "var"
-    let urlp = (Home, [("p", "q")])
-    flip jelper $(juliusFile "external1.julius") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
+    let var = "123;"
+    let renderedF = unlines
+          [ "'שלום';"
+          , var
+          , "'url';"
+          , "'url?p=q';"
+          , "x = 5;"
+          ]
+    flip jelper $(juliusFile "external1.julius") renderedF
 
 caseJuliusFileDebug :: Assertion
 caseJuliusFileDebug = do
-    let var = "var"
-    let urlp = (Home, [("p", "q")])
-    flip jelper $(juliusFileDebug "external1.julius") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
+    let var = "123;"
+    let renderedF = unlines
+          [ "'שלום';"
+          , var
+          , "'url';"
+          , "'url?p=q';"
+          , "x = 5;"
+          ]
+    flip jelper $(juliusFileDebug "external1.julius") renderedF
+
+caseCoffeeFile :: Assertion
+caseCoffeeFile = do
+    let var = "123;"
+    let renderedF = unlines
+          [ "'שלום';"
+          , var
+          , "'url';"
+          , "'url?p=q';"
+          , "x = 5;"
+          ]
+    flip cofelper $(coffeeFile "tests/external1.coffee") renderedF
+
+caseCoffeeFileDebug :: Assertion
+caseCoffeeFileDebug = do
+    let var = "123;"
+    let renderedF = unlines
+          [ "'שלום';"
+          , var
+          , "'url';"
+          , "'url?p=q';"
+          , "x = 5;"
+          ]
+    flip cofelper $(coffeeFileDebug "tests/external1.coffee") renderedF
 
 caseJuliusFileDebugChange :: Assertion
 caseJuliusFileDebugChange = do
