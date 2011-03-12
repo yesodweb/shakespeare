@@ -336,9 +336,11 @@ data AbsoluteUnit = Centimeter
                   | Point
                   deriving (Eq, Show)
 
-data AbsoluteSize = AbsoluteSize -- | Not intended for direct use, see 'mkSize'.
-                      AbsoluteUnit -- | Units used for text formatting.
-                      Rational -- | Normalized value in centimeters.
+-- | Not intended for direct use, see 'mkSize'.
+data AbsoluteSize = AbsoluteSize
+    { absoluteSizeUnit :: AbsoluteUnit -- ^ Units used for text formatting.
+    , absoluteSizeValue :: Rational -- ^ Normalized value in centimeters.
+    }
 
 -- | Absolute size unit convertion rate to centimeters.
 absoluteUnitRate :: AbsoluteUnit -> Rational
@@ -383,8 +385,10 @@ instance Fractional AbsoluteSize where
 instance ToCss AbsoluteSize where
   toCss = TL.pack . show
 
-data PercentageSize = PercentageSize -- | Not intended for direct use, see 'mkSize'.
-                        Rational -- | Normalized value, 1 == 100%.
+-- | Not intended for direct use, see 'mkSize'.
+data PercentageSize = PercentageSize
+    { percentageSizeValue :: Rational -- ^ Normalized value, 1 == 100%.
+    }
                     deriving (Eq, Ord)
 
 -- | Constructs 'PercentageSize'. Not intended for direct use, see 'mkSize'.
