@@ -53,8 +53,6 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Hamlet.Quasi (readUtf8File)
-import Data.Map (Map)
-import qualified Data.Map as Map
 import Data.List (intersperse)
 
 data Color = Color Word8 Word8 Word8
@@ -92,7 +90,7 @@ renderCss =
     go (Css' x y) = mconcat
         [ x
         , singleton '{'
-        , mconcat $ intersperse (singleton ';') $ map go' $ Map.toList y
+        , mconcat $ intersperse (singleton ';') $ map go' y
         , singleton '}'
         ]
     go' (k, v) = mconcat
@@ -107,7 +105,7 @@ renderCassius r s = renderCss $ s r
 type Css = [Css']
 data Css' = Css'
     { _cssSelectors :: Builder
-    , _cssAttributes :: Map TL.Text Builder
+    , _cssAttributes :: [(TL.Text, Builder)]
     }
 
 type Cassius url = (url -> [(String, String)] -> String) -> Css
@@ -222,7 +220,7 @@ blockToCss :: Name -> (Contents, [ContentPair]) -> Q Exp
 blockToCss r (sel, props) = do
     css' <- [|Css'|]
     let sel' = contentsToBuilder r sel
-    props' <- [|Map.fromList|] `appE` listE (map go props)
+    props' <- listE (map go props)
     return css' `appE` sel' `appE` return props'
   where
     go (x, y) = tupE [tlt $ contentsToBuilder r x, contentsToBuilder r y]
@@ -290,7 +288,7 @@ cassiusRuntime fp cd render' = unsafePerformIO $ do
     return $ map go a
   where
     go :: (Contents, [ContentPair]) -> Css'
-    go (x, y) = Css' (mconcat $ map go' x) $ Map.fromList $ map go'' y
+    go (x, y) = Css' (mconcat $ map go' x) $ map go'' y
     go' :: Content -> Builder
     go' (ContentRaw s) = fromText $ TS.pack s
     go' (ContentVar d) =

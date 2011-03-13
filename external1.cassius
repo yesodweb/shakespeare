@@ -1,11 +1,11 @@
 foo
-    color: #{colorRed}
     background: #{colorBlack}
     bar: baz
+    color: #{colorRed}
 bin
-    color: #{(((Color 127) 100) 5)}
-    bar: bar
-    unicode-test: שלום
-    f#{var}x: someval
     background-image: url(@{Home})
+    bar: bar
+    color: #{(((Color 127) 100) 5)}
+    f#{var}x: someval
+    unicode-test: שלום
     urlp: url(@?{urlp})

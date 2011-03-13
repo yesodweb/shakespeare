@@ -99,6 +99,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "embed json" caseEmbedJson
     , testCase "interpolated operators" caseOperators
     , testCase "HTML comments" caseHtmlComments
+    , testCase "multi cassius" caseMultiCassius
     ]
 
 data Url = Home | Sub SubUrl
@@ -611,15 +612,15 @@ caseCassius = do
     let urlp = (Home, [("p", "q")])
     flip celper [$cassius|
 foo
-    color: #{colorRed}
     background: #{colorBlack}
     bar: baz
+    color: #{colorRed}
 bin
-        color: #{(((Color 127) 100) 5)}
-        bar: bar
-        unicode-test: שלום
-        f#{var}x: someval
         background-image: url(@{Home})
+        bar: bar
+        color: #{(((Color 127) 100) 5)}
+        f#{var}x: someval
+        unicode-test: שלום
         urlp: url(@?{urlp})
 |] $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
@@ -913,4 +914,12 @@ caseHtmlComments = do
 <!-- ignored comment -->
 <p
     2
+|]
+
+caseMultiCassius :: Assertion
+caseMultiCassius = do
+    celper "foo{bar:baz;bar:bin}" [$cassius|
+foo
+    bar: baz
+    bar: bin
 |]
