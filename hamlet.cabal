@@ -8,26 +8,19 @@ synopsis:        Haml-like template files that are compile-time checked
 description:
     Hamlet gives you a type-safe tool for generating HTML code. It works via Quasi-Quoting, and generating extremely efficient output code. The syntax is white-space sensitive, and it helps you avoid cross-site scripting issues and 404 errors. Please see the documentation at <http://docs.yesodweb.com/book/hamlet/> for more details.
     .
-    As a quick overview, here is a sample Hamlet template (note that, due to some issues with Haddock, I have replaced braces (&#123; and &#125;) with double-square-brackets ([[ and ]])):
+    Here is a quick overview of hamlet html. Due to haddock escaping issues, we can't properly show variable insertion, but we are still going to show some conditionals. Please see http://docs.yesodweb.com/book/templates for a thorough description
     .
     > !!!
     > <html
     >     <head
     >         <title>Hamlet Demo
     >     <body
-    >         <h1>Information on #[[name person]]
-    >         <p>#[[name person]] is #[[age person]] years old.
+    >         <h1>Information on John Doe
     >         <h2
     >             $if isMarried person
     >                 Married
     >             $else
     >                 Not married
-    >         <ul
-    >             $forall child <- children person
-    >                 <li>#[[child]]
-    >         <p
-    >             <a href=@[[page person]]>See the page.
-    >         ^[[footer]]
 category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.6
