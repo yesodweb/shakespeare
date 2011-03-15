@@ -100,6 +100,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "interpolated operators" caseOperators
     , testCase "HTML comments" caseHtmlComments
     , testCase "multi cassius" caseMultiCassius
+    , testCase "nested maybes" caseNestedMaybes
     ]
 
 data Url = Home | Sub SubUrl
@@ -923,3 +924,24 @@ foo
     bar: baz
     bar: bin
 |]
+
+caseNestedMaybes :: Assertion
+caseNestedMaybes = do
+    let muser = Just "User" :: Maybe String
+        mprof = Nothing :: Maybe Int
+        m3 = Nothing :: Maybe String
+    helper "justnothing" [$hamlet|
+$maybe user <- muser
+    $maybe profile <- mprof
+        First two are Just
+        $maybe desc <- m3
+            \ and left us a description:
+            <p>#{desc}
+        $nothing
+        and has left us no description.
+    $nothing
+        justnothing
+$nothing
+    <h1>No such Person exists.
+   |]
+
