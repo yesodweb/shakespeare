@@ -37,6 +37,7 @@ module Text.Cassius
 #endif
     ) where
 
+import Text.Css
 import Text.MkSizeType
 import Text.Shakespeare
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -103,10 +104,6 @@ renderCassius :: (url -> [(String, String)] -> String) -> Cassius url -> TL.Text
 renderCassius r s = renderCss $ s r
 
 type Css = [Css']
-data Css' = Css'
-    { _cssSelectors :: Builder
-    , _cssAttributes :: [(TL.Text, Builder)]
-    }
 
 type Cassius url = (url -> [(String, String)] -> String) -> Css
 

@@ -7,6 +7,7 @@ import Test.HUnit hiding (Test)
 import Prelude hiding (reverse)
 import Text.Hamlet
 import Text.Cassius
+import Text.Lucius
 import Text.Julius
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
@@ -101,6 +102,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "HTML comments" caseHtmlComments
     , testCase "multi cassius" caseMultiCassius
     , testCase "nested maybes" caseNestedMaybes
+    , testCase "lucius" caseLucius
     ]
 
 data Url = Home | Sub SubUrl
@@ -945,3 +947,29 @@ $nothing
     <h1>No such Person exists.
    |]
 
+
+caseLucius :: Assertion
+caseLucius = do
+    let var = "var"
+    let urlp = (Home, [("p", "q")])
+    flip celper [$lucius|
+foo {
+    background: #{colorBlack};
+    bar: baz;
+    color: #{colorRed};
+}
+bin {
+        background-image: url(@{Home});
+        bar: bar;
+        color: #{(((Color 127) 100) 5)};
+        f#{var}x: someval;
+        unicode-test: שלום;
+        urlp: url(@?{urlp});
+}
+|] $ concat
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
+        ]

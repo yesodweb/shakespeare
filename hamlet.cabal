@@ -1,5 +1,5 @@
 name:            hamlet
-version:         0.7.2.1
+version:         0.7.3
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -46,12 +46,14 @@ library
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
                      Text.Cassius
+                     Text.Lucius
                      Text.Julius
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
                      Text.Hamlet.Debug
                      Text.MkSizeType
                      Text.Shakespeare
+                     Text.Css
     ghc-options:     -Wall
 
 executable             runtests
