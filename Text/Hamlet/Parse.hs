@@ -26,6 +26,7 @@ import Data.List (intercalate)
 import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Maybe (mapMaybe)
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -214,8 +215,6 @@ parseLine set = do
             c <- content InContent
             return c)
         let (tn, attr, classes) = tag' $ TagName name : xs
-        unless (null classes || null (filter (\(_, s, _) -> s == "class") attr)) $
-            fail "You cannot specify both class=\"...\" and .class in the same tag."
         return $ LineTag tn attr c classes
 
 data TagPiece = TagName String
@@ -263,11 +262,16 @@ nestToDoc set (Nest (LineMaybe d i) inside:rest) = do
     Ok $ DocMaybe d i inside' nothing : rest''
 nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
     let attrFix (x, y, z) = (x, y, [(Nothing, z)])
+    let takeClass (a, "class", b) = Just (a, b)
+        takeClass _ = Nothing
+    let clazzes = classes ++ mapMaybe takeClass attrs
+    let notClass (_, x, _) = x /= "class"
+    let noclass = filter notClass attrs
     let attrs' =
-            case classes of
-              [] -> map attrFix attrs
-              _ -> (Nothing, "class", classes)
-                       : map attrFix attrs -- FIXME combine all class attrs
+            case clazzes of
+              [] -> map attrFix noclass
+              _ -> (Nothing, "class", clazzes)
+                       : map attrFix noclass
     let closeStyle =
             if not (null content) || not (null inside)
                 then CloseSeparate

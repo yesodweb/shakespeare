@@ -976,6 +976,15 @@ bin {
         ]
 
 caseCondClass :: Assertion
-caseCondClass = helper "<p class=\"current\"></p>" [$hamlet|
+caseCondClass = do
+    helper "<p class=\"current\"></p>" [$hamlet|
 <p :False:.ignored :True:.current
+|]
+
+    helper "<p class=\"1 3 2 4\"></p>" [$hamlet|
+<p :True:.1 :True:class=2 :False:.a :False:class=b .3 class=4
+|]
+
+    helper "<p class=\"foo bar baz\"></p>" [$hamlet|
+<p class=foo class=bar class=baz
 |]
