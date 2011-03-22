@@ -103,6 +103,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "multi cassius" caseMultiCassius
     , testCase "nested maybes" caseNestedMaybes
     , testCase "lucius" caseLucius
+    , testCase "conditional class" caseCondClass
     ]
 
 data Url = Home | Sub SubUrl
@@ -973,3 +974,8 @@ bin {
         , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
         , "urlp:url(url?p=q)}"
         ]
+
+caseCondClass :: Assertion
+caseCondClass = helper "<p class=\"current\"></p>" [$hamlet|
+<p :False:.ignored :True:.current
+|]

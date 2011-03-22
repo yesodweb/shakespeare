@@ -138,7 +138,6 @@ parsePair = do
     val <- parseContents ";}"
     (char ';' >> return ()) <|> return ()
     whiteSpace
-    -- FIXME (char ';' >> return()) <|> return ()
     return (key, val)
 
 parseContents :: String -> Parser Contents

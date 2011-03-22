@@ -56,7 +56,7 @@ data Line = LineForall Deref Ident
             { _lineTagName :: String
             , _lineAttr :: [(Maybe Deref, String, [Content])]
             , _lineContent :: [Content]
-            , _lineClasses :: [[Content]]
+            , _lineClasses :: [(Maybe Deref, [Content])]
             }
           | LineContent [Content]
     deriving (Eq, Show, Read)
@@ -183,20 +183,19 @@ parseLine set = do
         cr <- (char '"' >> return InQuotes) <|> return notInQuotes
         content cr
     tagIdent = char '#' >> TagIdent <$> tagAttribValue NotInQuotes
-    tagClass = char '.' >> TagClass <$> tagAttribValue NotInQuotes
-    tagAttrib = do
-        cond <- (Just <$> tagAttribCond) <|> return Nothing
+    tagCond = do
+        _ <- char ':'
+        d <- parseDeref
+        _ <- char ':'
+        tagClass (Just d) <|> tagAttrib (Just d)
+    tagClass x = char '.' >> (TagClass . (,) x) <$> tagAttribValue NotInQuotes
+    tagAttrib cond = do
         s <- many1 $ noneOf " \t=\r\n>"
         v <- (do
             _ <- char '='
             s' <- tagAttribValue NotInQuotesAttr
             return s') <|> return []
         return $ TagAttrib (cond, s, v)
-    tagAttribCond = do
-        _ <- char ':'
-        d <- parseDeref
-        _ <- char ':'
-        return d
     tag' = foldr tag'' ("div", [], [])
     tag'' (TagName s) (_, y, z) = (s, y, z)
     tag'' (TagIdent s) (x, y, z) = (x, (Nothing, "id", s) : y, z)
@@ -207,18 +206,21 @@ parseLine set = do
         _ <- char '<'
         name' <- many  $ noneOf " \t.#\r\n!>"
         let name = if null name' then "div" else name'
-        xs <- many $ try ((many $ oneOf " \t") >> (tagIdent <|> tagClass <|> tagAttrib))
+        xs <- many $ try ((many $ oneOf " \t") >>
+              (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrib Nothing))
         _ <- many $ oneOf " \t"
         c <- (eol >> return []) <|> (do
             _ <- char '>'
             c <- content InContent
             return c)
         let (tn, attr, classes) = tag' $ TagName name : xs
+        unless (null classes || null (filter (\(_, s, _) -> s == "class") attr)) $
+            fail "You cannot specify both class=\"...\" and .class in the same tag."
         return $ LineTag tn attr c classes
 
 data TagPiece = TagName String
               | TagIdent [Content]
-              | TagClass [Content]
+              | TagClass (Maybe Deref, [Content])
               | TagAttrib (Maybe Deref, String, [Content])
     deriving Show
 
@@ -260,11 +262,12 @@ nestToDoc set (Nest (LineMaybe d i) inside:rest) = do
     rest'' <- nestToDoc set rest'
     Ok $ DocMaybe d i inside' nothing : rest''
 nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
+    let attrFix (x, y, z) = (x, y, [(Nothing, z)])
     let attrs' =
             case classes of
-              [] -> attrs
-              _ -> (Nothing, "class", intercalate [ContentRaw " "] classes)
-                       : attrs
+              [] -> map attrFix attrs
+              _ -> (Nothing, "class", classes)
+                       : map attrFix attrs -- FIXME combine all class attrs
     let closeStyle =
             if not (null content) || not (null inside)
                 then CloseSeparate
@@ -326,14 +329,33 @@ parseDoc set s = do
     ds <- nestToDoc set ns
     return $ compressDoc ds
 
-attrToContent :: (Maybe Deref, String, [Content]) -> [Doc]
+attrToContent :: (Maybe Deref, String, [(Maybe Deref, [Content])]) -> [Doc]
 attrToContent (Just cond, k, v) =
     [DocCond [(cond, attrToContent (Nothing, k, v))] Nothing]
 attrToContent (Nothing, k, []) = [DocContent $ ContentRaw $ ' ' : k]
-attrToContent (Nothing, k, v) =
+attrToContent (Nothing, k, [(Nothing, [])]) = [DocContent $ ContentRaw $ ' ' : k]
+attrToContent (Nothing, k, [(Nothing, v)]) =
     DocContent (ContentRaw (' ' : k ++ "=\""))
   : map DocContent v
   ++ [DocContent $ ContentRaw "\""]
+attrToContent (Nothing, k, v) = -- only for class
+      DocContent (ContentRaw (' ' : k ++ "=\""))
+    : concat (map go $ init v)
+    ++ go' (last v)
+    ++ [DocContent $ ContentRaw "\""]
+  where
+    go (Nothing, x) = map DocContent x ++ [DocContent $ ContentRaw " "]
+    go (Just b, x) =
+        [ DocCond
+            [(b, map DocContent x ++ [DocContent $ ContentRaw " "])]
+            Nothing
+        ]
+    go' (Nothing, x) = map DocContent x
+    go' (Just b, x) =
+        [ DocCond
+            [(b, map DocContent x)]
+            Nothing
+        ]
 
 -- | Settings for parsing of a hamlet document.
 data HamletSettings = HamletSettings
