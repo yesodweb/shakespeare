@@ -10,12 +10,6 @@ module Text.Julius
     , julius
     , juliusFile
     , juliusFileDebug
-#if HAMLET6TO7
-    , parseContents
-    , Content (..)
-    , Contents
-    , compressContents
-#endif
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)

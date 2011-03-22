@@ -30,11 +30,6 @@ module Text.Cassius
     , PercentageSize (..)
     , percentageSize
     , PixelSize (..)
-#if HAMLET6TO7
-    , parseBlocks
-    , Content (..)
-    , compressBlock
-#endif
     ) where
 
 import Text.Css

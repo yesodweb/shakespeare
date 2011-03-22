@@ -10,10 +10,6 @@ module Text.Hamlet.Parse
     , xhtmlHamletSettings
     , debugHamletSettings
     , CloseStyle (..)
-#if HAMLET6TO7
-    , parseLines
-    , Line (..)
-#endif
     )
     where
 
