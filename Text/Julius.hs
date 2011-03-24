@@ -70,7 +70,7 @@ parseContent =
         go (d, False) = ContentUrl d
         go (d, True) = ContentUrlParam d
     parseCaret' = either ContentRaw ContentMix `fmap` parseCaret
-    parseChar = (ContentRaw . return) `fmap` anyChar
+    parseChar = ContentRaw `fmap` (many1 $ noneOf "#@^")
 
 compressContents :: Contents -> Contents
 compressContents [] = []
