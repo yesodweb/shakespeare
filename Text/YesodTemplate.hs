@@ -64,13 +64,14 @@ liftContent ceq arg = do
   return $ ce `AppE` ae
 
 -- template expression variable
-data VarExp url = EPlain Builder
-                | EUrl url
-                | EUrlParam (url, [(String, String)])
-                | EMixin (YesodEnv url -> Builder)
+data Monoid a => VarExp url a = EPlain Builder
+                              | EUrl url
+                              | EUrlParam (url, [(String, String)])
+                              | EMixin (YesodEnv url -> a)
 
 data YesodTemplate = YesodTemplate {
-    toBuilder :: Q Exp
+    builderWrapper :: Q Exp
+  , toBuilder :: Q Exp
   , startVar :: Char
 }
 
@@ -106,7 +107,8 @@ stringToTH yt =
     contentsToType :: [Content] -> Q Exp
     contentsToType a = do
         r <- newName "_render"
-        c <- mapM (contentToTH r) a
+        bw <- builderWrapper yt
+        c <- mapM (contentToTH r bw) a
         d <- case c of
                 [] -> [|mempty|]
                 [x] -> return x
@@ -116,21 +118,21 @@ stringToTH yt =
         return $ LamE [VarP r] d
       where
           toB = toBuilder yt
-          contentToTH :: Name -> Content -> Q Exp  
-          contentToTH _ (ContentRaw s') = do
+          contentToTH :: Name -> Exp -> Content -> Q Exp  
+          contentToTH _ bw (ContentRaw s') = do
               ts <- [|fromText . TS.pack|]
-              return $ ts `AppE` LitE (StringL s')
-          contentToTH _ (ContentVar d) = do
+              return $ bw `AppE` (ts `AppE` LitE (StringL s'))
+          contentToTH _ bw (ContentVar d) = do
               tB <- toB
-              return $ tB `AppE` derefToExp [] d
-          contentToTH r (ContentUrl d) = do
+              return $ bw `AppE` (tB `AppE` derefToExp [] d)
+          contentToTH r bw (ContentUrl d) = do
               ts <- [|fromText . TS.pack|]
-              return $ ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE [])
-          contentToTH r (ContentUrlParam d) = do
+              return $ bw `AppE` (ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE []))
+          contentToTH r bw (ContentUrlParam d) = do
               ts <- [|fromText . TS.pack|]
               up <- [|\r' (u, p) -> r' u p|]
-              return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d)
-          contentToTH r (ContentMix d) = do
+              return $ bw `AppE` (ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d))
+          contentToTH r _ (ContentMix d) = do
               return $ derefToExp [] d `AppE` VarE r
 
 fileDebug :: YesodTemplate -> FilePath -> Q Exp
@@ -139,8 +141,11 @@ fileDebug yt fp = do
     let b = concatMap getVars $ (contentFromString yt) s
     c <- mapM vtToExp b
     let sc = startVar yt
-    cr <- [|runtime (contentFromStringStart sc) fp|]
-    return $ cr `AppE` ListE c
+    bw <- builderWrapper yt
+    rt <- [|runtime|]
+    cr <- [|(contentFromStringStart sc)|]
+    fp' <- [|fp|]
+    return $ (rt `AppE` bw) `AppE` cr `AppE` fp' `AppE` ListE c
   where
     toB = toBuilder yt
     render = newName "_render"
@@ -193,25 +198,24 @@ getVars (ContentUrl d) = [(d, VTUrl)]
 getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 getVars (ContentMix d) = [(d, VTMixin)]
 
-runtime :: (String -> [Content]) -> FilePath -> [(Deref, VarExp url)] -> (YesodEnv url -> Builder)
-runtime cfs fp cd render' = unsafePerformIO $ do
+runtime :: Monoid a => (Builder -> a) -> (String -> [Content]) -> FilePath -> [(Deref, VarExp url a)] -> (YesodEnv url -> a)
+runtime bw cfs fp cd render' = unsafePerformIO $ do
     s <- readFileUtf8 fp
     return $ mconcat $ map contentToBuilder $ cfs s
   where
-    contentToBuilder :: Content -> Builder
-    contentToBuilder (ContentRaw s) = fromText $ TS.pack s
+    contentToBuilder (ContentRaw s) = bw $ fromText $ TS.pack s
     contentToBuilder (ContentVar d) =
         case lookup d cd of
-            Just (EPlain s) -> s
+            Just (EPlain s) -> bw s
             _ -> error $ show d ++ ": expected EDPlain"
     contentToBuilder (ContentUrl d) =
         case lookup d cd of
-            Just (EUrl u) -> fromText $ TS.pack $ render' u []
+            Just (EUrl u) -> bw $ fromText $ TS.pack $ render' u []
             _ -> error $ show d ++ ": expected EUrl"
     contentToBuilder (ContentUrlParam d) =
         case lookup d cd of
             Just (EUrlParam (u, p)) ->
-                fromText $ TS.pack $ render' u p
+                bw $ fromText $ TS.pack $ render' u p
             _ -> error $ show d ++ ": expected EUrlParam"
     contentToBuilder (ContentMix d) =
         case lookup d cd of

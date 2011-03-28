@@ -21,11 +21,19 @@ import qualified Text.JSON.Enumerator as JE
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Blaze.ByteString.Builder (toLazyByteString)
 import Text.YesodTemplate
+import Data.Monoid
 
-type Julius url = YesodEnv url -> Builder
+type Julius url = YesodEnv url -> Javascript
+
+renderJavascript :: Javascript -> TL.Text
+renderJavascript (Javascript b) = toLazyText b
 
 renderJulius :: YesodEnv url -> Julius url -> TL.Text
-renderJulius r s = toLazyText $ s r
+-- renderJulius r s = toLazyText $ s r
+renderJulius r s = renderJavascript $ s r
+
+newtype Javascript = Javascript Builder
+    deriving Monoid
 
 class Lift j => ToJavascript j where
     toJavascript :: j -> Builder
@@ -42,8 +50,9 @@ instance Lift J.Root  where lift = lift . toLazyText . toJavascript
 instance Lift J.Value where lift = lift . toLazyText . toJavascript
 
 juliusTemplate :: YesodTemplate
-juliusTemplate = defaultYesodTemplate {toBuilder = toJExp}
+juliusTemplate = defaultYesodTemplate {toBuilder = toJExp, builderWrapper = javascript }
   where toJExp = [|toJavascript|]
+        javascript = [|Javascript|]
 
 julius :: QuasiQuoter
 julius = QuasiQuoter { quoteExp = stringToTH juliusTemplate }
