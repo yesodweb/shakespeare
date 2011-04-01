@@ -51,12 +51,13 @@ import qualified Data.Text.Encoding.Error as T
 import Text.Blaze.Renderer.Utf8 (renderHtml)
 import qualified Text.Blaze.Renderer.Text as BT
 import Text.Blaze (preEscapedText, preEscapedString, string, unsafeByteString)
+import Data.Text (Text)
 
 -- | Converts a 'Hamlet' to lazy bytestring.
-renderHamlet :: (url -> [(String, String)] -> String) -> Hamlet url -> L.ByteString
+renderHamlet :: (url -> [(Text, Text)] -> Text) -> Hamlet url -> L.ByteString
 renderHamlet render h = renderHtml $ h render
 
-renderHamletText :: (url -> [(String, String)] -> String) -> Hamlet url
+renderHamletText :: (url -> [(Text, Text)] -> Text) -> Hamlet url
                  -> T.Text
 renderHamletText render h =
     T.decodeUtf8With T.lenientDecode $ renderHtml $ h render

@@ -23,19 +23,21 @@ import Control.Failure
 import Text.Hamlet.Parse
 import Text.Hamlet.Quasi (Html)
 import Data.List (intercalate)
-import Text.Blaze (preEscapedString)
+import Text.Blaze (preEscapedString, preEscapedText)
+import Data.Text (Text)
 
 type HamletMap url = [([String], HamletData url)]
 
 data HamletData url
     = HDHtml Html
     | HDUrl url
-    | HDUrlParams url [(String, String)]
+    | HDUrlParams url [(Text, Text)]
     | HDTemplate HamletRT
     | HDBool Bool
     | HDMaybe (Maybe (HamletMap url))
     | HDList [HamletMap url]
 
+-- FIXME switch to Text?
 data SimpleDoc = SDRaw String
                | SDVar [String]
                | SDUrl Bool [String]
@@ -91,7 +93,7 @@ parseHamletRT set s =
 renderHamletRT :: Failure HamletException m
                => HamletRT
                -> HamletMap url
-               -> (url -> [(String, String)] -> String)
+               -> (url -> [(Text, Text)] -> Text)
                -> m Html
 renderHamletRT = renderHamletRT' False
 
@@ -99,7 +101,7 @@ renderHamletRT' :: Failure HamletException m
                 => Bool
                 -> HamletRT
                 -> HamletMap url
-                -> (url -> [(String, String)] -> String)
+                -> (url -> [(Text, Text)] -> Text)
                 -> m Html
 renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
     liftM mconcat $ mapM (go scope0) docs
@@ -113,9 +115,9 @@ renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
     go scope (SDUrl p n) = do
         v <- lookup' n n scope
         case (p, v) of
-            (False, HDUrl u) -> return $ preEscapedString $ renderUrl u []
+            (False, HDUrl u) -> return $ preEscapedText $ renderUrl u []
             (True, HDUrlParams u q) ->
-                return $ preEscapedString $ renderUrl u q
+                return $ preEscapedText $ renderUrl u q
             (False, _) -> fa $ showName n ++ ": expected HDUrl"
             (True, _) -> fa $ showName n ++ ": expected HDUrlParams"
     go scope (SDTemplate n) = do

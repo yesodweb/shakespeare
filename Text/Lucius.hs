@@ -18,24 +18,20 @@ import Text.Shakespeare
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
-import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText, singleton)
-import Data.Maybe (catMaybes)
+import Data.Text.Lazy.Builder (fromText)
 import Data.Monoid
-import Data.Word (Word8)
-import Data.Bits
-import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import Text.Hamlet.Quasi (readUtf8File)
-import Data.List (intersperse)
 import qualified Text.Cassius as C
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
-import Text.Shakespeare
 import Data.Char (isSpace)
 
 type Lucius a = C.Cassius a
 
+renderLucius :: (url -> [(TS.Text, TS.Text)] -> TS.Text)
+             -> Lucius url
+             -> TL.Text
 renderLucius = C.renderCassius
 
 lucius :: QuasiQuoter
@@ -66,8 +62,7 @@ blockToCss r (sel, pairs) = do
     props' <- listE (map go pairs)
     return css' `appE` sel' `appE` return props'
   where
-    go (x, y) = tupE [tlt $ contentsToBuilder r x, contentsToBuilder r y]
-    tlt = appE [|toLazyText|]
+    go (x, y) = tupE [contentsToBuilder r x, contentsToBuilder r y]
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -84,12 +79,12 @@ contentToBuilder :: Name -> Content -> Q Exp
 contentToBuilder _ (ContentRaw x) =
     [|fromText . TS.pack|] `appE` litE (StringL x)
 contentToBuilder _ (ContentVar d) =
-    [|fromLazyText . toCss|] `appE` return (derefToExp [] d)
+    [|toCss|] `appE` return (derefToExp [] d)
 contentToBuilder r (ContentUrl u) =
-    [|fromText . TS.pack|] `appE`
+    [|fromText|] `appE`
         (varE r `appE` return (derefToExp [] u) `appE` listE [])
 contentToBuilder r (ContentUrlParam u) =
-    [|fromText . TS.pack|] `appE`
+    [|fromText|] `appE`
         ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
 
 parseBlocks :: ([Block] -> [Block]) -> Parser [Block]
@@ -97,8 +92,10 @@ parseBlocks front = do
     whiteSpace
     (parseBlock >>= (\b -> parseBlocks (front . (:) b))) <|> (return $ map compressBlock $ front [])
 
+compressBlock :: Block -> Block
 compressBlock = id -- FIXME
 
+whiteSpace :: Parser ()
 whiteSpace = many (oneOf " \t\n\r" >> return ()) >> return () -- FIXME comments, don't use many
 
 parseBlock :: Parser Block

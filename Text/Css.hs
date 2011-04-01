@@ -7,5 +7,5 @@ import qualified Data.Text.Lazy as TL
 
 data Css' = Css'
     { _cssSelectors :: Builder
-    , _cssAttributes :: [(TL.Text, Builder)]
+    , _cssAttributes :: [(Builder, Builder)]
     }

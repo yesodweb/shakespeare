@@ -13,9 +13,10 @@ import Data.Either
 import Control.Monad (forM)
 import qualified Data.Text.Lazy as T
 import Text.Blaze (toHtml)
+import Data.Text (Text)
 
 unsafeRenderTemplate :: FilePath -> HamletMap url
-                     -> (url -> [(String, String)] -> String) -> Html
+                     -> (url -> [(Text, Text)] -> Text) -> Html
 unsafeRenderTemplate fp hd render = unsafePerformIO $ do
     contents <- fmap T.unpack $ readUtf8File fp
     temp <- parseHamletRT defaultHamletSettings contents

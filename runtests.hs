@@ -13,8 +13,9 @@ import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
 import qualified Data.List as L
-import qualified Data.JSON.Types as J
 import qualified Data.Map as Map
+import Data.Text (Text, pack, unpack)
+import Data.Monoid (mappend)
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -97,7 +98,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "in a row" caseInARow
     , testCase "embedded slash" caseEmbeddedSlash
     , testCase "string literals" caseStringLiterals
-    , testCase "embed json" caseEmbedJson
     , testCase "interpolated operators" caseOperators
     , testCase "HTML comments" caseHtmlComments
     , testCase "multi cassius" caseMultiCassius
@@ -108,17 +108,17 @@ testSuite = testGroup "Text.Hamlet"
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
-render :: Url -> [(String, String)] -> String
-render Home qs = "url" ++ showParams qs
-render (Sub SubUrl) qs = "suburl" ++ showParams qs
+render :: Url -> [(Text, Text)] -> Text
+render Home qs = pack "url" `mappend` showParams qs
+render (Sub SubUrl) qs = pack "suburl" `mappend` showParams qs
 
-showParams :: [(String, String)] -> String
-showParams [] = ""
+showParams :: [(Text, Text)] -> Text
+showParams [] = pack ""
 showParams z =
-    '?' : intercalate "&" (map go z)
+    pack $ '?' : intercalate "&" (map go z)
   where
     go (x, y) = go' x ++ '=' : go' y
-    go' = concatMap encodeUrlChar
+    go' = concatMap encodeUrlChar . unpack
 
 -- | Taken straight from web-encodings; reimplemented here to avoid extra
 -- dependencies.
@@ -153,7 +153,7 @@ data Arg url = Arg
     , list :: [Arg url]
     , nothing :: Maybe String
     , just :: Maybe String
-    , urlParams :: (Url, [(String, String)])
+    , urlParams :: (Url, [(Text, Text)])
     }
 
 theArg :: Arg url
@@ -167,7 +167,7 @@ theArg = Arg
     , list = [theArg, theArg, theArg]
     , nothing = Nothing
     , just = Just "just"
-    , urlParams = (Home, [("foo", "bar"), ("foo1", "bar1")])
+    , urlParams = (Home, [(pack "foo", pack "bar"), (pack "foo1", pack "bar1")])
     }
 
 helper :: String -> Hamlet Url -> Assertion
@@ -202,11 +202,11 @@ caseVarChain = do
 
 caseUrl :: Assertion
 caseUrl = do
-    helper (render Home []) [$hamlet|@{url theArg}|]
+    helper (unpack $ render Home []) [$hamlet|@{url theArg}|]
 
 caseUrlChain :: Assertion
 caseUrlChain = do
-    helper (render Home []) [$hamlet|@{url (getArg (getArg (getArg theArg)))}|]
+    helper (unpack $ render Home []) [$hamlet|@{url (getArg (getArg (getArg theArg)))}|]
 
 caseEmbed :: Assertion
 caseEmbed = do
@@ -560,7 +560,7 @@ caseHamletRT = do
             , (["template"], HDTemplate temp)
             , (["var"], HDHtml $ string "var")
             , (["url"], HDUrl Home)
-            , (["urlp"], HDUrlParams Home [("foo", "bar")])
+            , (["urlp"], HDUrlParams Home [(pack "foo", pack "bar")])
             , (["true"], HDBool True)
             , (["false"], HDBool False)
             ]
@@ -581,7 +581,7 @@ caseHamletFileDebugFeatures :: Assertion
 caseHamletFileDebugFeatures = do
     let var = "var"
     let url = Home
-    let urlp = (Home, [("foo", "bar")])
+    let urlp = (Home, [(pack "foo", pack "bar")])
     let template = [$hamlet|template|]
     let true = True
     let just = Just "just"
@@ -613,7 +613,7 @@ celper res h = do
 caseCassius :: Assertion
 caseCassius = do
     let var = "var"
-    let urlp = (Home, [("p", "q")])
+    let urlp = (Home, [(pack "p", pack "q")])
     flip celper [$cassius|
 foo
     background: #{colorBlack}
@@ -637,7 +637,7 @@ bin
 caseCassiusFile :: Assertion
 caseCassiusFile = do
     let var = "var"
-    let urlp = (Home, [("p", "q")])
+    let urlp = (Home, [(pack "p", pack "q")])
     flip celper $(cassiusFile "external1.cassius") $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
         , "bin{"
@@ -649,7 +649,7 @@ caseCassiusFile = do
 caseCassiusFileDebug :: Assertion
 caseCassiusFileDebug = do
     let var = "var"
-    let urlp = (Home, [("p", "q")])
+    let urlp = (Home, [(pack "p", pack "q")])
     flip celper $(cassiusFileDebug "external1.cassius") $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
         , "bin{"
@@ -675,7 +675,7 @@ jelper res h = T.pack res @=? renderJulius render h
 caseJulius :: Assertion
 caseJulius = do
     let var = "var"
-    let urlp = (Home, [("p", "q")])
+    let urlp = (Home, [(pack "p", pack "q")])
     flip jelper [$julius|שלום
 #{var}
 @{Home}
@@ -692,7 +692,7 @@ caseJulius = do
 caseJuliusFile :: Assertion
 caseJuliusFile = do
     let var = "var"
-    let urlp = (Home, [("p", "q")])
+    let urlp = (Home, [(pack "p", pack "q")])
     flip jelper $(juliusFile "external1.julius") $ unlines
         [ "שלום"
         , var
@@ -704,7 +704,7 @@ caseJuliusFile = do
 caseJuliusFileDebug :: Assertion
 caseJuliusFileDebug = do
     let var = "var"
-    let urlp = (Home, [("p", "q")])
+    let urlp = (Home, [(pack "p", pack "q")])
     flip jelper $(juliusFileDebug "external1.julius") $ unlines
         [ "שלום"
         , var
@@ -898,16 +898,6 @@ caseStringLiterals = do
     helper "str&quot;ing" [$hamlet|#{"str\"ing"}|]
     helper "str&lt;ing" [$hamlet|#{"str<ing"}|]
 
-caseEmbedJson :: Assertion
-caseEmbedJson = do
-    let v = J.ValueObject $ Map.fromList
-                [ ( T.pack "foo", J.ValueArray
-                    [ J.ValueAtom $ J.AtomText $ T.pack "bar"
-                    , J.ValueAtom $ J.AtomNumber 5
-                    ])
-                ]
-    jelper "{\"foo\":[\"bar\",5.0]}" [$julius|#{v}|]
-
 caseOperators = do
     helper "3" [$hamlet|#{show $ (+) 1 2}|]
     helper "6" [$hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
@@ -952,7 +942,7 @@ $nothing
 caseLucius :: Assertion
 caseLucius = do
     let var = "var"
-    let urlp = (Home, [("p", "q")])
+    let urlp = (Home, [(pack "p", pack "q")])
     flip celper [$lucius|
 foo {
     background: #{colorBlack};

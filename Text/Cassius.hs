@@ -58,7 +58,7 @@ instance ToCss Color where
         let (r1, r2) = toHex r
             (g1, g2) = toHex g
             (b1, b2) = toHex b
-         in TL.pack $ '#' :
+         in fromText $ TS.pack $ '#' :
             if r1 == r2 && g1 == g2 && b1 == b2
                 then [r1, g1, b1]
                 else [r1, r2, g1, g2, b1, b2]
@@ -83,30 +83,25 @@ renderCss :: Css -> TL.Text
 renderCss =
     toLazyText . mconcat . map go
   where
-    go (Css' x y) = mconcat
-        [ x
-        , singleton '{'
-        , mconcat $ intersperse (singleton ';') $ map go' y
-        , singleton '}'
-        ]
-    go' (k, v) = mconcat
-        [ fromLazyText k
-        , singleton ':'
-        , v
-        ]
+    go (Css' x y) =
+        x
+        `mappend` singleton '{'
+        `mappend` mconcat (intersperse (singleton ';') $ map go' y)
+        `mappend` singleton '}'
+    go' (k, v) = k `mappend` singleton ':' `mappend` v
 
-renderCassius :: (url -> [(String, String)] -> String) -> Cassius url -> TL.Text
+renderCassius :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Cassius url -> TL.Text
 renderCassius r s = renderCss $ s r
 
 type Css = [Css']
 
-type Cassius url = (url -> [(String, String)] -> String) -> Css
+type Cassius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Css
 
 class ToCss a where
-    toCss :: a -> TL.Text
-instance ToCss [Char] where toCss = TL.pack
-instance ToCss TS.Text where toCss = TL.fromChunks . return
-instance ToCss TL.Text where toCss = id
+    toCss :: a -> Builder
+instance ToCss [Char] where toCss = fromLazyText . TL.pack
+instance ToCss TS.Text where toCss = fromText
+instance ToCss TL.Text where toCss = fromLazyText
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -215,8 +210,7 @@ blockToCss r (sel, props) = do
     props' <- listE (map go props)
     return css' `appE` sel' `appE` return props'
   where
-    go (x, y) = tupE [tlt $ contentsToBuilder r x, contentsToBuilder r y]
-    tlt = appE [|toLazyText|]
+    go (x, y) = tupE [contentsToBuilder r x, contentsToBuilder r y]
 
 contentsToBuilder :: Name -> [Content] -> Q Exp
 contentsToBuilder r contents =
@@ -226,12 +220,12 @@ contentToBuilder :: Name -> Content -> Q Exp
 contentToBuilder _ (ContentRaw x) =
     [|fromText . TS.pack|] `appE` litE (StringL x)
 contentToBuilder _ (ContentVar d) =
-    [|fromLazyText . toCss|] `appE` return (derefToExp [] d)
+    [|toCss|] `appE` return (derefToExp [] d)
 contentToBuilder r (ContentUrl u) =
-    [|fromText . TS.pack|] `appE`
+    [|fromText|] `appE`
         (varE r `appE` return (derefToExp [] u) `appE` listE [])
 contentToBuilder r (ContentUrlParam u) =
-    [|fromText . TS.pack|] `appE`
+    [|fromText|] `appE`
         ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
 
 cassiusFile :: FilePath -> Q Exp
@@ -247,9 +241,9 @@ getVars (ContentVar d) = [(d, VTPlain)]
 getVars (ContentUrl d) = [(d, VTUrl)]
 getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
-data CDData url = CDPlain TL.Text
+data CDData url = CDPlain Builder
                 | CDUrl url
-                | CDUrlParam (url, [(String, String)])
+                | CDUrlParam (url, [(TS.Text, TS.Text)])
 
 vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
@@ -285,18 +279,18 @@ cassiusRuntime fp cd render' = unsafePerformIO $ do
     go' (ContentRaw s) = fromText $ TS.pack s
     go' (ContentVar d) =
         case lookup d cd of
-            Just (CDPlain s) -> fromLazyText s
+            Just (CDPlain s) -> s
             _ -> error $ show d ++ ": expected CDPlain"
     go' (ContentUrl d) =
         case lookup d cd of
-            Just (CDUrl u) -> fromText $ TS.pack $ render' u []
+            Just (CDUrl u) -> fromText $ render' u []
             _ -> error $ show d ++ ": expected CDUrl"
     go' (ContentUrlParam d) =
         case lookup d cd of
             Just (CDUrlParam (u, p)) ->
-                fromText $ TS.pack $ render' u p
+                fromText $ render' u p
             _ -> error $ show d ++ ": expected CDUrlParam"
-    go'' (k, v) = (toLazyText $ mconcat $ map go' k, mconcat $ map go' v)
+    go'' (k, v) = (mconcat $ map go' k, mconcat $ map go' v)
 
 
 -- CSS size wrappers
@@ -373,7 +367,7 @@ instance Fractional AbsoluteSize where
   fromRational x = AbsoluteSize Centimeter (fromRational x)
 
 instance ToCss AbsoluteSize where
-  toCss = TL.pack . show
+  toCss = fromText . TS.pack . show
 
 -- | Not intended for direct use, see 'mkSize'.
 data PercentageSize = PercentageSize
@@ -402,7 +396,7 @@ instance Fractional PercentageSize where
   fromRational x = PercentageSize (fromRational x)
 
 instance ToCss PercentageSize where
-  toCss = TL.pack . show
+  toCss = fromText . TS.pack . show
 
 -- | Converts number and unit suffix to CSS format.
 showSize :: Rational -> String -> String

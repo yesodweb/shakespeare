@@ -26,12 +26,12 @@ import Text.Shakespeare
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
 
-renderJulius :: (url -> [(String, String)] -> String) -> Julius url -> TL.Text
+renderJulius :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Julius url -> TL.Text
 renderJulius r s = renderJavascript $ s r
 
 newtype Javascript = Javascript Builder
     deriving Monoid
-type Julius url = (url -> [(String, String)] -> String) -> Javascript
+type Julius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Javascript
 
 class ToJavascript a where
     toJavascript :: a -> Builder
@@ -97,10 +97,10 @@ contentToJavascript _ (ContentVar d) = do
     ts <- [|Javascript . toJavascript|]
     return $ ts `AppE` derefToExp [] d
 contentToJavascript r (ContentUrl d) = do
-    ts <- [|Javascript . fromText . TS.pack|]
+    ts <- [|Javascript . fromText|]
     return $ ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE [])
 contentToJavascript r (ContentUrlParam d) = do
-    ts <- [|Javascript . fromText . TS.pack|]
+    ts <- [|Javascript . fromText|]
     up <- [|\r' (u, p) -> r' u p|]
     return $ ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d)
 contentToJavascript r (ContentMix d) = do
@@ -122,7 +122,7 @@ getVars (ContentMix d) = [(d, VTMixin)]
 
 data JDData url = JDPlain Builder
                 | JDUrl url
-                | JDUrlParam (url, [(String, String)])
+                | JDUrlParam (url, [(TS.Text, TS.Text)])
                 | JDMixin (Julius url)
 
 vtToExp :: (Deref, VarType) -> Q Exp
@@ -160,12 +160,12 @@ juliusRuntime fp cd render' = unsafePerformIO $ do
             _ -> error $ show d ++ ": expected JDPlain"
     go (ContentUrl d) =
         case lookup d cd of
-            Just (JDUrl u) -> Javascript $ fromText $ TS.pack $ render' u []
+            Just (JDUrl u) -> Javascript $ fromText $ render' u []
             _ -> error $ show d ++ ": expected JDUrl"
     go (ContentUrlParam d) =
         case lookup d cd of
             Just (JDUrlParam (u, p)) ->
-                Javascript $ fromText $ TS.pack $ render' u p
+                Javascript $ fromText $ render' u p
             _ -> error $ show d ++ ": expected JDUrlParam"
     go (ContentMix d) =
         case lookup d cd of

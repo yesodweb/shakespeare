@@ -28,10 +28,11 @@ import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import Data.Monoid (Monoid (..))
 import Data.Maybe (fromMaybe)
+import Data.Text (Text)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TIO
 import qualified System.IO as SIO
-import Text.Blaze (Html, preEscapedString, string, toHtml)
+import Text.Blaze (Html, preEscapedString, toHtml)
 
 readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do
@@ -193,17 +194,17 @@ maybeH Nothing _ (Just x) = x
 maybeH (Just v) f _ = f v
 
 -- | An function generating an 'Html' given a URL-rendering function.
-type Hamlet url = (url -> [(String, String)] -> String) -> Html
+type Hamlet url = (url -> [(Text, Text)] -> Text) -> Html
 
 class Monad (HamletMonad a) => HamletValue a where
     data HamletMonad a :: * -> *
     type HamletUrl a
     toHamletValue :: HamletMonad a () -> a
     htmlToHamletMonad :: Html -> HamletMonad a ()
-    urlToHamletMonad :: HamletUrl a -> [(String, String)] -> HamletMonad a ()
+    urlToHamletMonad :: HamletUrl a -> [(Text, Text)] -> HamletMonad a ()
     fromHamletValue :: a -> HamletMonad a ()
 
-type Render url = url -> [(String, String)] -> String
+type Render url = url -> [(Text, Text)] -> Text
 instance HamletValue (Hamlet url) where
     newtype HamletMonad (Hamlet url) a =
         HMonad { runHMonad :: Render url -> (Html, a) }
@@ -211,7 +212,7 @@ instance HamletValue (Hamlet url) where
     toHamletValue = fmap fst . runHMonad
     htmlToHamletMonad x = HMonad $ const (x, ())
     urlToHamletMonad url pairs = HMonad $ \r ->
-        (string $ r url pairs, ())
+        (toHtml $ r url pairs, ())
     fromHamletValue f = HMonad $ \r -> (f r, ())
 instance Monad (HamletMonad (Hamlet url)) where
     return x = HMonad $ const (mempty, x)

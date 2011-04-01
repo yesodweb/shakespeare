@@ -38,7 +38,9 @@ fractionalInstanceDec name = InstanceD [] (instanceType "Fractional" name) decs
 toCssInstanceDec :: Name -> Dec
 toCssInstanceDec name = InstanceD [] (instanceType "ToCss" name) [toCssDec]
   where toCssDec = FunD (mkName "toCss") [Clause [] showBody []]
-        showBody = NormalB $ AppE (AppE dot pack) show
+        showBody = NormalB $ (AppE dot from) `AppE` ((AppE dot pack) `AppE` show)
+        -- FIXME this whole section makes me a little nervous
+        from = VarE (mkName "fromLazyText")
         pack = VarE (mkName "TL.pack")
         dot = VarE (mkName ".")
         show = VarE (mkName "show")
