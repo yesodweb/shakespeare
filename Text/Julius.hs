@@ -22,10 +22,6 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Hamlet.Quasi (readUtf8File)
 import Text.Shakespeare
-import qualified Data.JSON.Types as J
-import qualified Text.JSON.Enumerator as JE
-import Data.Text.Lazy.Encoding (decodeUtf8)
-import Blaze.ByteString.Builder (toLazyByteString)
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -42,11 +38,6 @@ class ToJavascript a where
 instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
 instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
-instance ToJavascript J.Root where
-    toJavascript (J.RootObject o) = toJavascript $ J.ValueObject o
-    toJavascript (J.RootArray o) = toJavascript $ J.ValueArray o
-instance ToJavascript J.Value where
-    toJavascript = fromLazyText . decodeUtf8 . toLazyByteString . JE.renderValue
 
 data Content = ContentRaw String
              | ContentVar Deref
