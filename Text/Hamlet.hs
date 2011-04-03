@@ -24,6 +24,7 @@ module Text.Hamlet
     , string
     , unsafeByteString
     , cdata
+    , toHtml
       -- * Rendering
       -- ** ByteString
     , renderHamlet
@@ -50,7 +51,7 @@ import qualified Data.Text.Lazy.Encoding as T
 import qualified Data.Text.Encoding.Error as T
 import Text.Blaze.Renderer.Utf8 (renderHtml)
 import qualified Text.Blaze.Renderer.Text as BT
-import Text.Blaze (preEscapedText, preEscapedString, string, unsafeByteString)
+import Text.Blaze (preEscapedText, preEscapedString, string, unsafeByteString, toHtml)
 import Data.Text (Text)
 
 -- | Converts a 'Hamlet' to lazy bytestring.
