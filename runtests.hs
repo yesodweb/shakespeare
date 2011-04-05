@@ -103,6 +103,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "multi cassius" caseMultiCassius
     , testCase "nested maybes" caseNestedMaybes
     , testCase "lucius" caseLucius
+    , testCase "lucius file" caseLuciusFile
+    , testCase "lucius file debug" caseLuciusFileDebug
     , testCase "conditional class" caseCondClass
     ]
 
@@ -978,3 +980,24 @@ caseCondClass = do
     helper "<p class=\"foo bar baz\"></p>" [$hamlet|
 <p class=foo class=bar class=baz
 |]
+
+caseLuciusFile :: Assertion
+caseLuciusFile = do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip celper $(luciusFile "external1.lucius") $ concat
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
+        ]
+
+caseLuciusFileDebug :: Assertion
+caseLuciusFileDebug = do
+    let var = "var"
+    writeFile "external2.lucius" "foo{#{var}: 1}"
+    celper "foo{var:1}" $(luciusFileDebug "external2.lucius")
+    writeFile "external2.lucius" "foo{#{var}: 2}"
+    celper "foo{var:2}" $(luciusFileDebug "external2.lucius")
+    writeFile "external2.lucius" "foo{#{var}: 1}"

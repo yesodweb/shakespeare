@@ -9,6 +9,8 @@ module Text.Lucius
     , renderLucius
       -- * Parsing
     , lucius
+    , luciusFile
+    , luciusFileDebug
       -- * Re-export cassius
     , module Text.Cassius
     ) where
@@ -26,6 +28,7 @@ import qualified Text.Cassius as C
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
 import Data.Char (isSpace)
+import Text.Hamlet.Quasi (readUtf8File)
 
 type Lucius a = C.Cassius a
 
@@ -63,13 +66,6 @@ blockToCss r (sel, pairs) = do
     return css' `appE` sel' `appE` return props'
   where
     go (x, y) = tupE [contentsToBuilder r x, contentsToBuilder r y]
-
-data Content = ContentRaw String
-             | ContentVar Deref
-             | ContentUrl Deref
-             | ContentUrlParam Deref
-    deriving (Show, Eq)
-type Contents = [Content]
 
 contentsToBuilder :: Name -> [Content] -> Q Exp
 contentsToBuilder r contents =
@@ -155,3 +151,10 @@ parseContent restricted =
         _ <- try $ string "/*"
         _ <- manyTill anyChar $ try $ string "*/"
         return $ ContentRaw ""
+
+luciusFile :: FilePath -> Q Exp
+luciusFile fp = do
+    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    luciusFromString contents
+
+luciusFileDebug = cssFileDebug [|parseBlocks id|] $ parseBlocks id

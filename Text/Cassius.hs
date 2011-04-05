@@ -97,19 +97,10 @@ type Css = [Css']
 
 type Cassius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Css
 
-class ToCss a where
-    toCss :: a -> Builder
 instance ToCss [Char] where toCss = fromLazyText . TL.pack
 instance ToCss TS.Text where toCss = fromText
 instance ToCss TL.Text where toCss = fromLazyText
 
-data Content = ContentRaw String
-             | ContentVar Deref
-             | ContentUrl Deref
-             | ContentUrlParam Deref
-    deriving (Show, Eq)
-type Contents = [Content]
-type ContentPair = (Contents, Contents)
 type Block = (Contents, [ContentPair])
 
 parseBlocks :: Parser [Block]
@@ -233,39 +224,14 @@ cassiusFile fp = do
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     cassiusFromString contents
 
-data VarType = VTPlain | VTUrl | VTUrlParam
-
 getVars :: Content -> [(Deref, VarType)]
 getVars ContentRaw{} = []
 getVars (ContentVar d) = [(d, VTPlain)]
 getVars (ContentUrl d) = [(d, VTUrl)]
 getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
-data CDData url = CDPlain Builder
-                | CDUrl url
-                | CDUrlParam (url, [(TS.Text, TS.Text)])
-
-vtToExp :: (Deref, VarType) -> Q Exp
-vtToExp (d, vt) = do
-    d' <- lift d
-    c' <- c vt
-    return $ TupE [d', c' `AppE` derefToExp [] d]
-  where
-    c :: VarType -> Q Exp
-    c VTPlain = [|CDPlain . toCss|]
-    c VTUrl = [|CDUrl|]
-    c VTUrlParam = [|CDUrlParam|]
-
 cassiusFileDebug :: FilePath -> Q Exp
-cassiusFileDebug fp = do
-    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
-    let a = either (error . show) id $ parse parseBlocks s s
-    c <- mapM vtToExp $ concatMap getVars $ concatMap go a
-    cr <- [|cassiusRuntime|]
-    return $ cr `AppE` (LitE $ StringL fp) `AppE` ListE c
-  where
-    go (x, y) = x ++ concatMap go' y
-    go' (k, v) = k ++ v
+cassiusFileDebug = cssFileDebug [|parseBlocks|] parseBlocks
 
 cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
 cassiusRuntime fp cd render' = unsafePerformIO $ do
