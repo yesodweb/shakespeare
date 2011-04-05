@@ -9,8 +9,11 @@ module Text.Shakespeare
     , Scope
     , parseDeref
     , parseHash
+    , parseVar
     , parseAt
+    , parseUrl
     , parseCaret
+    , parseInt
     , derefToExp
     , flattenDeref
     ) where
@@ -159,9 +162,11 @@ flattenDeref (DerefBranch (DerefIdent (Ident x)) y) = do
 flattenDeref _ = Nothing
 
 parseHash :: Parser (Either String Deref)
-parseHash = do
-    _ <- char '#'
-    (char '\\' >> return (Left "#")) <|> (do
+parseHash = parseVar '#'
+
+parseVar c = do
+    _ <- char c
+    (char '\\' >> return (Left [c])) <|> (do
         _ <- char '{'
         deref <- parseDeref
         _ <- char '}'
@@ -169,25 +174,29 @@ parseHash = do
             -- Check for hash just before newline
             _ <- lookAhead (oneOf "\r\n" >> return ()) <|> eof
             return $ Left ""
-            ) <|> return (Left "#")
+            ) <|> return (Left [c])
 
 parseAt :: Parser (Either String (Deref, Bool))
-parseAt = do
-    _ <- char '@'
-    (char '\\' >> return (Left "@")) <|> (do
-        x <- (char '?' >> return True) <|> return False
+parseAt = parseUrl '@' '?'
+
+parseUrl c d = do
+    _ <- char c
+    (char '\\' >> return (Left [c])) <|> (do
+        x <- (char d >> return True) <|> return False
         (do
             _ <- char '{'
             deref <- parseDeref
             _ <- char '}'
             return $ Right (deref, x))
-                <|> return (Left $ if x then "@?" else "@"))
+                <|> return (Left $ if x then [c, d] else [c]))
 
 parseCaret :: Parser (Either String Deref)
-parseCaret = do
-    _ <- char '^'
-    (char '\\' >> return (Left "^")) <|> (do
+parseCaret = parseInt '^'
+
+parseInt c = do
+    _ <- char c
+    (char '\\' >> return (Left [c])) <|> (do
         _ <- char '{'
         deref <- parseDeref
         _ <- char '}'
-        return $ Right deref) <|> return (Left "^")
+        return $ Right deref) <|> return (Left [c])

@@ -46,6 +46,7 @@ library
                      Text.Cassius
                      Text.Lucius
                      Text.Julius
+                     Text.Romeo
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
                      Text.Hamlet.Debug
