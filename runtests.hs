@@ -106,6 +106,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "lucius file" caseLuciusFile
     , testCase "lucius file debug" caseLuciusFileDebug
     , testCase "conditional class" caseCondClass
+    , testCase "lucius nested" caseLuciusNested
     ]
 
 data Url = Home | Sub SubUrl
@@ -1001,3 +1002,13 @@ caseLuciusFileDebug = do
     writeFile "external2.lucius" "foo{#{var}: 2}"
     celper "foo{var:2}" $(luciusFileDebug "external2.lucius")
     writeFile "external2.lucius" "foo{#{var}: 1}"
+
+caseLuciusNested :: Assertion
+caseLuciusNested = do
+    celper "foo bar{baz:bin}" [$lucius|
+foo {
+    bar {
+        baz: bin;
+    }
+}
+|]

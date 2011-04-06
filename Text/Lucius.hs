@@ -15,6 +15,7 @@ module Text.Lucius
     , module Text.Cassius
     ) where
 
+import Debug.Trace
 import Text.Cassius hiding (Cassius, renderCassius, cassius, cassiusFile, cassiusFileDebug)
 import Text.Shakespeare
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -29,6 +30,8 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
 import Data.Char (isSpace)
 import Text.Hamlet.Quasi (readUtf8File)
+import Control.Applicative ((<$>))
+import Data.Either (partitionEithers)
 
 type Lucius a = C.Cassius a
 
@@ -42,54 +45,13 @@ lucius = QuasiQuoter { quoteExp = luciusFromString }
 
 luciusFromString :: String -> Q Exp
 luciusFromString s =
-    blocksToLucius
+    blocksToCassius
   $ either (error . show) id $ parse (parseBlocks id) s s
-
-type Block = (Selector, Pairs)
-
-type Pairs = [Pair]
-
-type Pair = (Contents, Contents)
-
-type Selector = Contents
-
-blocksToLucius :: [Block] -> Q Exp
-blocksToLucius blocks = do
-    r <- newName "_render"
-    lamE [varP r] $ listE $ map (blockToCss r) blocks
-
-blockToCss :: Name -> Block -> Q Exp
-blockToCss r (sel, pairs) = do
-    css' <- [|Css'|]
-    let sel' = contentsToBuilder r sel
-    props' <- listE (map go pairs)
-    return css' `appE` sel' `appE` return props'
-  where
-    go (x, y) = tupE [contentsToBuilder r x, contentsToBuilder r y]
-
-contentsToBuilder :: Name -> [Content] -> Q Exp
-contentsToBuilder r contents =
-    appE [|mconcat|] $ listE $ map (contentToBuilder r) contents
-
-contentToBuilder :: Name -> Content -> Q Exp
-contentToBuilder _ (ContentRaw x) =
-    [|fromText . TS.pack|] `appE` litE (StringL x)
-contentToBuilder _ (ContentVar d) =
-    [|toCss|] `appE` return (derefToExp [] d)
-contentToBuilder r (ContentUrl u) =
-    [|fromText|] `appE`
-        (varE r `appE` return (derefToExp [] u) `appE` listE [])
-contentToBuilder r (ContentUrlParam u) =
-    [|fromText|] `appE`
-        ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
 
 parseBlocks :: ([Block] -> [Block]) -> Parser [Block]
 parseBlocks front = do
     whiteSpace
     (parseBlock >>= (\b -> parseBlocks (front . (:) b))) <|> (return $ map compressBlock $ front [])
-
-compressBlock :: Block -> Block
-compressBlock = id -- FIXME
 
 whiteSpace :: Parser ()
 whiteSpace = many (oneOf " \t\n\r" >> return ()) >> return () -- FIXME comments, don't use many
@@ -99,9 +61,10 @@ parseBlock = do
     sel <- parseSelector
     _ <- char '{'
     whiteSpace
-    pairs <- parsePairs id
+    pairsBlocks <- parsePairsBlocks id
+    let (pairs, blocks) = partitionEithers pairsBlocks
     whiteSpace
-    return (sel, pairs)
+    return $ Block sel pairs blocks
 
 parseSelector :: Parser Selector
 parseSelector = fmap trim $ parseContents "{"
@@ -118,10 +81,22 @@ trim =
     trimS True = dropWhile isSpace
     trimS False = reverse . dropWhile isSpace . reverse
 
-parsePairs :: ([Pair] -> [Pair]) -> Parser [Pair]
-parsePairs front = (char '}' >> return (front [])) <|> (do
-    x <- parsePair
-    parsePairs $ front . (:) x)
+type PairBlock = Either Pair Block
+parsePairsBlocks :: ([PairBlock] -> [PairBlock]) -> Parser [PairBlock]
+parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
+    isBlock <- lookAhead checkIfBlock
+    x <- if traceShow ("isBlock", isBlock) isBlock
+            then Right <$> parseBlock
+            else Left <$> parsePair
+    parsePairsBlocks $ front . (:) x)
+  where
+    checkIfBlock = do
+        skipMany $ noneOf "#@"
+        (parseHash >> checkIfBlock)
+            <|> (parseAt >> checkIfBlock)
+            <|> (char '{' >> return True)
+            <|> (oneOf ";}" >> return False)
+            <|> (anyChar >> checkIfBlock)
 
 parsePair :: Parser Pair
 parsePair = do

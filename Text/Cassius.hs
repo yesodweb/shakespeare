@@ -93,27 +93,14 @@ renderCss =
 renderCassius :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Cassius url -> TL.Text
 renderCassius r s = renderCss $ s r
 
-type Css = [Css']
-
 type Cassius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Css
 
 instance ToCss [Char] where toCss = fromLazyText . TL.pack
 instance ToCss TS.Text where toCss = fromText
 instance ToCss TL.Text where toCss = fromLazyText
 
-type Block = (Contents, [ContentPair])
-
 parseBlocks :: Parser [Block]
 parseBlocks = (map compressBlock . catMaybes) `fmap` many parseBlock
-
-compressBlock :: Block -> Block
-compressBlock (x, y) =
-    (cc x, map go y)
-  where
-    go (k, v) = (cc k, cc v)
-    cc [] = []
-    cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
-    cc (a:b) = a : cc b
 
 parseEmptyLine :: Parser ()
 parseEmptyLine = do
@@ -147,7 +134,7 @@ parseBlock = do
         pairs <- fmap catMaybes $ many $ parsePair' indent
         case pairs of
             [] -> return Nothing
-            _ -> return $ Just (name, pairs)
+            _ -> return $ Just $ Block name pairs []
     parsePair' indent = try (parseEmptyLine >> return Nothing)
                     <|> try (Just `fmap` parsePair indent)
 
@@ -180,11 +167,6 @@ parseContent allowColon =
         _ <- manyTill anyChar $ try $ string "*/"
         return $ ContentRaw ""
 
-blocksToCassius :: [(Contents, [ContentPair])] -> Q Exp
-blocksToCassius a = do
-    r <- newName "_render"
-    lamE [varP r] $ listE $ map (blockToCss r) a
-
 cassius :: QuasiQuoter
 cassius = QuasiQuoter { quoteExp = cassiusFromString }
 
@@ -193,31 +175,6 @@ cassiusFromString s =
     blocksToCassius
   $ either (error . show) id $ parse parseBlocks s s
 
-
-blockToCss :: Name -> (Contents, [ContentPair]) -> Q Exp
-blockToCss r (sel, props) = do
-    css' <- [|Css'|]
-    let sel' = contentsToBuilder r sel
-    props' <- listE (map go props)
-    return css' `appE` sel' `appE` return props'
-  where
-    go (x, y) = tupE [contentsToBuilder r x, contentsToBuilder r y]
-
-contentsToBuilder :: Name -> [Content] -> Q Exp
-contentsToBuilder r contents =
-    appE [|mconcat|] $ listE $ map (contentToBuilder r) contents
-
-contentToBuilder :: Name -> Content -> Q Exp
-contentToBuilder _ (ContentRaw x) =
-    [|fromText . TS.pack|] `appE` litE (StringL x)
-contentToBuilder _ (ContentVar d) =
-    [|toCss|] `appE` return (derefToExp [] d)
-contentToBuilder r (ContentUrl u) =
-    [|fromText|] `appE`
-        (varE r `appE` return (derefToExp [] u) `appE` listE [])
-contentToBuilder r (ContentUrlParam u) =
-    [|fromText|] `appE`
-        ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
@@ -232,32 +189,6 @@ getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
 cassiusFileDebug :: FilePath -> Q Exp
 cassiusFileDebug = cssFileDebug [|parseBlocks|] parseBlocks
-
-cassiusRuntime :: FilePath -> [(Deref, CDData url)] -> Cassius url
-cassiusRuntime fp cd render' = unsafePerformIO $ do
-    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
-    let a = either (error . show) id $ parse parseBlocks s s
-    return $ map go a
-  where
-    go :: (Contents, [ContentPair]) -> Css'
-    go (x, y) = Css' (mconcat $ map go' x) $ map go'' y
-    go' :: Content -> Builder
-    go' (ContentRaw s) = fromText $ TS.pack s
-    go' (ContentVar d) =
-        case lookup d cd of
-            Just (CDPlain s) -> s
-            _ -> error $ show d ++ ": expected CDPlain"
-    go' (ContentUrl d) =
-        case lookup d cd of
-            Just (CDUrl u) -> fromText $ render' u []
-            _ -> error $ show d ++ ": expected CDUrl"
-    go' (ContentUrlParam d) =
-        case lookup d cd of
-            Just (CDUrlParam (u, p)) ->
-                fromText $ render' u p
-            _ -> error $ show d ++ ": expected CDUrlParam"
-    go'' (k, v) = (mconcat $ map go' k, mconcat $ map go' v)
-
 
 -- CSS size wrappers
 
