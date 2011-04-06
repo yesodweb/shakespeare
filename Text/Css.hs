@@ -51,22 +51,32 @@ cssFileDebug parseBlocks' parseBlocks fp = do
   where
     go :: Block -> [Content] -- FIXME use blockToCss
     go (Block x y z) =
-        (if null y then [] else x ++ concatMap go' y) ++
+        concatMap go' y ++
         concatMap (subGo x) z
-    go' (k, v) = [ContentRaw "FIXME"] ++ k ++ v
+    go' (k, v) = k ++ v
     subGo x (Block a b c) =
         go $ Block a' b c
       where
-        a' = x ++ ContentRaw " " : a
+        a' = combineSelectors x a
+
+combineSelectors a b = a ++ ContentRaw " " : b
 
 cssRuntime :: Parser [Block] -> FilePath -> [(Deref, CDData url)] -> (url -> [(Text, Text)] -> Text) -> Css
 cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
-    return $ map go a
+    return $ foldr ($) [] $ map go a
   where
-    go :: Block -> Css'
-    go (Block x y _FIXME) = Css' (mconcat $ map go' x) $ map go'' y
+    go :: Block -> [Css'] -> [Css']
+    -- FIXME share code with blockToCss
+    go (Block x y z) =
+        (:) (Css' (mconcat $ map go' x) (map go'' y))
+        . foldr (.) id (map (subGo x) z)
+    subGo :: [Content] -> Block -> [Css'] -> [Css']
+    subGo x (Block a b c) =
+        go (Block a' b c)
+      where
+        a' = combineSelectors x a
     go' :: Content -> Builder
     go' (ContentRaw s) = fromText $ pack s
     go' (ContentVar d) =
@@ -128,7 +138,7 @@ blockToCss r (Block sel props subblocks) =
     subGo (Block sel' b c) =
         blockToCss r $ Block sel'' b c
       where
-        sel'' = sel ++ ContentRaw " " : sel'
+        sel'' = combineSelectors sel sel'
 
 contentsToBuilder :: Name -> [Content] -> Q Exp
 contentsToBuilder r contents =

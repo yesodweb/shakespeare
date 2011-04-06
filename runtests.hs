@@ -1012,3 +1012,5 @@ foo {
     }
 }
 |]
+    celper "foo bar{baz:bin}" $(luciusFile "external-nested.lucius")
+    celper "foo bar{baz:bin}" $(luciusFileDebug "external-nested.lucius")
