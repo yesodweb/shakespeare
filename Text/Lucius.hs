@@ -15,7 +15,6 @@ module Text.Lucius
     , module Text.Cassius
     ) where
 
-import Debug.Trace
 import Text.Cassius hiding (Cassius, renderCassius, cassius, cassiusFile, cassiusFileDebug)
 import Text.Shakespeare
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -85,18 +84,22 @@ type PairBlock = Either Pair Block
 parsePairsBlocks :: ([PairBlock] -> [PairBlock]) -> Parser [PairBlock]
 parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
     isBlock <- lookAhead checkIfBlock
-    x <- if traceShow ("isBlock", isBlock) isBlock
-            then Right <$> parseBlock
+    x <- if isBlock
+            then (do
+                b <- parseBlock
+                whiteSpace
+                return $ Right b)
             else Left <$> parsePair
     parsePairsBlocks $ front . (:) x)
   where
     checkIfBlock = do
-        skipMany $ noneOf "#@"
+        skipMany $ noneOf "#@{};"
         (parseHash >> checkIfBlock)
             <|> (parseAt >> checkIfBlock)
             <|> (char '{' >> return True)
             <|> (oneOf ";}" >> return False)
             <|> (anyChar >> checkIfBlock)
+            <|> fail "checkIfBlock"
 
 parsePair :: Parser Pair
 parsePair = do

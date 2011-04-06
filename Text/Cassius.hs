@@ -83,6 +83,7 @@ renderCss :: Css -> TL.Text
 renderCss =
     toLazyText . mconcat . map go
   where
+    go (Css' x []) = mempty
     go (Css' x y) =
         x
         `mappend` singleton '{'

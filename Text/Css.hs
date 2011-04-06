@@ -49,9 +49,15 @@ cssFileDebug parseBlocks' parseBlocks fp = do
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
   where
-    go :: Block -> [Content]
-    go (Block x y _FIXME) = x ++ concatMap go' y
-    go' (k, v) = k ++ v
+    go :: Block -> [Content] -- FIXME use blockToCss
+    go (Block x y z) =
+        (if null y then [] else x ++ concatMap go' y) ++
+        concatMap (subGo x) z
+    go' (k, v) = [ContentRaw "FIXME"] ++ k ++ v
+    subGo x (Block a b c) =
+        go $ Block a' b c
+      where
+        a' = x ++ ContentRaw " " : a
 
 cssRuntime :: Parser [Block] -> FilePath -> [(Deref, CDData url)] -> (url -> [(Text, Text)] -> Text) -> Css
 cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
@@ -113,13 +119,16 @@ compressBlock (Block x y blocks) =
     cc (a:b) = a : cc b
 
 blockToCss :: Name -> Block -> Q Exp
-blockToCss r (Block sel props _FIXME) = do
-    css' <- [|Css'|]
-    let sel' = contentsToBuilder r sel
-    props' <- listE (map go props)
-    return css' `appE` sel' `appE` return props'
+blockToCss r (Block sel props subblocks) =
+    [|(:) (Css' $(contentsToBuilder r sel) $(listE $ map go props))
+      . foldr (.) id $(listE $ map subGo subblocks)
+    |]
   where
     go (x, y) = tupE [contentsToBuilder r x, contentsToBuilder r y]
+    subGo (Block sel' b c) =
+        blockToCss r $ Block sel'' b c
+      where
+        sel'' = sel ++ ContentRaw " " : sel'
 
 contentsToBuilder :: Name -> [Content] -> Q Exp
 contentsToBuilder r contents =
@@ -140,4 +149,4 @@ contentToBuilder r (ContentUrlParam u) =
 blocksToCassius :: [Block] -> Q Exp
 blocksToCassius a = do
     r <- newName "_render"
-    lamE [varP r] $ listE $ map (blockToCss r) a
+    lamE [varP r] $ appE [|foldr ($) []|] $ listE $ map (blockToCss r) a
