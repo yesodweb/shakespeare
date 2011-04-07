@@ -55,13 +55,13 @@ library
                      Text.MkSizeType
                      Text.Shakespeare
                      Text.Css
-    ghc-options:     -Wall -Werror
+    ghc-options:     -Wall
 
 executable             runtests
     if flag(test)
         Buildable: True
         cpp-options:   -DTEST
-        ghc-options:     -Wall -Werror
+        ghc-options:     -Wall
         build-depends: QuickCheck >= 2 && < 3,
                        HUnit,
                        test-framework-hunit,
