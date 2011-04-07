@@ -18,7 +18,6 @@ import Control.Applicative ((<$>), Applicative (..))
 import Control.Monad
 import Control.Arrow
 import Data.Data
-import Data.List (intercalate)
 import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set

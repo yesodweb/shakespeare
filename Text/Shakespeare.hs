@@ -23,7 +23,7 @@ import Language.Haskell.TH (appE)
 import Data.Char (isUpper)
 import Text.ParserCombinators.Parsec
 import Data.List (intercalate)
-import Data.Ratio (numerator, denominator, (%))
+import Data.Ratio (Ratio, numerator, denominator, (%))
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 
@@ -61,7 +61,7 @@ instance Lift Deref where
     lift (DerefRational r) = do
         n <- lift $ numerator r
         d <- lift $ denominator r
-        per <- [|(%)|]
+        per <- [|(%) :: Int -> Int -> Ratio Int|]
         dr <- [|DerefRational|]
         return $ dr `AppE` (InfixE (Just n) per (Just d))
     lift (DerefString s) = [|DerefString|] `appE` lift s
@@ -164,6 +164,7 @@ flattenDeref _ = Nothing
 parseHash :: Parser (Either String Deref)
 parseHash = parseVar '#'
 
+parseVar :: Char -> Parser (Either String Deref)
 parseVar c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
@@ -179,6 +180,7 @@ parseVar c = do
 parseAt :: Parser (Either String (Deref, Bool))
 parseAt = parseUrl '@' '?'
 
+parseUrl :: Char -> Char -> Parser (Either String (Deref, Bool))
 parseUrl c d = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
@@ -193,6 +195,7 @@ parseUrl c d = do
 parseCaret :: Parser (Either String Deref)
 parseCaret = parseInt '^'
 
+parseInt :: Char -> Parser (Either String Deref)
 parseInt c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do

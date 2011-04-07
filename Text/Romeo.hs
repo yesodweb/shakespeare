@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 -- | For lack of a better name... a parameterized version of Julius.
 module Text.Romeo
     ( RomeoSettings (..)
@@ -15,8 +17,7 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Syntax.Internals
-import Language.Haskell.TH (appE)
-import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
+import Data.Text.Lazy.Builder (Builder, fromText)
 import Data.Monoid
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
@@ -34,10 +35,10 @@ data RomeoSettings = RomeoSettings
     }
 
 instance Lift RomeoSettings where
-    lift (RomeoSettings a b c d e f) =
+    lift (RomeoSettings x1 x2 x3 x4 x5 x6) =
         [|RomeoSettings
-            $(lift a) $(lift b) $(lift c)
-            $(liftExp d) $(liftExp e) $(liftExp f)|]
+            $(lift x1) $(lift x2) $(lift x3)
+            $(liftExp x4) $(liftExp x5) $(liftExp x6)|]
       where
         liftExp (VarE n) = [|VarE $(liftName n)|]
         liftExp (ConE n) = [|ConE $(liftName n)|]
@@ -45,8 +46,8 @@ instance Lift RomeoSettings where
         liftName (Name (OccName a) b) = [|Name (OccName $(lift a)) $(liftFlavour b)|]
         liftFlavour NameS = [|NameS|]
         liftFlavour (NameQ (ModName a)) = [|NameQ (ModName $(lift a))|]
-        liftFlavour (NameU a) = error "liftFlavour NameU" -- [|NameU $(lift $ fromIntegral a)|]
-        liftFlavour (NameL a) = error "liftFlavour NameL" -- [|NameU $(lift $ fromIntegral a)|]
+        liftFlavour (NameU _) = error "liftFlavour NameU" -- [|NameU $(lift $ fromIntegral a)|]
+        liftFlavour (NameL _) = error "liftFlavour NameL" -- [|NameU $(lift $ fromIntegral a)|]
         liftFlavour (NameG ns (PkgName p) (ModName m)) = [|NameG $(liftNS ns) (PkgName $(lift p)) (ModName $(lift m))|]
         liftNS VarName = [|VarName|]
         liftNS DataName = [|DataName|]

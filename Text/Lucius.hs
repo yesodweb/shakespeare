@@ -2,6 +2,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Lucius
     ( -- * Datatypes
       Lucius
@@ -19,9 +21,6 @@ import Text.Cassius hiding (Cassius, renderCassius, cassius, cassiusFile, cassiu
 import Text.Shakespeare
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Language.Haskell.TH
-import Data.Text.Lazy.Builder (fromText)
-import Data.Monoid
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import qualified Text.Cassius as C
@@ -39,18 +38,17 @@ renderLucius :: (url -> [(TS.Text, TS.Text)] -> TS.Text)
              -> TL.Text
 renderLucius = C.renderCassius
 
+-- |
+--
+-- >>> renderLucius undefined [lucius|foo{bar:baz}|]
+-- "foo{bar:baz}"
 lucius :: QuasiQuoter
 lucius = QuasiQuoter { quoteExp = luciusFromString }
 
 luciusFromString :: String -> Q Exp
 luciusFromString s =
-    blocksToCassius
-  $ either (error . show) id $ parse (parseBlocks id) s s
-
-parseBlocks :: ([Block] -> [Block]) -> Parser [Block]
-parseBlocks front = do
-    whiteSpace
-    (parseBlock >>= (\b -> parseBlocks (front . (:) b))) <|> (return $ map compressBlock $ front [])
+    topLevelsToCassius
+  $ either (error . show) id $ parse parseTopLevels s s
 
 whiteSpace :: Parser ()
 whiteSpace = many (oneOf " \t\n\r" >> return ()) >> return () -- FIXME comments, don't use many
@@ -135,4 +133,24 @@ luciusFile fp = do
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     luciusFromString contents
 
-luciusFileDebug = cssFileDebug [|parseBlocks id|] $ parseBlocks id
+luciusFileDebug :: FilePath -> Q Exp
+luciusFileDebug = cssFileDebug [|parseTopLevels|] parseTopLevels
+
+parseTopLevels :: Parser [TopLevel]
+parseTopLevels =
+    go id
+  where
+    go front = do
+        whiteSpace
+        ((media <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
+            <|> (return $ map compressTopLevel $ front [])
+    media = do
+        try $ string "@media "
+        name <- many1 $ noneOf "{"
+        _ <- char '{'
+        b <- parseBlocks id
+        return $ MediaBlock name b
+    parseBlocks front = do
+        whiteSpace
+        (char '}' >> return (map compressBlock $ front []))
+            <|> (parseBlock >>= \x -> parseBlocks (front . (:) x))

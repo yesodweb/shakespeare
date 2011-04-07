@@ -107,6 +107,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "lucius file debug" caseLuciusFileDebug
     , testCase "conditional class" caseCondClass
     , testCase "lucius nested" caseLuciusNested
+    , testCase "lucius media" caseLuciusMedia
     ]
 
 data Url = Home | Sub SubUrl
@@ -1014,3 +1015,17 @@ foo {
 |]
     celper "foo bar{baz:bin}" $(luciusFile "external-nested.lucius")
     celper "foo bar{baz:bin}" $(luciusFileDebug "external-nested.lucius")
+
+caseLuciusMedia :: Assertion
+caseLuciusMedia = do
+    celper "@media only screen{foo bar{baz:bin}}" [$lucius|
+@media only screen{
+    foo {
+        bar {
+            baz: bin;
+        }
+    }
+}
+|]
+    celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "external-media.lucius")
+    celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "external-media.lucius")

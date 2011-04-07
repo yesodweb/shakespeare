@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Cassius
     ( -- * Datatypes
       Cassius
@@ -40,16 +41,13 @@ import Text.Printf (printf)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
-import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText, singleton)
+import Data.Text.Lazy.Builder (fromText, fromLazyText)
 import Data.Maybe (catMaybes)
-import Data.Monoid
 import Data.Word (Word8)
 import Data.Bits
-import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Hamlet.Quasi (readUtf8File)
-import Data.List (intersperse)
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -79,26 +77,10 @@ colorRed = Color 255 0 0
 colorBlack :: Color
 colorBlack = Color 0 0 0
 
-renderCss :: Css -> TL.Text
-renderCss =
-    toLazyText . mconcat . map go
-  where
-    go (Css' x []) = mempty
-    go (Css' x y) =
-        x
-        `mappend` singleton '{'
-        `mappend` mconcat (intersperse (singleton ';') $ map go' y)
-        `mappend` singleton '}'
-    go' (k, v) = k `mappend` singleton ':' `mappend` v
-
 renderCassius :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Cassius url -> TL.Text
 renderCassius r s = renderCss $ s r
 
 type Cassius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Css
-
-instance ToCss [Char] where toCss = fromLazyText . TL.pack
-instance ToCss TS.Text where toCss = fromText
-instance ToCss TL.Text where toCss = fromLazyText
 
 parseBlocks :: Parser [Block]
 parseBlocks = (map compressBlock . catMaybes) `fmap` many parseBlock
@@ -153,7 +135,7 @@ eol = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
 parseContent :: Bool -> Parser Content
 parseContent allowColon =
-    parseHash' <|> parseAt' <|> parseComment <|> parseChar
+    parseHash' <|> parseAt' <|> parseComment' <|> parseChar
   where
     parseHash' = either ContentRaw ContentVar `fmap` parseHash
     parseAt' =
@@ -163,7 +145,7 @@ parseContent allowColon =
         go (d, True) = ContentUrlParam d
     parseChar = (ContentRaw . return) `fmap` noneOf restricted
     restricted = (if allowColon then id else (:) ':') "\r\n"
-    parseComment = do
+    parseComment' = do
         _ <- try $ string "/*"
         _ <- manyTill anyChar $ try $ string "*/"
         return $ ContentRaw ""
@@ -173,23 +155,21 @@ cassius = QuasiQuoter { quoteExp = cassiusFromString }
 
 cassiusFromString :: String -> Q Exp
 cassiusFromString s =
-    blocksToCassius
+    topLevelsToCassius $ map TopBlock
   $ either (error . show) id $ parse parseBlocks s s
-
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     cassiusFromString contents
 
-getVars :: Content -> [(Deref, VarType)]
-getVars ContentRaw{} = []
-getVars (ContentVar d) = [(d, VTPlain)]
-getVars (ContentUrl d) = [(d, VTUrl)]
-getVars (ContentUrlParam d) = [(d, VTUrlParam)]
-
 cassiusFileDebug :: FilePath -> Q Exp
-cassiusFileDebug = cssFileDebug [|parseBlocks|] parseBlocks
+cassiusFileDebug = cssFileDebug [|parseTopLevels|] parseTopLevels
+
+parseTopLevels :: Parser [TopLevel]
+parseTopLevels = do
+    x <- parseBlocks
+    return $ map TopBlock x
 
 -- CSS size wrappers
 
@@ -208,6 +188,7 @@ mkSize s = appE nameE valueE
           "pt" -> appE absoluteSizeE (conE $ mkName "Point")
           "px" -> conE $ mkName "PixelSize"
           "%" -> varE $ mkName "percentageSize"
+          _ -> error $ "In mkSize, invalid unit: " ++ unit
         valueE = litE $ rationalL (toRational value)
 
 -- | Absolute size units.

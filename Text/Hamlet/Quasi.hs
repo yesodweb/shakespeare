@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Hamlet.Quasi
     ( hamlet
     , xhamlet

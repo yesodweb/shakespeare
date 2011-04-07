@@ -4,9 +4,10 @@
 {-# LANGUAGE CPP #-}
 module Text.Css where
 
-import Data.Text.Lazy.Builder (Builder, fromText)
+import Data.List (intersperse)
+import Data.Text.Lazy.Builder (Builder, fromText, singleton, toLazyText, fromLazyText)
 import qualified Data.Text.Lazy as TL
-import Data.Monoid (mconcat)
+import Data.Monoid (mconcat, mappend, mempty)
 import Data.Text (Text, pack)
 import Language.Haskell.TH.Syntax
 import System.IO.Unsafe (unsafePerformIO)
@@ -18,12 +19,17 @@ import Language.Haskell.TH
 class ToCss a where
     toCss :: a -> Builder
 
+instance ToCss [Char] where toCss = fromLazyText . TL.pack
+instance ToCss Text where toCss = fromText
+instance ToCss TL.Text where toCss = fromLazyText
+
 data Css' = Css'
     { _cssSelectors :: Builder
     , _cssAttributes :: [(Builder, Builder)]
     }
+data CssTop = Media String [Css'] | Css Css'
 
-type Css = [Css']
+type Css = [CssTop]
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -40,7 +46,7 @@ data CDData url = CDPlain Builder
                 | CDUrl url
                 | CDUrlParam (url, [(Text, Text)])
 
-cssFileDebug :: Q Exp -> Parser [Block] -> FilePath -> Q Exp
+cssFileDebug :: Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
 cssFileDebug parseBlocks' parseBlocks fp = do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
@@ -49,24 +55,33 @@ cssFileDebug parseBlocks' parseBlocks fp = do
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
   where
-    go :: Block -> [Content] -- FIXME use blockToCss
-    go (Block x y z) =
+    go :: TopLevel -> [Content] -- FIXME use blockToCss
+    go (MediaBlock _ blocks) = concatMap (go . TopBlock) blocks
+    go (TopBlock (Block x y z)) =
         concatMap go' y ++
         concatMap (subGo x) z
     go' (k, v) = k ++ v
     subGo x (Block a b c) =
-        go $ Block a' b c
+        go $ TopBlock $ Block a' b c
       where
         a' = combineSelectors x a
 
+combineSelectors :: [Content] -> [Content] -> [Content]
 combineSelectors a b = a ++ ContentRaw " " : b
 
-cssRuntime :: Parser [Block] -> FilePath -> [(Deref, CDData url)] -> (url -> [(Text, Text)] -> Text) -> Css
+cssRuntime :: Parser [TopLevel]
+           -> FilePath
+           -> [(Deref, CDData url)]
+           -> (url -> [(Text, Text)] -> Text)
+           -> Css
 cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
-    return $ foldr ($) [] $ map go a
+    return $ foldr ($) [] $ map goTop a
   where
+    goTop :: TopLevel -> Css -> Css
+    goTop (TopBlock b) x = map Css (go b []) ++ x
+    goTop (MediaBlock s b) x = Media s (foldr go [] b) : x
     go :: Block -> [Css'] -> [Css']
     -- FIXME share code with blockToCss
     go (Block x y z) =
@@ -113,11 +128,17 @@ getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
 data Block = Block Selector Pairs [Block]
 
+data TopLevel = TopBlock Block | MediaBlock String [Block]
+
 type Pairs = [Pair]
 
 type Pair = (Contents, Contents)
 
 type Selector = Contents
+
+compressTopLevel :: TopLevel -> TopLevel
+compressTopLevel (TopBlock b) = TopBlock $ compressBlock b
+compressTopLevel (MediaBlock s b) = MediaBlock s $ map compressBlock b
 
 compressBlock :: Block -> Block
 compressBlock (Block x y blocks) =
@@ -156,7 +177,35 @@ contentToBuilder r (ContentUrlParam u) =
     [|fromText|] `appE`
         ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
 
-blocksToCassius :: [Block] -> Q Exp
-blocksToCassius a = do
+topLevelsToCassius :: [TopLevel] -> Q Exp
+topLevelsToCassius a = do
     r <- newName "_render"
-    lamE [varP r] $ appE [|foldr ($) []|] $ listE $ map (blockToCss r) a
+    lamE [varP r] $ appE [|foldr ($) []|] $ listE $ map (go r) a
+  where
+    go r (TopBlock b) = [|(++) $ map Css ($(blockToCss r b) [])|]
+    go r (MediaBlock s b) = [|(:) $ Media $(lift s) $(blocksToCassius r b)|]
+
+blocksToCassius :: Name -> [Block] -> Q Exp
+blocksToCassius r a = do
+    appE [|foldr ($) []|] $ listE $ map (blockToCss r) a
+
+renderCss :: Css -> TL.Text
+renderCss =
+    toLazyText . mconcat . map go -- FIXME use a foldr
+  where
+    go (Css x) = renderCss' x
+    go (Media s x) =
+        fromText (pack "@media ") `mappend`
+        fromText (pack s) `mappend`
+        singleton '{' `mappend`
+        foldr mappend (singleton '}') (map renderCss' x)
+
+renderCss' :: Css' -> Builder
+renderCss' (Css' _x []) = mempty
+renderCss' (Css' x y) =
+    x
+    `mappend` singleton '{'
+    `mappend` mconcat (intersperse (singleton ';') $ map go' y)
+    `mappend` singleton '}'
+  where
+    go' (k, v) = k `mappend` singleton ':' `mappend` v

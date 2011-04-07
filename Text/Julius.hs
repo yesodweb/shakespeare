@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Julius
     ( Julius
     , Javascript (..)
@@ -12,16 +13,12 @@ module Text.Julius
     , juliusFileDebug
     ) where
 
-import Text.ParserCombinators.Parsec hiding (Line)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
 import Data.Monoid
-import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import Text.Hamlet.Quasi (readUtf8File)
-import Text.Shakespeare
 import Text.Romeo
 import Control.Monad (ap)
 
