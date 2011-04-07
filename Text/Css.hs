@@ -58,13 +58,10 @@ cssFileDebug parseBlocks' parseBlocks fp = do
     go :: TopLevel -> [Content] -- FIXME use blockToCss
     go (MediaBlock _ blocks) = concatMap (go . TopBlock) blocks
     go (TopBlock (Block x y z)) =
+        x ++
         concatMap go' y ++
-        concatMap (subGo x) z
+        concatMap (go . TopBlock) z
     go' (k, v) = k ++ v
-    subGo x (Block a b c) =
-        go $ TopBlock $ Block a' b c
-      where
-        a' = combineSelectors x a
 
 combineSelectors :: [Content] -> [Content] -> [Content]
 combineSelectors a b = a ++ ContentRaw " " : b

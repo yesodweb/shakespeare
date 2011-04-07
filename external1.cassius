@@ -1,4 +1,4 @@
-foo
+#{selector}
     background: #{colorBlack}
     bar: baz
     color: #{colorRed}

@@ -641,6 +641,7 @@ bin
 caseCassiusFile :: Assertion
 caseCassiusFile = do
     let var = "var"
+    let selector = "foo"
     let urlp = (Home, [(pack "p", pack "q")])
     flip celper $(cassiusFile "external1.cassius") $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
@@ -653,6 +654,7 @@ caseCassiusFile = do
 caseCassiusFileDebug :: Assertion
 caseCassiusFileDebug = do
     let var = "var"
+    let selector = "foo"
     let urlp = (Home, [(pack "p", pack "q")])
     flip celper $(cassiusFileDebug "external1.cassius") $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
