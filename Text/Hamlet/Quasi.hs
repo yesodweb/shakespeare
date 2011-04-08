@@ -34,6 +34,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TIO
 import qualified System.IO as SIO
 import Text.Blaze (Html, preEscapedString, toHtml)
+import qualified Data.Foldable as F
 
 readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do
@@ -54,7 +55,7 @@ docToExp scope (DocForall list ident@(Ident name) inside) = do
     let list' = derefToExp scope list
     name' <- newName name
     let scope' = (ident, VarE name') : scope
-    mh <- [|mapM_|]
+    mh <- [|F.mapM_|]
     inside' <- docsToExp scope' inside
     let lam = LamE [VarP name'] inside'
     return $ mh `AppE` lam `AppE` list'
