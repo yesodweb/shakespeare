@@ -144,16 +144,16 @@ parseLine set = do
         eol
         return $ LineForall x y
     controlLet = do
-        _ <- try $ string "$let"
+        _ <- try $ string "$with"
         spaces
         y <- ident
         spaces
-        _ <- string "="
+        _ <- string "<-"
         spaces
         x <- parseDeref
         _ <- many $ oneOf " \t"
         eol
-        return $ LineForall (derefBranch (derefIdent (Ident "return")) x) y
+        return $ LineMaybe (derefBranch (derefIdent (Ident "Just")) x) y
     content cr = do
         x <- many $ content' cr
         case cr of
