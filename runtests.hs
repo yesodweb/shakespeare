@@ -16,6 +16,7 @@ import qualified Data.List as L
 import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
+import qualified Data.Set as Set
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -110,6 +111,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "conditional class" caseCondClass
     , testCase "lucius nested" caseLuciusNested
     , testCase "lucius media" caseLuciusMedia
+    , testCase "forall on Foldable" caseForallFoldable
     ]
 
 data Url = Home | Sub SubUrl
@@ -1048,3 +1050,11 @@ caseLuciusMedia = do
 |]
     celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "external-media.lucius")
     celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "external-media.lucius")
+
+caseForallFoldable :: Assertion
+caseForallFoldable = helper "12345" [$hamlet|
+$forall x <- set
+    #{x}
+|]
+  where
+    set = Set.fromList [1..5 :: Int]
