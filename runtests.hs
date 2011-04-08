@@ -39,6 +39,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "elseif chain " caseElseIfChain
     , testCase "list" caseList
     , testCase "list chain" caseListChain
+    , testCase "let" caseLet
+    , testCase "let chain" caseLetChain
     , testCase "script not empty" caseScriptNotEmpty
     , testCase "meta empty" caseMetaEmpty
     , testCase "input empty" caseInputEmpty
@@ -282,6 +284,21 @@ caseListChain = do
     helper "urlurlurl" [$hamlet|
 $forall x <-  list(getArg(getArg(getArg(getArg(getArg (theArg))))))
     @{url x}
+|]
+
+caseLet :: Assertion
+caseLet = do
+    helper "it's embedded" [$hamlet|
+$let n = embed theArg
+    it's ^{n}ded
+|]
+
+caseLetChain :: Assertion
+caseLetChain = do
+    helper "it's true" [$hamlet|
+$let n = true(getArg(getArg(getArg(getArg theArg))))
+    $if n
+    	it's true
 |]
 
 caseScriptNotEmpty :: Assertion

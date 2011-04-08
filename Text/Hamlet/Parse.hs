@@ -77,6 +77,7 @@ parseLine set = do
          controlMaybe <|>
          (try (string "$nothing") >> many (oneOf " \t") >> eol >> return LineNothing) <|>
          controlForall <|>
+         controlLet <|>
          angle <|>
          (eol' >> return (LineContent [])) <|>
          (do
@@ -142,6 +143,17 @@ parseLine set = do
         _ <- many $ oneOf " \t"
         eol
         return $ LineForall x y
+    controlLet = do
+        _ <- try $ string "$let"
+        spaces
+        y <- ident
+        spaces
+        _ <- string "="
+        spaces
+        x <- parseDeref
+        _ <- many $ oneOf " \t"
+        eol
+        return $ LineForall (derefBranch (derefIdent (Ident "return")) x) y
     content cr = do
         x <- many $ content' cr
         case cr of
