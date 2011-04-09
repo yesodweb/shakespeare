@@ -41,6 +41,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "list" caseList
     , testCase "list chain" caseListChain
     , testCase "with" caseWith
+    , testCase "with multi" caseWithMulti
     , testCase "with chain" caseWithChain
     , testCase "script not empty" caseScriptNotEmpty
     , testCase "meta empty" caseMetaEmpty
@@ -293,6 +294,14 @@ caseWith = do
     helper "it's embedded" [$hamlet|
 $with n <- embed theArg
     it's ^{n}ded
+|]
+
+caseWithMulti :: Assertion
+caseWithMulti = do
+    helper "it's embedded" [$hamlet|
+$with n <- embed theArg, m <- true theArg
+    $if m
+        it's ^{n}ded
 |]
 
 caseWithChain :: Assertion

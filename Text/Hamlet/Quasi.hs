@@ -59,6 +59,16 @@ docToExp scope (DocForall list ident@(Ident name) inside) = do
     inside' <- docsToExp scope' inside
     let lam = LamE [VarP name'] inside'
     return $ mh `AppE` lam `AppE` list'
+docToExp scope (DocWith [] inside) = do
+    inside' <- docsToExp scope inside
+    return $ inside'
+docToExp scope (DocWith ((deref,ident@(Ident name)):dis) inside) = do
+    let deref' = derefToExp scope deref
+    name' <- newName name
+    let scope' = (ident, VarE name') : scope
+    inside' <- docToExp scope' (DocWith dis inside)
+    let lam = LamE [VarP name'] inside'
+    return $ lam `AppE` deref'
 docToExp scope (DocMaybe val ident@(Ident name) inside mno) = do
     let val' = derefToExp scope val
     name' <- newName name

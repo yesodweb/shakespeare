@@ -46,6 +46,7 @@ data Line = LineForall Deref Ident
           | LineIf Deref
           | LineElseIf Deref
           | LineElse
+          | LineWith [(Deref, Ident)]
           | LineMaybe Deref Ident
           | LineNothing
           | LineTag
@@ -77,7 +78,7 @@ parseLine set = do
          controlMaybe <|>
          (try (string "$nothing") >> many (oneOf " \t") >> eol >> return LineNothing) <|>
          controlForall <|>
-         controlLet <|>
+         controlWith <|>
          angle <|>
          (eol' >> return (LineContent [])) <|>
          (do
@@ -107,53 +108,47 @@ parseLine set = do
         _ <- char '\\'
         (eol >> return (LineContent [ContentRaw "\n"]))
             <|> (LineContent <$> content InContent)
+    spaceTabs = many $ oneOf " \t"
     controlIf = do
         _ <- try $ string "$if"
         spaces
         x <- parseDeref
-        _ <- many $ oneOf " \t"
+        _ <- spaceTabs
         eol
         return $ LineIf x
     controlElseIf = do
         _ <- try $ string "$elseif"
         spaces
         x <- parseDeref
-        _ <- many $ oneOf " \t"
+        _ <- spaceTabs
         eol
         return $ LineElseIf x
-    controlMaybe = do
-        _ <- try $ string "$maybe"
-        spaces
+    binding = do
         y <- ident
         spaces
         _ <- string "<-"
         spaces
         x <- parseDeref
-        _ <- many $ oneOf " \t"
+        _ <- spaceTabs
+        return (x,y)
+    bindingSep = char ',' >> spaceTabs
+    controlMaybe = do
+        _ <- try $ string "$maybe"
+        spaces
+        (x,y) <- binding
         eol
         return $ LineMaybe x y
     controlForall = do
         _ <- try $ string "$forall"
         spaces
-        y <- ident
-        spaces
-        _ <- string "<-"
-        spaces
-        x <- parseDeref
-        _ <- many $ oneOf " \t"
+        (x,y) <- binding
         eol
         return $ LineForall x y
-    controlLet = do
+    controlWith = do
         _ <- try $ string "$with"
         spaces
-        y <- ident
-        spaces
-        _ <- string "<-"
-        spaces
-        x <- parseDeref
-        _ <- many $ oneOf " \t"
-        eol
-        return $ LineMaybe (derefBranch (derefIdent (Ident "Just")) x) y
+        bindings <- (binding `sepBy` bindingSep) `endBy` eol
+        return $ LineWith $ concat bindings -- concat because endBy returns a [[(Deref,Ident)]]
     content cr = do
         x <- many $ content' cr
         case cr of
@@ -241,6 +236,7 @@ nestLines ((i, l):rest) =
      in Nest l (nestLines deeper) : nestLines rest'
 
 data Doc = DocForall Deref Ident [Doc]
+         | DocWith [(Deref,Ident)] [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
          | DocMaybe Deref Ident [Doc] (Maybe [Doc])
          | DocContent Content
@@ -252,6 +248,10 @@ nestToDoc set (Nest (LineForall d i) inside:rest) = do
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ DocForall d i inside' : rest'
+nestToDoc set (Nest (LineWith dis) inside:rest) = do
+    inside' <- nestToDoc set inside
+    rest' <- nestToDoc set rest
+    Ok $ DocWith dis inside' : rest'
 nestToDoc set (Nest (LineIf d) inside:rest) = do
     inside' <- nestToDoc set inside
     (ifs, el, rest') <- parseConds set ((:) (d, inside')) rest
@@ -316,6 +316,8 @@ compressDoc :: [Doc] -> [Doc]
 compressDoc [] = []
 compressDoc (DocForall d i doc:rest) =
     DocForall d i (compressDoc doc) : compressDoc rest
+compressDoc (DocWith dis doc:rest) =
+    DocWith dis (compressDoc doc) : compressDoc rest
 compressDoc (DocMaybe d i doc mnothing:rest) =
     DocMaybe d i (compressDoc doc) (fmap compressDoc mnothing)
   : compressDoc rest
