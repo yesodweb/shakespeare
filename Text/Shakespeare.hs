@@ -5,8 +5,6 @@
 -- | General parsers, functions and datatypes for all three languages.
 module Text.Shakespeare
     ( Deref
-    , derefBranch
-    , derefIdent
     , Ident (..)
     , Scope
     , parseDeref
@@ -41,11 +39,6 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefString String
            | DerefBranch Deref Deref
     deriving (Show, Eq, Read, Data, Typeable)
-
-derefBranch :: Deref -> Deref -> Deref
-derefBranch = DerefBranch
-derefIdent :: Ident -> Deref
-derefIdent  = DerefIdent
 
 instance Lift Ident where
     lift (Ident s) = [|Ident|] `appE` lift s

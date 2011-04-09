@@ -113,14 +113,14 @@ parseLine set = do
         _ <- try $ string "$if"
         spaces
         x <- parseDeref
-        spaceTabs
+        _ <- spaceTabs
         eol
         return $ LineIf x
     controlElseIf = do
         _ <- try $ string "$elseif"
         spaces
         x <- parseDeref
-        spaceTabs
+        _ <- spaceTabs
         eol
         return $ LineElseIf x
     binding = do
@@ -129,7 +129,7 @@ parseLine set = do
         _ <- string "<-"
         spaces
         x <- parseDeref
-        spaceTabs
+        _ <- spaceTabs
         return (x,y)
     bindingSep = char ',' >> spaceTabs
     controlMaybe = do
