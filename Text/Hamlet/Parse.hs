@@ -74,9 +74,9 @@ parseLine set = do
          backslash <|>
          controlIf <|>
          controlElseIf <|>
-         (try (string "$else") >> many (oneOf " \t") >> eol >> return LineElse) <|>
+         (try (string "$else") >> spaceTabs >> eol >> return LineElse) <|>
          controlMaybe <|>
-         (try (string "$nothing") >> many (oneOf " \t") >> eol >> return LineNothing) <|>
+         (try (string "$nothing") >> spaceTabs >> eol >> return LineNothing) <|>
          controlForall <|>
          controlWith <|>
          angle <|>
@@ -91,6 +91,7 @@ parseLine set = do
   where
     eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
     eol = eof <|> eol'
+    spaceTabs = many $ oneOf " \t"
     doctype = do
         try $ string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
@@ -108,19 +109,18 @@ parseLine set = do
         _ <- char '\\'
         (eol >> return (LineContent [ContentRaw "\n"]))
             <|> (LineContent <$> content InContent)
-    spaceTabs = many $ oneOf " \t"
     controlIf = do
         _ <- try $ string "$if"
         spaces
         x <- parseDeref
-        _ <- spaceTabs
+        spaceTabs
         eol
         return $ LineIf x
     controlElseIf = do
         _ <- try $ string "$elseif"
         spaces
         x <- parseDeref
-        _ <- spaceTabs
+        spaceTabs
         eol
         return $ LineElseIf x
     binding = do
@@ -129,7 +129,7 @@ parseLine set = do
         _ <- string "<-"
         spaces
         x <- parseDeref
-        _ <- spaceTabs
+        spaceTabs
         return (x,y)
     bindingSep = char ',' >> spaceTabs
     controlMaybe = do
