@@ -43,6 +43,8 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "with" caseWith
     , testCase "with multi" caseWithMulti
     , testCase "with chain" caseWithChain
+    , testCase "with comma string" caseWithCommaString
+    , testCase "with multi scope" caseWithMultiBindingScope 
     , testCase "script not empty" caseScriptNotEmpty
     , testCase "meta empty" caseMetaEmpty
     , testCase "input empty" caseInputEmpty
@@ -310,6 +312,21 @@ caseWithChain = do
 $with n <- true(getArg(getArg(getArg(getArg theArg))))
     $if n
     	it's true
+|]
+
+-- in multi-with binding, make sure that a comma in a string doesn't confuse the parser.
+caseWithCommaString :: Assertion
+caseWithCommaString = do
+    helper "it's  , something" [$hamlet|
+$with n <- " , something"
+    it's #{n}
+|]
+
+caseWithMultiBindingScope :: Assertion
+caseWithMultiBindingScope = do
+    helper "it's  , something" [$hamlet|
+$with n <- " , something", y <- n
+    it's #{y}
 |]
 
 caseScriptNotEmpty :: Assertion
