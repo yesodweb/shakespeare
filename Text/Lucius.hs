@@ -64,7 +64,13 @@ parseBlock = do
     return $ Block sel pairs blocks
 
 parseSelector :: Parser Selector
-parseSelector = fmap trim $ parseContents "{"
+parseSelector =
+    go id
+  where
+    go front = do
+        c <- parseContents "{,"
+        let front' = front . (:) (trim c)
+        (char ',' >> go front') <|> return (front' [])
 
 trim :: Contents -> Contents
 trim =

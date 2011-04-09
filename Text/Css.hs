@@ -4,7 +4,7 @@
 {-# LANGUAGE CPP #-}
 module Text.Css where
 
-import Data.List (intersperse)
+import Data.List (intersperse, intercalate)
 import Data.Text.Lazy.Builder (Builder, fromText, singleton, toLazyText, fromLazyText)
 import qualified Data.Text.Lazy as TL
 import Data.Monoid (mconcat, mappend, mempty)
@@ -58,13 +58,16 @@ cssFileDebug parseBlocks' parseBlocks fp = do
     go :: TopLevel -> [Content] -- FIXME use blockToCss
     go (MediaBlock _ blocks) = concatMap (go . TopBlock) blocks
     go (TopBlock (Block x y z)) =
-        x ++
+        intercalate [ContentRaw ","] x ++
         concatMap go' y ++
         concatMap (go . TopBlock) z
     go' (k, v) = k ++ v
 
-combineSelectors :: [Content] -> [Content] -> [Content]
-combineSelectors a b = a ++ ContentRaw " " : b
+combineSelectors :: Selector -> Selector -> Selector
+combineSelectors a b = do
+    a' <- a
+    b' <- b
+    return $ a' ++ ContentRaw " " : b'
 
 cssRuntime :: Parser [TopLevel]
            -> FilePath
@@ -82,9 +85,9 @@ cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     go :: Block -> [Css'] -> [Css']
     -- FIXME share code with blockToCss
     go (Block x y z) =
-        (:) (Css' (mconcat $ map go' x) (map go'' y))
+        (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
         . foldr (.) id (map (subGo x) z)
-    subGo :: [Content] -> Block -> [Css'] -> [Css']
+    subGo :: Selector -> Block -> [Css'] -> [Css']
     subGo x (Block a b c) =
         go (Block a' b c)
       where
@@ -131,7 +134,7 @@ type Pairs = [Pair]
 
 type Pair = (Contents, Contents)
 
-type Selector = Contents
+type Selector = [Contents]
 
 compressTopLevel :: TopLevel -> TopLevel
 compressTopLevel (TopBlock b) = TopBlock $ compressBlock b
@@ -139,7 +142,7 @@ compressTopLevel (MediaBlock s b) = MediaBlock s $ map compressBlock b
 
 compressBlock :: Block -> Block
 compressBlock (Block x y blocks) =
-    Block (cc x) (map go y) (map compressBlock blocks)
+    Block (map cc x) (map go y) (map compressBlock blocks)
   where
     go (k, v) = (cc k, cc v)
     cc [] = []
@@ -148,7 +151,7 @@ compressBlock (Block x y blocks) =
 
 blockToCss :: Name -> Block -> Q Exp
 blockToCss r (Block sel props subblocks) =
-    [|(:) (Css' $(contentsToBuilder r sel) $(listE $ map go props))
+    [|(:) (Css' $(selectorToBuilder r sel) $(listE $ map go props))
       . foldr (.) id $(listE $ map subGo subblocks)
     |]
   where
@@ -157,6 +160,10 @@ blockToCss r (Block sel props subblocks) =
         blockToCss r $ Block sel'' b c
       where
         sel'' = combineSelectors sel sel'
+
+selectorToBuilder :: Name -> Selector -> Q Exp
+selectorToBuilder r sels =
+    contentsToBuilder r $ intercalate [ContentRaw ","] sels
 
 contentsToBuilder :: Name -> [Content] -> Q Exp
 contentsToBuilder r contents =

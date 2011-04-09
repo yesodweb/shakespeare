@@ -1063,6 +1063,14 @@ foo {
     celper "foo bar{baz:bin}" $(luciusFile "external-nested.lucius")
     celper "foo bar{baz:bin}" $(luciusFileDebug "external-nested.lucius")
 
+    celper "foo1 bar,foo2 bar{baz:bin}" [$lucius|
+foo1, foo2 {
+    bar {
+        baz: bin;
+    }
+}
+|]
+
 caseLuciusMedia :: Assertion
 caseLuciusMedia = do
     celper "@media only screen{foo bar{baz:bin}}" [$lucius|

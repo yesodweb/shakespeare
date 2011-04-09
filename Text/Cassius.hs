@@ -117,7 +117,7 @@ parseBlock = do
         pairs <- fmap catMaybes $ many $ parsePair' indent
         case pairs of
             [] -> return Nothing
-            _ -> return $ Just $ Block name pairs []
+            _ -> return $ Just $ Block [name] pairs []
     parsePair' indent = try (parseEmptyLine >> return Nothing)
                     <|> try (Just `fmap` parsePair indent)
 
