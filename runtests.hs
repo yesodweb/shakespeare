@@ -115,6 +115,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "lucius nested" caseLuciusNested
     , testCase "lucius media" caseLuciusMedia
     , testCase "forall on Foldable" caseForallFoldable
+    , testCase "cassius removes whitespace" caseCassiusRemoveWhitespace
     ]
 
 data Url = Home | Sub SubUrl
@@ -1092,3 +1093,9 @@ $forall x <- set
 |]
   where
     set = Set.fromList [1..5 :: Int]
+
+caseCassiusRemoveWhitespace :: Assertion
+caseCassiusRemoveWhitespace = celper "foo{bar:baz}" [$cassius|
+foo
+    bar     :    baz
+|]

@@ -48,6 +48,7 @@ import Data.Bits
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Hamlet.Quasi (readUtf8File)
+import Data.Char (isSpace)
 
 data Color = Color Word8 Word8 Word8
     deriving Show
@@ -128,7 +129,19 @@ parsePair minIndent = do
     key <- manyTill (parseContent False) $ char ':'
     spaces
     value <- manyTill (parseContent True) $ eol <|> eof
-    return (key, value)
+    return (trim key, value) -- FIXME consider trimming value as well
+
+trim :: Contents -> Contents
+trim =
+    reverse . go . reverse . go
+  where
+    go [] = []
+    go (ContentRaw x:xs) =
+        case dropWhile isSpace x of
+            [] -> go xs
+            y -> ContentRaw y:xs
+    go x = x
+
 
 eol :: Parser ()
 eol = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
