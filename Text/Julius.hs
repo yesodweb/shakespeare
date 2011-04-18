@@ -20,7 +20,6 @@ import Data.Monoid
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Romeo
-import Control.Monad (ap)
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -39,7 +38,14 @@ instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
 
 settings :: Q RomeoSettings
-settings = RomeoSettings '#' '@' '^' `fmap` [|toJavascript|] `ap` [|Javascript|] `ap` [|unJavascript|]
+settings = do
+  toJExp <- [|toJavascript|]
+  wrapExp <- [|Javascript|]
+  unWrapExp <- [|unJavascript|]
+  return $ defaultRomeoSettings { toBuilder = toJExp
+  , wrap = wrapExp
+  , unwrap = unWrapExp
+  }
 
 julius :: QuasiQuoter
 julius = QuasiQuoter { quoteExp = \s -> do
