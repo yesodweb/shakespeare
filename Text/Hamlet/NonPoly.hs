@@ -122,8 +122,8 @@ contentToExp _ hr scope (ContentVar d) = do
 contentToExp env hr scope (ContentUrl hasParams d) =
     case urlRender env of
         Nothing -> error "URL interpolation used, but no URL renderer provided"
-        Just render -> do
-            let render' = return $ VarE render
+        Just wrender -> wrender $ \render -> do
+            let render' = return render
             ou <- if hasParams
                     then [|\(u, p) -> $(render') u p|]
                     else [|\u -> $(render') u []|]
@@ -134,8 +134,8 @@ contentToExp _ hr scope (ContentEmbed d) = return $ derefToExp scope d
 contentToExp env hr scope (ContentMsg d) =
     case msgRender env of
         Nothing -> error "Message interpolation used, but no message renderer provided"
-        Just render -> do
-            return $ hrFromHtml hr `AppE` (VarE render `AppE` derefToExp scope d)
+        Just wrender -> wrender $ \render ->
+            return $ hrFromHtml hr `AppE` (render `AppE` derefToExp scope d)
 
 html :: QuasiQuoter
 html = hamletWithSettings htmlRules defaultHamletSettings
@@ -154,7 +154,7 @@ hamletRules = do
     let ur f = do
             r <- newName "_render"
             let env = Env
-                    { urlRender = Just r
+                    { urlRender = Just ($ (VarE r))
                     , msgRender = Nothing
                     }
             h <- f env
@@ -171,8 +171,8 @@ ihamletRules = do
             u <- newName "_urender"
             m <- newName "_mrender"
             let env = Env
-                    { urlRender = Just u
-                    , msgRender = Just m
+                    { urlRender = Just ($ (VarE u))
+                    , msgRender = Just ($ (VarE m))
                     }
             h <- f env
             return $ LamE [VarP m, VarP u] h
@@ -190,8 +190,8 @@ data HamletRules = HamletRules
     }
 
 data Env = Env
-    { urlRender :: Maybe Name
-    , msgRender :: Maybe Name
+    { urlRender :: Maybe ((Exp -> Q Exp) -> Q Exp)
+    , msgRender :: Maybe ((Exp -> Q Exp) -> Q Exp)
     }
 
 hamletFromString :: Q HamletRules -> HamletSettings -> String -> Q Exp
