@@ -10,15 +10,11 @@ module Text.Hamlet.NonPoly
     ( -- * Plain HTML
       Html
     , html
-{- not yet implemented
     , htmlFile
--}
       -- * Hamlet
     , Hamlet
     , hamlet
-{- not yet implemented
     , hamletFile
--}
       -- * I18N Hamlet
     , IHamlet
 {- not yet implemented
@@ -185,18 +181,16 @@ hamletFromString qhr set s = do
         Error s' -> error s'
         Ok d -> hrWithEnv hr $ \env -> docsToExp env hr [] d
 
-hamletFileWithSettings :: HamletSettings -> FilePath -> Q Exp
-hamletFileWithSettings set fp = do
+hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
+hamletFileWithSettings qhr set fp = do
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
-    error "FIXME" hamletFromString set contents
+    hamletFromString qhr set contents
 
--- | Calls 'hamletFileWithSettings' with 'defaultHamletSettings'.
 hamletFile :: FilePath -> Q Exp
-hamletFile = hamletFileWithSettings defaultHamletSettings
+hamletFile = hamletFileWithSettings hamletRules defaultHamletSettings
 
--- | Calls 'hamletFileWithSettings' using XHTML 1.0 Strict settings.
-xhamletFile :: FilePath -> Q Exp
-xhamletFile = hamletFileWithSettings xhtmlHamletSettings
+htmlFile :: FilePath -> Q Exp
+htmlFile = hamletFileWithSettings htmlRules defaultHamletSettings
 
 varName :: Scope -> String -> Exp
 varName _ "" = error "Illegal empty varName"

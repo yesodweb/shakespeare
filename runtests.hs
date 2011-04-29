@@ -17,7 +17,7 @@ import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 import qualified Data.Set as Set
-import Text.Hamlet.NonPoly (html)
+import Text.Hamlet.NonPoly (html, htmlFile)
 import TestHelper
 
 main :: IO ()
@@ -1110,11 +1110,15 @@ foo
 |]
 
 caseNonPolyHtml :: Assertion
-caseNonPolyHtml = helperHtml "<h1>HELLO WORLD</h1>" [$html|
+caseNonPolyHtml = do
+    helperHtml "<h1>HELLO WORLD</h1>" [$html|
 <h1>HELLO WORLD
 |]
+    helperHtml "<h1>HELLO WORLD</h1>" $(htmlFile "nonpolyhtml.hamlet")
 
 caseNonPolyHamlet :: Assertion
-caseNonPolyHamlet = helper "<h1>url</h1>" [$nphamlet|
+caseNonPolyHamlet = do
+    helper "<h1>url</h1>" [$nphamlet|
 <h1>@{Home}
 |]
+    helper "<h1>url</h1>" $(npHamletFile "nonpolyhamlet.hamlet")
