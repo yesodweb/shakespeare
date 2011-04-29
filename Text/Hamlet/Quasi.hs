@@ -1,3 +1,6 @@
+-- NOTE: This module is being deprecated, in favor of NonPoly. In Hamlet 0.9,
+-- this code will be replaced entirely. Avoid changes here whenever possible.
+
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
