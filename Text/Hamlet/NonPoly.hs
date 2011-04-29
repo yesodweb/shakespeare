@@ -17,10 +17,8 @@ module Text.Hamlet.NonPoly
     , hamletFile
       -- * I18N Hamlet
     , IHamlet
-{- not yet implemented
     , ihamlet
     , ihamletFile
--}
     ) where
 
 import Text.Shakespeare
@@ -40,7 +38,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (ap)
 
 type Render url = url -> [(Text, Text)] -> Text
-type Translate msg = msg -> Text
+type Translate msg = msg -> Html
 
 -- | A function generating an 'Html' given a URL-rendering function.
 type Hamlet url = Render url -> Html
@@ -133,6 +131,11 @@ contentToExp env hr scope (ContentUrl hasParams d) =
             pet <- [|preEscapedText|]
             return $ hrFromHtml hr `AppE` (pet `AppE` (ou `AppE` d'))
 contentToExp _ hr scope (ContentEmbed d) = return $ derefToExp scope d
+contentToExp env hr scope (ContentMsg d) =
+    case msgRender env of
+        Nothing -> error "Message interpolation used, but no message renderer provided"
+        Just render -> do
+            return $ hrFromHtml hr `AppE` (VarE render `AppE` derefToExp scope d)
 
 html :: QuasiQuoter
 html = hamletWithSettings htmlRules defaultHamletSettings
@@ -156,6 +159,23 @@ hamletRules = do
                     }
             h <- f env
             return $ LamE [VarP r] h
+    return $ HamletRules i ur
+
+ihamlet :: QuasiQuoter
+ihamlet = hamletWithSettings ihamletRules defaultHamletSettings
+
+ihamletRules :: Q HamletRules
+ihamletRules = do
+    i <- [|id|]
+    let ur f = do
+            u <- newName "_urender"
+            m <- newName "_mrender"
+            let env = Env
+                    { urlRender = Just u
+                    , msgRender = Just m
+                    }
+            h <- f env
+            return $ LamE [VarP m, VarP u] h
     return $ HamletRules i ur
 
 hamletWithSettings :: Q HamletRules -> HamletSettings -> QuasiQuoter
@@ -191,6 +211,9 @@ hamletFile = hamletFileWithSettings hamletRules defaultHamletSettings
 
 htmlFile :: FilePath -> Q Exp
 htmlFile = hamletFileWithSettings htmlRules defaultHamletSettings
+
+ihamletFile :: FilePath -> Q Exp
+ihamletFile = hamletFileWithSettings ihamletRules defaultHamletSettings
 
 varName :: Scope -> String -> Exp
 varName _ "" = error "Illegal empty varName"

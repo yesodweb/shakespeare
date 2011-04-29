@@ -13,6 +13,7 @@ module Text.Shakespeare
     , parseAt
     , parseUrl
     , parseCaret
+    , parseUnder
     , parseInt
     , derefToExp
     , flattenDeref
@@ -203,3 +204,12 @@ parseInt c = do
         deref <- parseDeref
         _ <- char '}'
         return $ Right deref) <|> return (Left [c])
+
+parseUnder :: Parser (Either String Deref)
+parseUnder = do
+    _ <- char '_'
+    (char '\\' >> return (Left "_")) <|> (do
+        _ <- char '{'
+        deref <- parseDeref
+        _ <- char '}'
+        return $ Right deref) <|> return (Left "_")

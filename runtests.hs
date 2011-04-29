@@ -17,7 +17,7 @@ import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 import qualified Data.Set as Set
-import Text.Hamlet.NonPoly (html, htmlFile)
+import Text.Hamlet.NonPoly (html, htmlFile, IHamlet, ihamlet, ihamletFile)
 import TestHelper
 
 main :: IO ()
@@ -120,6 +120,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "cassius removes whitespace" caseCassiusRemoveWhitespace
     , testCase "non-poly HTML" caseNonPolyHtml
     , testCase "non-poly Hamlet " caseNonPolyHamlet
+    , testCase "non-poly IHamlet " caseNonPolyIHamlet
     ]
 
 data Url = Home | Sub SubUrl
@@ -1122,3 +1123,20 @@ caseNonPolyHamlet = do
 <h1>@{Home}
 |]
     helper "<h1>url</h1>" $(npHamletFile "nonpolyhamlet.hamlet")
+
+data Msg = Hello | Goodbye
+
+ihelper :: String -> IHamlet Msg Url -> Assertion
+ihelper res h = do
+    let x = renderHtmlText $ h showMsg render
+    T.pack res @=? x
+  where
+    showMsg Hello = preEscapedString "Hola"
+    showMsg Goodbye = preEscapedString "Adios"
+
+caseNonPolyIHamlet :: Assertion
+caseNonPolyIHamlet = do
+    ihelper "<h1>Adios</h1>" [$ihamlet|
+<h1>_{Goodbye}
+|]
+    ihelper "<h1>Hola</h1>" $(ihamletFile "nonpolyihamlet.hamlet")

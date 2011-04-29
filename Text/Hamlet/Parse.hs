@@ -40,6 +40,7 @@ data Content = ContentRaw String
              | ContentVar Deref
              | ContentUrl Bool Deref -- ^ bool: does it include params?
              | ContentEmbed Deref
+             | ContentMsg Deref
     deriving (Show, Eq, Read, Data, Typeable)
 
 data Line = LineForall Deref Ident
@@ -162,6 +163,7 @@ parseLine set = do
         cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
         cc (a:b) = a : cc b
     content' cr = contentHash <|> contentAt <|> contentCaret
+                              <|> contentUnder
                               <|> contentReg cr
     contentHash = do
         x <- parseHash
@@ -178,6 +180,11 @@ parseLine set = do
         case x of
             Left str -> return $ ContentRaw str
             Right deref -> return $ ContentEmbed deref
+    contentUnder = do
+        x <- parseUnder
+        case x of
+            Left str -> return $ ContentRaw str
+            Right deref -> return $ ContentMsg deref
     contentReg InContent = (ContentRaw . return) <$> noneOf "#@^\r\n"
     contentReg NotInQuotes = (ContentRaw . return) <$> noneOf "@^#. \t\n\r>"
     contentReg NotInQuotesAttr = (ContentRaw . return) <$> noneOf "@^ \t\n\r>"
