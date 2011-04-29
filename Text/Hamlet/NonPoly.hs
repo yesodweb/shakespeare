@@ -19,6 +19,12 @@ module Text.Hamlet.NonPoly
     , IHamlet
     , ihamlet
     , ihamletFile
+      -- * Internal, for making more
+    , hamletWithSettings
+    , hamletFileWithSettings
+    , defaultHamletSettings
+    , Env (..)
+    , HamletRules (..)
     ) where
 
 import Text.Shakespeare
