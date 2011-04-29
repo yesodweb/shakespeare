@@ -1,5 +1,5 @@
 name:            hamlet
-version:         0.8.0
+version:         0.8.1
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -11,12 +11,12 @@ description:
     Here is a quick overview of hamlet html. Due to haddock escaping issues, we can't properly show variable insertion, but we are still going to show some conditionals. Please see http://docs.yesodweb.com/book/templates for a thorough description
     .
     > !!!
-    > <html
-    >     <head
+    > <html>
+    >     <head>
     >         <title>Hamlet Demo
-    >     <body
+    >     <body>
     >         <h1>Information on John Doe
-    >         <h2
+    >         <h2>
     >             $if isMarried person
     >                 Married
     >             $else
@@ -25,7 +25,7 @@ category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.8
 build-type:      Simple
-homepage:        http://docs.yesodweb.com/
+homepage:        http://www.yesodweb.com/
 
 flag test
   description: Build the executable to run unit tests
@@ -45,6 +45,7 @@ library
                    , blaze-builder    >= 0.2     && < 0.4
                    , process          >= 1.0     && < 1.1
     exposed-modules: Text.Hamlet
+                     Text.Hamlet.NonPoly
                      Text.Hamlet.RT
                      Text.Cassius
                      Text.Lucius
