@@ -12,21 +12,18 @@ module Text.Hamlet.NonPoly
     , html
 {- not yet implemented
     , htmlFile
-    , htmlFileDebug
 -}
       -- * Hamlet
     , Hamlet
-{- not yet implemented
     , hamlet
+{- not yet implemented
     , hamletFile
-    , hamletFileDebug
 -}
       -- * I18N Hamlet
     , IHamlet
 {- not yet implemented
     , ihamlet
     , ihamletFile
-    , ihamletFileDebug
 -}
     ) where
 
@@ -44,6 +41,7 @@ import qualified System.IO as SIO
 import Text.Blaze (Html, preEscapedText, toHtml)
 import qualified Data.Foldable as F
 import Control.Applicative ((<$>))
+import Control.Monad (ap)
 
 type Render url = url -> [(Text, Text)] -> Text
 type Translate msg = msg -> Text
@@ -144,7 +142,25 @@ html :: QuasiQuoter
 html = hamletWithSettings htmlRules defaultHamletSettings
 
 htmlRules :: Q HamletRules
-htmlRules = HamletRules <$> [|id|]
+htmlRules = do
+    i <- [|id|]
+    return $ HamletRules i ($ (Env Nothing Nothing))
+
+hamlet :: QuasiQuoter
+hamlet = hamletWithSettings hamletRules defaultHamletSettings
+
+hamletRules :: Q HamletRules
+hamletRules = do
+    i <- [|id|]
+    let ur f = do
+            r <- newName "_render"
+            let env = Env
+                    { urlRender = Just r
+                    , msgRender = Nothing
+                    }
+            h <- f env
+            return $ LamE [VarP r] h
+    return $ HamletRules i ur
 
 hamletWithSettings :: Q HamletRules -> HamletSettings -> QuasiQuoter
 hamletWithSettings hr set =
@@ -154,6 +170,7 @@ hamletWithSettings hr set =
 
 data HamletRules = HamletRules
     { hrFromHtml :: Exp
+    , hrWithEnv :: (Env -> Q Exp) -> Q Exp
     }
 
 data Env = Env
@@ -166,9 +183,7 @@ hamletFromString qhr set s = do
     hr <- qhr
     case parseDoc set s of
         Error s' -> error s'
-        Ok d -> do
-            let env = Env Nothing Nothing -- FIXME
-            docsToExp env hr [] d
+        Ok d -> hrWithEnv hr $ \env -> docsToExp env hr [] d
 
 hamletFileWithSettings :: HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings set fp = do

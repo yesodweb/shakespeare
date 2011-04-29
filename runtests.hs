@@ -18,6 +18,7 @@ import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 import qualified Data.Set as Set
 import Text.Hamlet.NonPoly (html)
+import TestHelper
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -118,6 +119,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "forall on Foldable" caseForallFoldable
     , testCase "cassius removes whitespace" caseCassiusRemoveWhitespace
     , testCase "non-poly HTML" caseNonPolyHtml
+    , testCase "non-poly Hamlet " caseNonPolyHamlet
     ]
 
 data Url = Home | Sub SubUrl
@@ -1110,4 +1112,9 @@ foo
 caseNonPolyHtml :: Assertion
 caseNonPolyHtml = helperHtml "<h1>HELLO WORLD</h1>" [$html|
 <h1>HELLO WORLD
+|]
+
+caseNonPolyHamlet :: Assertion
+caseNonPolyHamlet = helper "<h1>url</h1>" [$nphamlet|
+<h1>@{Home}
 |]
