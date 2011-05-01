@@ -122,6 +122,7 @@ contentToExp scope (ContentEmbed d) = do
     let d' = derefToExp scope d
     fhv <- [|fromHamletValue|]
     return $ fhv `AppE` d'
+contentToExp _ ContentMsg{} = error "Poly-Hamlet does not support messages"
 
 -- | Calls 'hamletWithSettings' with 'defaultHamletSettings'.
 hamlet :: QuasiQuoter
