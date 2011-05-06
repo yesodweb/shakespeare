@@ -965,11 +965,12 @@ caseOperators = do
     helper "6" [$hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
 
 caseHtmlComments = do
-    helper "<p>1</p><p>2</p>" [$hamlet|
+    helper "<p>1</p><p>2 not ignored</p>" [$hamlet|
 <p>1
 <!-- ignored comment -->
 <p
     2
+    <!-- ignored --> not ignored<!-- ignored -->
 |]
 
 caseMultiCassius :: Assertion

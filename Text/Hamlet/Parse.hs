@@ -103,9 +103,16 @@ parseLine set = do
         return $ LineContent []
     htmlComment = do
         _ <- try $ string "<!--"
-        _ <- many $ noneOf "\r\n"
+        _ <- manyTill anyChar $ try $ string "-->"
+        x <- many nonComments
         eol
-        return $ LineContent []
+        return $ LineContent [ContentRaw $ concat x] -- FIXME handle variables?
+    nonComments = (many1 $ noneOf "\r\n<") <|> (do
+        _ <- char '<'
+        (do
+            try $ string "!--"
+            _ <- manyTill anyChar $ try $ string "-->"
+            return "") <|> return "<")
     backslash = do
         _ <- char '\\'
         (eol >> return (LineContent [ContentRaw "\n"]))
