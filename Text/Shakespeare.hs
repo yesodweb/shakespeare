@@ -4,7 +4,7 @@
 {-# LANGUAGE CPP #-}
 -- | General parsers, functions and datatypes for all three languages.
 module Text.Shakespeare
-    ( Deref
+    ( Deref (..)
     , Ident (..)
     , Scope
     , parseDeref

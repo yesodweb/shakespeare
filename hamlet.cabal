@@ -1,5 +1,5 @@
 name:            hamlet
-version:         0.8.1
+version:         0.8.2
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -52,11 +52,11 @@ library
                      Text.Julius
                      Text.Coffee
                      Text.Romeo
+                     Text.Shakespeare
     other-modules:   Text.Hamlet.Parse
                      Text.Hamlet.Quasi
                      Text.Hamlet.Debug
                      Text.MkSizeType
-                     Text.Shakespeare
                      Text.Css
     ghc-options:     -Wall
 
