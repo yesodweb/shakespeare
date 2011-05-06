@@ -1119,8 +1119,10 @@ caseNonPolyHtml = do
 
 caseNonPolyHamlet :: Assertion
 caseNonPolyHamlet = do
-    helper "<h1>url</h1>" [$nphamlet|
+    let embed = [$nphamlet|<p>EMBEDDED|]
+    helper "<h1>url</h1><p>EMBEDDED</p>" [$nphamlet|
 <h1>@{Home}
+^{embed}
 |]
     helper "<h1>url</h1>" $(npHamletFile "nonpolyhamlet.hamlet")
 
@@ -1136,7 +1138,9 @@ ihelper res h = do
 
 caseNonPolyIHamlet :: Assertion
 caseNonPolyIHamlet = do
-    ihelper "<h1>Adios</h1>" [$ihamlet|
+    let embed = [$ihamlet|<p>EMBEDDED|]
+    ihelper "<h1>Adios</h1><p>EMBEDDED</p>" [$ihamlet|
 <h1>_{Goodbye}
+^{embed}
 |]
     ihelper "<h1>Hola</h1>" $(ihamletFile "nonpolyihamlet.hamlet")

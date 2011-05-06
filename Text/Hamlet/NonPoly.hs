@@ -136,7 +136,7 @@ contentToExp env hr scope (ContentUrl hasParams d) =
             let d' = derefToExp scope d
             pet <- [|preEscapedText|]
             return $ hrFromHtml hr `AppE` (pet `AppE` (ou `AppE` d'))
-contentToExp _ hr scope (ContentEmbed d) = return $ derefToExp scope d
+contentToExp env hr scope (ContentEmbed d) = hrEmbed hr env $ derefToExp scope d
 contentToExp env hr scope (ContentMsg d) =
     case msgRender env of
         Nothing -> error "Message interpolation used, but no message renderer provided"
@@ -149,7 +149,7 @@ html = hamletWithSettings htmlRules defaultHamletSettings
 htmlRules :: Q HamletRules
 htmlRules = do
     i <- [|id|]
-    return $ HamletRules i ($ (Env Nothing Nothing))
+    return $ HamletRules i ($ (Env Nothing Nothing)) (\_ b -> return b)
 
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings hamletRules defaultHamletSettings
@@ -165,7 +165,9 @@ hamletRules = do
                     }
             h <- f env
             return $ LamE [VarP r] h
-    return $ HamletRules i ur
+    let em (Env (Just urender) Nothing) e =
+            urender $ \ur -> return (e `AppE` ur)
+    return $ HamletRules i ur em
 
 ihamlet :: QuasiQuoter
 ihamlet = hamletWithSettings ihamletRules defaultHamletSettings
@@ -182,7 +184,9 @@ ihamletRules = do
                     }
             h <- f env
             return $ LamE [VarP m, VarP u] h
-    return $ HamletRules i ur
+    let em (Env (Just urender) (Just mrender)) e =
+            urender $ \ur -> mrender $ \mr -> return (e `AppE` mr `AppE` ur)
+    return $ HamletRules i ur em
 
 hamletWithSettings :: Q HamletRules -> HamletSettings -> QuasiQuoter
 hamletWithSettings hr set =
@@ -193,6 +197,7 @@ hamletWithSettings hr set =
 data HamletRules = HamletRules
     { hrFromHtml :: Exp
     , hrWithEnv :: (Env -> Q Exp) -> Q Exp
+    , hrEmbed :: Env -> Exp -> Q Exp
     }
 
 data Env = Env
