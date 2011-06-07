@@ -121,6 +121,7 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "non-poly HTML" caseNonPolyHtml
     , testCase "non-poly Hamlet " caseNonPolyHamlet
     , testCase "non-poly IHamlet " caseNonPolyIHamlet
+    , testCase "lucius trailing comments" caseLuciusTrailingComment
     ]
 
 data Url = Home | Sub SubUrl
@@ -1145,3 +1146,7 @@ caseNonPolyIHamlet = do
 ^{embed}
 |]
     ihelper "<h1>Hola</h1>" $(ihamletFile "nonpolyihamlet.hamlet")
+
+caseLuciusTrailingComment :: Assertion
+caseLuciusTrailingComment =
+    celper "foo{bar:baz}" [$lucius|foo{bar:baz;}/* ignored*/|]

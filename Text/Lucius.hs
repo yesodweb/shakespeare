@@ -51,7 +51,9 @@ luciusFromString s =
   $ either (error . show) id $ parse parseTopLevels s s
 
 whiteSpace :: Parser ()
-whiteSpace = many (oneOf " \t\n\r" >> return ()) >> return () -- FIXME comments, don't use many
+whiteSpace = many
+    ((oneOf " \t\n\r" >> return ()) <|> (parseComment >> return ()))
+    >> return () -- FIXME comments, don't use many
 
 parseBlock :: Parser Block
 parseBlock = do
@@ -129,10 +131,12 @@ parseContent restricted =
         go (d, False) = ContentUrl d
         go (d, True) = ContentUrlParam d
     parseChar = (ContentRaw . return) `fmap` noneOf restricted
-    parseComment = do
-        _ <- try $ string "/*"
-        _ <- manyTill anyChar $ try $ string "*/"
-        return $ ContentRaw ""
+
+parseComment :: Parser Content
+parseComment = do
+    _ <- try $ string "/*"
+    _ <- manyTill anyChar $ try $ string "*/"
+    return $ ContentRaw ""
 
 luciusFile :: FilePath -> Q Exp
 luciusFile fp = do
