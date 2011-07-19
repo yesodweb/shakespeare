@@ -17,6 +17,7 @@ module Text.Shakespeare
     , parseInt
     , derefToExp
     , flattenDeref
+    , readUtf8File
     ) where
 
 import Language.Haskell.TH.Syntax
@@ -27,6 +28,9 @@ import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator, (%))
 import Data.Data (Data)
 import Data.Typeable (Typeable)
+import qualified Data.Text.Lazy as TL
+import qualified System.IO as SIO
+import qualified Data.Text.Lazy.IO as TIO
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
@@ -213,3 +217,9 @@ parseUnder = do
         deref <- parseDeref
         _ <- char '}'
         return $ Right deref) <|> return (Left "_")
+
+readUtf8File :: FilePath -> IO TL.Text
+readUtf8File fp = do
+    h <- SIO.openFile fp SIO.ReadMode
+    SIO.hSetEncoding h SIO.utf8_bom
+    TIO.hGetContents h

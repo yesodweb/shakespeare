@@ -17,8 +17,8 @@ import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 import qualified Data.Set as Set
-import Text.Hamlet.NonPoly (html, htmlFile, IHamlet, ihamlet, ihamletFile)
-import TestHelper
+import qualified Text.Blaze.Renderer.Text
+import Text.Blaze (toHtml, preEscapedString)
 
 main :: IO ()
 main = defaultMain [testSuite]
@@ -76,10 +76,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "parens" caseParens
     , testCase "hamlet literals" caseHamletLiterals
     , testCase "hamlet' and xhamlet'" caseHamlet'
-    , testCase "hamletDebug" caseHamletDebug
-    , testCase "hamlet runtime" caseHamletRT
-    , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
-    , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
     , testCase "cassius" caseCassius
     , testCase "cassiusFile" caseCassiusFile
     , testCase "cassiusFileDebug" caseCassiusFileDebug
@@ -89,7 +85,6 @@ testSuite = testGroup "Text.Hamlet"
     , testCase "juliusFileDebug" caseJuliusFileDebug
     , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
     , testCase "comments" caseComments
-    , testCase "hamletFileDebug double foralls" caseDoubleForalls
     , testCase "cassius pseudo-class" casePseudo
     -- FIXME test is disabled , testCase "different binding names" caseDiffBindNames
     , testCase "blank line" caseBlankLine
@@ -177,7 +172,7 @@ data Arg url = Arg
 theArg :: Arg url
 theArg = Arg
     { getArg = theArg
-    , var = string "<var>"
+    , var = toHtml "<var>"
     , url = Home
     , embed = [$hamlet|embed|]
     , true = True
@@ -190,12 +185,12 @@ theArg = Arg
 
 helperHtml :: String -> Html -> Assertion
 helperHtml res h = do
-    let x = renderHamletText render $ const h
+    let x = Text.Blaze.Renderer.Text.renderHtml h
     T.pack res @=? x
 
 helper :: String -> Hamlet Url -> Assertion
 helper res h = do
-    let x = renderHamletText render h
+    let x = Text.Blaze.Renderer.Text.renderHtml $ h render
     T.pack res @=? x
 
 caseEmpty :: Assertion
@@ -347,16 +342,16 @@ caseScriptNotEmpty = helper "<script></script>" [$hamlet|<script|]
 caseMetaEmpty :: Assertion
 caseMetaEmpty = do
     helper "<meta>" [$hamlet|<meta|]
-    helper "<meta/>" [$xhamlet|<meta|]
+    --helper "<meta/>" [$xhamlet|<meta|]
     helper "<meta>" [$hamlet|<meta>|]
-    helper "<meta/>" [$xhamlet|<meta>|]
+    --helper "<meta/>" [$xhamlet|<meta>|]
 
 caseInputEmpty :: Assertion
 caseInputEmpty = do
     helper "<input>" [$hamlet|<input|]
-    helper "<input/>" [$xhamlet|<input|]
+    --helper "<input/>" [$xhamlet|<input|]
     helper "<input>" [$hamlet|<input>|]
-    helper "<input/>" [$xhamlet|<input>|]
+    --helper "<input/>" [$xhamlet|<input>|]
 
 caseMultiClass :: Assertion
 caseMultiClass = do
@@ -536,7 +531,7 @@ caseCurrency =
 caseExternal :: Assertion
 caseExternal = do
     helper "foo<br>" $(hamletFile "external.hamlet")
-    helper "foo<br/>" $(xhamletFile "external.hamlet")
+    --helper "foo<br/>" $(xhamletFile "external.hamlet")
   where
     foo = "foo"
 
@@ -561,110 +556,20 @@ caseHamletLiterals = do
     helper "-123.456" [$hamlet|#{show -123.456}|]
 
 helper' :: String -> Html -> Assertion
-helper' res h = T.pack res @=? renderHtmlText h
+helper' res h = T.pack res @=? Text.Blaze.Renderer.Text.renderHtml h
 
 caseHamlet' :: Assertion
 caseHamlet' = do
-    helper' "foo" [$hamlet|foo|]
-    helper' "foo" [$xhamlet|foo|]
-    helper "<br>" $ const $ [$hamlet|<br|]
-    helper "<br/>" $ const $ [$xhamlet|<br|]
+    helper' "foo" [$html|foo|]
+    --helper' "foo" [$xhamlet|foo|]
+    helper "<br>" $ const $ [$html|<br|]
+    --helper "<br/>" $ const $ [$xhamlet|<br|]
 
     -- new with generalized stuff
-    helper' "foo" [$hamlet|foo|]
-    helper' "foo" [$xhamlet|foo|]
-    helper "<br>" $ const $ [$hamlet|<br|]
-    helper "<br/>" $ const $ [$xhamlet|<br|]
-
-caseHamletDebug :: Assertion
-caseHamletDebug = do
-    helper "<p>foo</p>\n<p>bar</p>\n" [$hamletDebug|
-<p>foo
-<p>bar
-|]
-
-caseHamletRT :: Assertion
-caseHamletRT = do
-    temp <- parseHamletRT defaultHamletSettings "#{var}"
-    rt <- parseHamletRT defaultHamletSettings $
-            unlines
-                [ "#{baz(bar foo)} bin #"
-                , "$forall l <- list"
-                , "  #{l}"
-                , "$maybe j <- just"
-                , "  #{j}"
-                , "$maybe n <- nothing"
-                , "$nothing"
-                , "  nothing"
-                , "^{template}"
-                , "@{url}"
-                , "$if false"
-                , "$elseif false"
-                , "$elseif true"
-                , "  a"
-                , "$if false"
-                , "$else"
-                , "  b"
-                , "@?{urlp}"
-                ]
-    let scope =
-            [ (["foo", "bar", "baz"], HDHtml $ preEscapedString "foo<bar>baz")
-            , (["list"], HDList
-                [ [([], HDHtml $ string "1")]
-                , [([], HDHtml $ string "2")]
-                , [([], HDHtml $ string "3")]
-                ])
-            , (["just"], HDMaybe $ Just
-                [ ([], HDHtml $ string "just")
-                ])
-            , (["nothing"], HDMaybe Nothing)
-            , (["template"], HDTemplate temp)
-            , (["var"], HDHtml $ string "var")
-            , (["url"], HDUrl Home)
-            , (["urlp"], HDUrlParams Home [(pack "foo", pack "bar")])
-            , (["true"], HDBool True)
-            , (["false"], HDBool False)
-            ]
-    rend <- renderHamletRT rt scope render
-    renderHtmlText rend @?=
-        T.pack "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
-
-caseHamletFileDebugChange :: Assertion
-caseHamletFileDebugChange = do
-    let foo = "foo"
-    writeFile "external-debug.hamlet" "#{foo} 1"
-    helper "foo 1" $ $(hamletFileDebug "external-debug.hamlet")
-    writeFile "external-debug.hamlet" "#{foo} 2"
-    helper "foo 2" $ $(hamletFileDebug "external-debug.hamlet")
-    writeFile "external-debug.hamlet" "#{foo} 1"
-
-caseHamletFileDebugFeatures :: Assertion
-caseHamletFileDebugFeatures = do
-    let var = "var"
-    let url = Home
-    let urlp = (Home, [(pack "foo", pack "bar")])
-    let template = [$hamlet|template|]
-    let true = True
-    let just = Just "just"
-        nothing = Nothing
-    let list = words "1 2 3"
-    let extra = "e"
-    flip helper $(hamletFileDebug "external-debug2.hamlet") $ concat
-        [ "var"
-        , "var"
-        , "url"
-        , "url"
-        , "suburl"
-        , "url?foo=bar"
-        , "template"
-        , "truee"
-        , "not truee"
-        , "elseif truee"
-        , "just"
-        , "juste"
-        , "nothinge"
-        , "1e2e3e"
-        ]
+    helper' "foo" [$html|foo|]
+    --helper' "foo" [$xhamlet|foo|]
+    helper "<br>" $ const $ [$html|<br|]
+    --helper "<br/>" $ const $ [$xhamlet|<br|]
 
 celper :: String -> Cassius Url -> Assertion
 celper res h = do
@@ -795,10 +700,6 @@ $#a third one|]
 /* another comment */
 /*a third one*/|]
 
-caseDoubleForalls :: Assertion
-caseDoubleForalls = do
-    let list = map show [1..2]
-    helper "12" $(hamletFileDebug "double-foralls.hamlet")
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
 
@@ -1121,18 +1022,18 @@ caseNonPolyHtml = do
 
 caseNonPolyHamlet :: Assertion
 caseNonPolyHamlet = do
-    let embed = [$nphamlet|<p>EMBEDDED|]
-    helper "<h1>url</h1><p>EMBEDDED</p>" [$nphamlet|
+    let embed = [$hamlet|<p>EMBEDDED|]
+    helper "<h1>url</h1><p>EMBEDDED</p>" [$hamlet|
 <h1>@{Home}
 ^{embed}
 |]
-    helper "<h1>url</h1>" $(npHamletFile "nonpolyhamlet.hamlet")
+    helper "<h1>url</h1>" $(hamletFile "nonpolyhamlet.hamlet")
 
 data Msg = Hello | Goodbye
 
 ihelper :: String -> IHamlet Msg Url -> Assertion
 ihelper res h = do
-    let x = renderHtmlText $ h showMsg render
+    let x = Text.Blaze.Renderer.Text.renderHtml $ h showMsg render
     T.pack res @=? x
   where
     showMsg Hello = preEscapedString "Hola"

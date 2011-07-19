@@ -27,7 +27,6 @@ import qualified Text.Cassius as C
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
 import Data.Char (isSpace)
-import Text.Hamlet.Quasi (readUtf8File)
 import Control.Applicative ((<$>))
 import Data.Either (partitionEithers)
 

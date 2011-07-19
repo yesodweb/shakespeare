@@ -47,7 +47,6 @@ import Data.Word (Word8)
 import Data.Bits
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import Text.Hamlet.Quasi (readUtf8File)
 import Data.Char (isSpace)
 
 data Color = Color Word8 Word8 Word8
