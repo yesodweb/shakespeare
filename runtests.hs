@@ -342,16 +342,16 @@ caseScriptNotEmpty = helper "<script></script>" [$hamlet|<script|]
 caseMetaEmpty :: Assertion
 caseMetaEmpty = do
     helper "<meta>" [$hamlet|<meta|]
-    --helper "<meta/>" [$xhamlet|<meta|]
+    helper "<meta/>" [$xhamlet|<meta|]
     helper "<meta>" [$hamlet|<meta>|]
-    --helper "<meta/>" [$xhamlet|<meta>|]
+    helper "<meta/>" [$xhamlet|<meta>|]
 
 caseInputEmpty :: Assertion
 caseInputEmpty = do
     helper "<input>" [$hamlet|<input|]
-    --helper "<input/>" [$xhamlet|<input|]
+    helper "<input/>" [$xhamlet|<input|]
     helper "<input>" [$hamlet|<input>|]
-    --helper "<input/>" [$xhamlet|<input>|]
+    helper "<input/>" [$xhamlet|<input>|]
 
 caseMultiClass :: Assertion
 caseMultiClass = do
@@ -531,7 +531,7 @@ caseCurrency =
 caseExternal :: Assertion
 caseExternal = do
     helper "foo<br>" $(hamletFile "external.hamlet")
-    --helper "foo<br/>" $(xhamletFile "external.hamlet")
+    helper "foo<br/>" $(xhamletFile "external.hamlet")
   where
     foo = "foo"
 
@@ -561,15 +561,15 @@ helper' res h = T.pack res @=? Text.Blaze.Renderer.Text.renderHtml h
 caseHamlet' :: Assertion
 caseHamlet' = do
     helper' "foo" [$html|foo|]
-    --helper' "foo" [$xhamlet|foo|]
+    helper' "foo" [$xhtml|foo|]
     helper "<br>" $ const $ [$html|<br|]
-    --helper "<br/>" $ const $ [$xhamlet|<br|]
+    helper "<br/>" $ const $ [$xhtml|<br|]
 
     -- new with generalized stuff
     helper' "foo" [$html|foo|]
-    --helper' "foo" [$xhamlet|foo|]
+    helper' "foo" [$xhtml|foo|]
     helper "<br>" $ const $ [$html|<br|]
-    --helper "<br/>" $ const $ [$xhamlet|<br|]
+    helper "<br/>" $ const $ [$xhtml|<br|]
 
 celper :: String -> Cassius Url -> Assertion
 celper res h = do

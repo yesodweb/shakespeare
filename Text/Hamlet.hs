@@ -11,10 +11,14 @@ module Text.Hamlet
       Html
     , html
     , htmlFile
+    , xhtml
+    , xhtmlFile
       -- * Hamlet
     , Hamlet
     , hamlet
     , hamletFile
+    , xhamlet
+    , xhamletFile
       -- * I18N Hamlet
     , IHamlet
     , ihamlet
@@ -23,6 +27,7 @@ module Text.Hamlet
     , hamletWithSettings
     , hamletFileWithSettings
     , defaultHamletSettings
+    , xhtmlHamletSettings
     , Env (..)
     , HamletRules (..)
     ) where
@@ -140,6 +145,9 @@ contentToExp env hr scope (ContentMsg d) =
 html :: QuasiQuoter
 html = hamletWithSettings htmlRules defaultHamletSettings
 
+xhtml :: QuasiQuoter
+xhtml = hamletWithSettings htmlRules xhtmlHamletSettings
+
 htmlRules :: Q HamletRules
 htmlRules = do
     i <- [|id|]
@@ -147,6 +155,9 @@ htmlRules = do
 
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings hamletRules defaultHamletSettings
+
+xhamlet :: QuasiQuoter
+xhamlet = hamletWithSettings hamletRules xhtmlHamletSettings
 
 hamletRules :: Q HamletRules
 hamletRules = do
@@ -214,8 +225,14 @@ hamletFileWithSettings qhr set fp = do
 hamletFile :: FilePath -> Q Exp
 hamletFile = hamletFileWithSettings hamletRules defaultHamletSettings
 
+xhamletFile :: FilePath -> Q Exp
+xhamletFile = hamletFileWithSettings hamletRules xhtmlHamletSettings
+
 htmlFile :: FilePath -> Q Exp
 htmlFile = hamletFileWithSettings htmlRules defaultHamletSettings
+
+xhtmlFile :: FilePath -> Q Exp
+xhtmlFile = hamletFileWithSettings htmlRules xhtmlHamletSettings
 
 ihamletFile :: FilePath -> Q Exp
 ihamletFile = hamletFileWithSettings ihamletRules defaultHamletSettings
