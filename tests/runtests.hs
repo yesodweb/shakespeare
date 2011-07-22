@@ -1,15 +1,14 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-import Test.Framework (defaultMain, testGroup, Test)
-import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
+import Test.Hspec
+import Test.Hspec.HUnit
 
 import Prelude hiding (reverse)
 import Text.Hamlet
 import Text.Cassius
 import Text.Lucius
 import Text.Julius
-import Text.Coffee
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
@@ -18,98 +17,104 @@ import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 import qualified Data.Set as Set
+import qualified Text.Blaze.Renderer.Text
+import Text.Blaze (toHtml, preEscapedString)
 
 main :: IO ()
-main = defaultMain [testSuite]
+main = hspec specs >> return ()
 
-testSuite :: Test
-testSuite = testGroup "Text.Hamlet"
-    [
-      testCase "empty" caseEmpty
-    , testCase "static" caseStatic
-    , testCase "tag" caseTag
-    , testCase "var" caseVar
-    , testCase "var chain " caseVarChain
-    , testCase "url" caseUrl
-    , testCase "url chain " caseUrlChain
-    , testCase "embed" caseEmbed
-    , testCase "embed chain " caseEmbedChain
-    , testCase "if" caseIf
-    , testCase "if chain " caseIfChain
-    , testCase "else" caseElse
-    , testCase "else chain " caseElseChain
-    , testCase "elseif" caseElseIf
-    , testCase "elseif chain " caseElseIfChain
-    , testCase "list" caseList
-    , testCase "list chain" caseListChain
-    , testCase "script not empty" caseScriptNotEmpty
-    , testCase "meta empty" caseMetaEmpty
-    , testCase "input empty" caseInputEmpty
-    , testCase "multiple classes" caseMultiClass
-    , testCase "attrib order" caseAttribOrder
-    , testCase "nothing" caseNothing
-    , testCase "nothing chain " caseNothingChain
-    , testCase "just" caseJust
-    , testCase "just chain " caseJustChain
-    , testCase "constructor" caseConstructor
-    , testCase "url + params" caseUrlParams
-    , testCase "escape" caseEscape
-    , testCase "empty statement list" caseEmptyStatementList
-    , testCase "attribute conditionals" caseAttribCond
-    , testCase "non-ascii" caseNonAscii
-    , testCase "maybe function" caseMaybeFunction
-    , testCase "trailing dollar sign" caseTrailingDollarSign
-    , testCase "non leading percent sign" caseNonLeadingPercent
-    , testCase "quoted attributes" caseQuotedAttribs
-    , testCase "spaced derefs" caseSpacedDerefs
-    , testCase "attrib vars" caseAttribVars
-    , testCase "strings and html" caseStringsAndHtml
-    , testCase "nesting" caseNesting
-    , testCase "trailing space" caseTrailingSpace
-    , testCase "currency symbols" caseCurrency
-    , testCase "external" caseExternal
-    , testCase "parens" caseParens
-    , testCase "hamlet literals" caseHamletLiterals
-    , testCase "hamlet' and xhamlet'" caseHamlet'
-    , testCase "hamletDebug" caseHamletDebug
-    , testCase "hamlet runtime" caseHamletRT
-    , testCase "hamletFileDebug- changing file" caseHamletFileDebugChange
-    , testCase "hamletFileDebug- features" caseHamletFileDebugFeatures
-    , testCase "cassius" caseCassius
-    , testCase "cassiusFile" caseCassiusFile
-    , testCase "cassiusFileDebug" caseCassiusFileDebug
-    , testCase "cassiusFileDebugChange" caseCassiusFileDebugChange
-    , testCase "julius" caseJulius
-    , testCase "coffee" caseCoffee
-    , testCase "juliusFile" caseJuliusFile
-    , testCase "coffeeFile" caseCoffeeFile
-    , testCase "coffeeFileDebug" caseCoffeeFileDebug
-    , testCase "juliusFileDebugChange" caseJuliusFileDebugChange
-    , testCase "comments" caseComments
-    , testCase "hamletFileDebug double foralls" caseDoubleForalls
-    , testCase "cassius pseudo-class" casePseudo
-    -- FIXME test is disabled , testCase "different binding names" caseDiffBindNames
-    , testCase "blank line" caseBlankLine
-    , testCase "leading spaces" caseLeadingSpaces
-    , testCase "cassius all spaces" caseCassiusAllSpaces
-    , testCase "cassius whitespace and colons" caseCassiusWhitespaceColons
-    , testCase "cassius trailing comments" caseCassiusTrailingComments
-    , testCase "hamlet angle bracket syntax" caseHamletAngleBrackets
-    , testCase "hamlet module names" caseHamletModuleNames
-    , testCase "cassius module names" caseCassiusModuleNames
-    , testCase "julius module names" caseJuliusModuleNames
-    , testCase "single dollar at and caret" caseSingleDollarAtCaret
-    , testCase "dollar operator" caseDollarOperator
-    , testCase "in a row" caseInARow
-    , testCase "embedded slash" caseEmbeddedSlash
-    , testCase "string literals" caseStringLiterals
-    -- , testCase "embed json" caseEmbedJson
-    , testCase "interpolated operators" caseOperators
-    , testCase "HTML comments" caseHtmlComments
-    , testCase "multi cassius" caseMultiCassius
-    , testCase "nested maybes" caseNestedMaybes
-    , testCase "lucius" caseLucius
-    , testCase "conditional class" caseCondClass
+specs = describe "hamlet"
+    [ it "empty" caseEmpty
+    , it "static" caseStatic
+    , it "tag" caseTag
+    , it "var" caseVar
+    , it "var chain " caseVarChain
+    , it "url" caseUrl
+    , it "url chain " caseUrlChain
+    , it "embed" caseEmbed
+    , it "embed chain " caseEmbedChain
+    , it "if" caseIf
+    , it "if chain " caseIfChain
+    , it "else" caseElse
+    , it "else chain " caseElseChain
+    , it "elseif" caseElseIf
+    , it "elseif chain " caseElseIfChain
+    , it "list" caseList
+    , it "list chain" caseListChain
+    , it "with" caseWith
+    , it "with multi" caseWithMulti
+    , it "with chain" caseWithChain
+    , it "with comma string" caseWithCommaString
+    , it "with multi scope" caseWithMultiBindingScope
+    , it "script not empty" caseScriptNotEmpty
+    , it "meta empty" caseMetaEmpty
+    , it "input empty" caseInputEmpty
+    , it "multiple classes" caseMultiClass
+    , it "attrib order" caseAttribOrder
+    , it "nothing" caseNothing
+    , it "nothing chain " caseNothingChain
+    , it "just" caseJust
+    , it "just chain " caseJustChain
+    , it "constructor" caseConstructor
+    , it "url + params" caseUrlParams
+    , it "escape" caseEscape
+    , it "empty statement list" caseEmptyStatementList
+    , it "attribute conditionals" caseAttribCond
+    , it "non-ascii" caseNonAscii
+    , it "maybe function" caseMaybeFunction
+    , it "trailing dollar sign" caseTrailingDollarSign
+    , it "non leading percent sign" caseNonLeadingPercent
+    , it "quoted attributes" caseQuotedAttribs
+    , it "spaced derefs" caseSpacedDerefs
+    , it "attrib vars" caseAttribVars
+    , it "strings and html" caseStringsAndHtml
+    , it "nesting" caseNesting
+    , it "trailing space" caseTrailingSpace
+    , it "currency symbols" caseCurrency
+    , it "external" caseExternal
+    , it "parens" caseParens
+    , it "hamlet literals" caseHamletLiterals
+    , it "hamlet' and xhamlet'" caseHamlet'
+    , it "cassius" caseCassius
+    , it "cassiusFile" caseCassiusFile
+    , it "cassiusFileDebug" caseCassiusFileDebug
+    , it "cassiusFileDebugChange" caseCassiusFileDebugChange
+    , it "julius" caseJulius
+    , it "juliusFile" caseJuliusFile
+    , it "juliusFileDebug" caseJuliusFileDebug
+    , it "juliusFileDebugChange" caseJuliusFileDebugChange
+    , it "comments" caseComments
+    , it "cassius pseudo-class" casePseudo
+    , it "blank line" caseBlankLine
+    , it "leading spaces" caseLeadingSpaces
+    , it "cassius all spaces" caseCassiusAllSpaces
+    , it "cassius whitespace and colons" caseCassiusWhitespaceColons
+    , it "cassius trailing comments" caseCassiusTrailingComments
+    , it "hamlet angle bracket syntax" caseHamletAngleBrackets
+    , it "hamlet module names" caseHamletModuleNames
+    , it "cassius module names" caseCassiusModuleNames
+    , it "julius module names" caseJuliusModuleNames
+    , it "single dollar at and caret" caseSingleDollarAtCaret
+    , it "dollar operator" caseDollarOperator
+    , it "in a row" caseInARow
+    , it "embedded slash" caseEmbeddedSlash
+    , it "string literals" caseStringLiterals
+    , it "interpolated operators" caseOperators
+    , it "HTML comments" caseHtmlComments
+    , it "multi cassius" caseMultiCassius
+    , it "nested maybes" caseNestedMaybes
+    , it "lucius" caseLucius
+    , it "lucius file" caseLuciusFile
+    , it "lucius file debug" caseLuciusFileDebug
+    , it "conditional class" caseCondClass
+    , it "lucius nested" caseLuciusNested
+    , it "lucius media" caseLuciusMedia
+    , it "forall on Foldable" caseForallFoldable
+    , it "cassius removes whitespace" caseCassiusRemoveWhitespace
+    , it "non-poly HTML" caseNonPolyHtml
+    , it "non-poly Hamlet " caseNonPolyHamlet
+    , it "non-poly IHamlet " caseNonPolyIHamlet
+    , it "lucius trailing comments" caseLuciusTrailingComment
     ]
 
 data Url = Home | Sub SubUrl
@@ -165,7 +170,7 @@ data Arg url = Arg
 theArg :: Arg url
 theArg = Arg
     { getArg = theArg
-    , var = string "<var>"
+    , var = toHtml "<var>"
     , url = Home
     , embed = [$hamlet|embed|]
     , true = True
@@ -176,9 +181,14 @@ theArg = Arg
     , urlParams = (Home, [(pack "foo", pack "bar"), (pack "foo1", pack "bar1")])
     }
 
+helperHtml :: String -> Html -> Assertion
+helperHtml res h = do
+    let x = Text.Blaze.Renderer.Text.renderHtml h
+    T.pack res @=? x
+
 helper :: String -> Hamlet Url -> Assertion
 helper res h = do
-    let x = renderHamletText render h
+    let x = Text.Blaze.Renderer.Text.renderHtml $ h render
     T.pack res @=? x
 
 caseEmpty :: Assertion
@@ -220,7 +230,7 @@ caseEmbed = do
 
 caseEmbedChain :: Assertion
 caseEmbedChain = do
-    helper (unpack $ render Home []) [$hamlet|@{url theArg}|]
+    helper "embed" [$hamlet|^{embed (getArg (getArg (getArg theArg)))}|]
 
 caseIf :: Assertion
 caseIf = do
@@ -284,6 +294,44 @@ caseListChain = do
     helper "urlurlurl" [$hamlet|
 $forall x <-  list(getArg(getArg(getArg(getArg(getArg (theArg))))))
     @{url x}
+|]
+
+caseWith :: Assertion
+caseWith = do
+    helper "it's embedded" [$hamlet|
+$with n <- embed theArg
+    it's ^{n}ded
+|]
+
+caseWithMulti :: Assertion
+caseWithMulti = do
+    helper "it's embedded" [$hamlet|
+$with n <- embed theArg, m <- true theArg
+    $if m
+        it's ^{n}ded
+|]
+
+caseWithChain :: Assertion
+caseWithChain = do
+    helper "it's true" [$hamlet|
+$with n <- true(getArg(getArg(getArg(getArg theArg))))
+    $if n
+    	it's true
+|]
+
+-- in multi-with binding, make sure that a comma in a string doesn't confuse the parser.
+caseWithCommaString :: Assertion
+caseWithCommaString = do
+    helper "it's  , something" [$hamlet|
+$with n <- " , something"
+    it's #{n}
+|]
+
+caseWithMultiBindingScope :: Assertion
+caseWithMultiBindingScope = do
+    helper "it's  , something" [$hamlet|
+$with n <- " , something", y <- n
+    it's #{y}
 |]
 
 caseScriptNotEmpty :: Assertion
@@ -506,110 +554,25 @@ caseHamletLiterals = do
     helper "-123.456" [$hamlet|#{show -123.456}|]
 
 helper' :: String -> Html -> Assertion
-helper' res h = T.pack res @=? renderHtmlText h
+helper' res h = T.pack res @=? Text.Blaze.Renderer.Text.renderHtml h
 
 caseHamlet' :: Assertion
 caseHamlet' = do
-    helper' "foo" [$hamlet|foo|]
-    helper' "foo" [$xhamlet|foo|]
-    helper "<br>" $ const $ [$hamlet|<br|]
-    helper "<br/>" $ const $ [$xhamlet|<br|]
+    helper' "foo" [$html|foo|]
+    helper' "foo" [$xhtml|foo|]
+    helper "<br>" $ const $ [$html|<br|]
+    helper "<br/>" $ const $ [$xhtml|<br|]
 
     -- new with generalized stuff
-    helper' "foo" [$hamlet|foo|]
-    helper' "foo" [$xhamlet|foo|]
-    helper "<br>" $ const $ [$hamlet|<br|]
-    helper "<br/>" $ const $ [$xhamlet|<br|]
+    helper' "foo" [$html|foo|]
+    helper' "foo" [$xhtml|foo|]
+    helper "<br>" $ const $ [$html|<br|]
+    helper "<br/>" $ const $ [$xhtml|<br|]
 
-caseHamletDebug :: Assertion
-caseHamletDebug = do
-    helper "<p>foo</p>\n<p>bar</p>\n" [$hamletDebug|
-<p>foo
-<p>bar
-|]
-
-caseHamletRT :: Assertion
-caseHamletRT = do
-    temp <- parseHamletRT defaultHamletSettings "#{var}"
-    rt <- parseHamletRT defaultHamletSettings $
-            unlines
-                [ "#{baz(bar foo)} bin #"
-                , "$forall l <- list"
-                , "  #{l}"
-                , "$maybe j <- just"
-                , "  #{j}"
-                , "$maybe n <- nothing"
-                , "$nothing"
-                , "  nothing"
-                , "^{template}"
-                , "@{url}"
-                , "$if false"
-                , "$elseif false"
-                , "$elseif true"
-                , "  a"
-                , "$if false"
-                , "$else"
-                , "  b"
-                , "@?{urlp}"
-                ]
-    let scope =
-            [ (["foo", "bar", "baz"], HDHtml $ preEscapedString "foo<bar>baz")
-            , (["list"], HDList
-                [ [([], HDHtml $ string "1")]
-                , [([], HDHtml $ string "2")]
-                , [([], HDHtml $ string "3")]
-                ])
-            , (["just"], HDMaybe $ Just
-                [ ([], HDHtml $ string "just")
-                ])
-            , (["nothing"], HDMaybe Nothing)
-            , (["template"], HDTemplate temp)
-            , (["var"], HDHtml $ string "var")
-            , (["url"], HDUrl Home)
-            , (["urlp"], HDUrlParams Home [(pack "foo", pack "bar")])
-            , (["true"], HDBool True)
-            , (["false"], HDBool False)
-            ]
-    rend <- renderHamletRT rt scope render
-    renderHtmlText rend @?=
-        T.pack "foo<bar>baz bin 123justnothingvarurlaburl?foo=bar"
-
-caseHamletFileDebugChange :: Assertion
-caseHamletFileDebugChange = do
-    let foo = "foo"
-    writeFile "external-debug.hamlet" "#{foo} 1"
-    helper "foo 1" $ $(hamletFileDebug "external-debug.hamlet")
-    writeFile "external-debug.hamlet" "#{foo} 2"
-    helper "foo 2" $ $(hamletFileDebug "external-debug.hamlet")
-    writeFile "external-debug.hamlet" "#{foo} 1"
-
-caseHamletFileDebugFeatures :: Assertion
-caseHamletFileDebugFeatures = do
-    let var = "var"
-    let url = Home
-    let urlp = (Home, [(pack "foo", pack "bar")])
-    let template = [$hamlet|template|]
-    let true = True
-    let just = Just "just"
-        nothing = Nothing
-    let list = words "1 2 3"
-    let extra = "e"
-    flip helper $(hamletFileDebug "external-debug2.hamlet") $ concat
-        [ "var"
-        , "var"
-        , "url"
-        , "url"
-        , "suburl"
-        , "url?foo=bar"
-        , "template"
-        , "truee"
-        , "not truee"
-        , "elseif truee"
-        , "just"
-        , "juste"
-        , "nothinge"
-        , "1e2e3e"
-        ]
+celper :: String -> Cassius Url -> Assertion
+celper res h = do
+    let x = renderCassius render h
+    T.pack res @=? x
 
 caseCassius :: Assertion
 caseCassius = do
@@ -651,8 +614,8 @@ caseCassiusFile = do
 caseCassiusFileDebug :: Assertion
 caseCassiusFileDebug = do
     let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
     let selector = "foo"
+    let urlp = (Home, [(pack "p", pack "q")])
     flip celper $(cassiusFileDebug "external1.cassius") $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
         , "bin{"
@@ -670,107 +633,60 @@ caseCassiusFileDebugChange = do
     celper "foo{var:2}" $(cassiusFileDebug "external2.cassius")
     writeFile "external2.cassius" "foo\n  #{var}: 1"
 
-celper :: String -> Cassius Url -> Assertion
-celper res h = do
-    let x = renderCassius render h
-    T.pack res @=? x
-
-jmixin = [$julius|x = 5|]
-cofmixin = [$coffee|x = 5|]
+jmixin = [$julius|var x;|]
 
 jelper :: String -> Julius Url -> Assertion
 jelper res h = T.pack res @=? renderJulius render h
 
-cofelper :: String -> Coffee Url -> Assertion
-cofelper res h = do
-  c <- renderCoffee render h
-  T.pack res @=? c
-
-varD = "123;"
-urlp = (Home, [(pack "p", pack "q")])
-
 caseJulius :: Assertion
 caseJulius = do
-    flip jelper [$julius|'שלום';
-#{varD}
-'@{Home}';
-'@?{urlp}';
-^{jmixin};
-|] $ renderedI "\r\n"
-
-caseCoffee :: Assertion
-caseCoffee = do
-    flip cofelper [$coffee|'שלום'
-%{varD}
-'@{Home}'
-'@?{urlp}'
-^{cofmixin}
-|] $ renderedI "\n"
-
-renderedI nl = intercalate nl
-        [ "'שלום';"
-        , varD
-        , "'url';"
-        , "'url?p=q';"
-        , "x = 5;"
-        ] ++ nl
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper [$julius|שלום
+#{var}
+@{Home}
+@?{urlp}
+^{jmixin}
+|] $ intercalate "\r\n"
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ] ++ "\r\n"
 
 caseJuliusFile :: Assertion
 caseJuliusFile = do
-    let var = "123;"
-    let renderedF = unlines
-          [ "'שלום';"
-          , var
-          , "'url';"
-          , "'url?p=q';"
-          , "x = 5;"
-          ]
-    flip jelper $(juliusFile "tests/external1.julius") renderedF
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper $(juliusFile "external1.julius") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
 
 caseJuliusFileDebug :: Assertion
 caseJuliusFileDebug = do
-    let var = "123;"
-    let renderedF = unlines
-          [ "'שלום';"
-          , var
-          , "'url';"
-          , "'url?p=q';"
-          , "x = 5;"
-          ]
-    flip jelper $(juliusFileDebug "tests/external1.julius") renderedF
-
-caseCoffeeFile :: Assertion
-caseCoffeeFile = do
-    let var = "123;"
-    let renderedF = unlines
-          [ "'שלום';"
-          , var
-          , "'url';"
-          , "'url?p=q';"
-          , "x = 5;"
-          ]
-    flip cofelper $(coffeeFile "tests/external1.coffee") renderedF
-
-caseCoffeeFileDebug :: Assertion
-caseCoffeeFileDebug = do
-    let var = "123;"
-    let renderedF = unlines
-          [ "'שלום';"
-          , var
-          , "'url';"
-          , "'url?p=q';"
-          , "x = 5;"
-          ]
-    flip cofelper $(coffeeFileDebug "tests/external1.coffee") renderedF
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper $(juliusFileDebug "external1.julius") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
 
 caseJuliusFileDebugChange :: Assertion
 caseJuliusFileDebugChange = do
     let var = "somevar"
-    writeFile "tests/external2.julius" "var #{var} = 1;"
-    jelper "var somevar = 1;" $(juliusFileDebug "tests/external2.julius")
-    writeFile "tests/external2.julius" "var #{var} = 2;"
-    jelper "var somevar = 2;" $(juliusFileDebug "tests/external2.julius")
-    writeFile "tests/external2.julius" "var #{var} = 1;"
+    writeFile "external2.julius" "var #{var} = 1;"
+    jelper "var somevar = 1;" $(juliusFileDebug "external2.julius")
+    writeFile "external2.julius" "var #{var} = 2;"
+    jelper "var somevar = 2;" $(juliusFileDebug "external2.julius")
+    writeFile "external2.julius" "var #{var} = 1;"
 
 caseComments :: Assertion
 caseComments = do
@@ -782,10 +698,6 @@ $#a third one|]
 /* another comment */
 /*a third one*/|]
 
-caseDoubleForalls :: Assertion
-caseDoubleForalls = do
-    let list = map show [1..2]
-    helper "12" $(hamletFileDebug "double-foralls.hamlet")
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
 
@@ -948,26 +860,17 @@ caseStringLiterals = do
     helper "str&quot;ing" [$hamlet|#{"str\"ing"}|]
     helper "str&lt;ing" [$hamlet|#{"str<ing"}|]
 
-{-caseEmbedJson :: Assertion-}
-{-caseEmbedJson = do-}
-    {-let v = J.ValueObject $ Map.fromList-}
-                {-[ ( T.pack "foo", J.ValueArray-}
-                    {-[ J.ValueAtom $ J.AtomText $ T.pack "bar"-}
-                    {-, J.ValueAtom $ J.AtomNumber 5-}
-                    {-])-}
-                {-]-}
-    {-jelper "{\"foo\":[\"bar\",5.0]}" [$julius|#{v}|]-}
-
 caseOperators = do
     helper "3" [$hamlet|#{show $ (+) 1 2}|]
     helper "6" [$hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
 
 caseHtmlComments = do
-    helper "<p>1</p><p>2</p>" [$hamlet|
+    helper "<p>1</p><p>2 not ignored</p>" [$hamlet|
 <p>1
 <!-- ignored comment -->
 <p
     2
+    <!-- ignored --> not ignored<!-- ignored -->
 |]
 
 caseMultiCassius :: Assertion
@@ -1038,3 +941,111 @@ caseCondClass = do
     helper "<p class=\"foo bar baz\"></p>" [$hamlet|
 <p class=foo class=bar class=baz
 |]
+
+caseLuciusFile :: Assertion
+caseLuciusFile = do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip celper $(luciusFile "external1.lucius") $ concat
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
+        ]
+
+caseLuciusFileDebug :: Assertion
+caseLuciusFileDebug = do
+    let var = "var"
+    writeFile "external2.lucius" "foo{#{var}: 1}"
+    celper "foo{var:1}" $(luciusFileDebug "external2.lucius")
+    writeFile "external2.lucius" "foo{#{var}: 2}"
+    celper "foo{var:2}" $(luciusFileDebug "external2.lucius")
+    writeFile "external2.lucius" "foo{#{var}: 1}"
+
+caseLuciusNested :: Assertion
+caseLuciusNested = do
+    celper "foo bar{baz:bin}" [$lucius|
+foo {
+    bar {
+        baz: bin;
+    }
+}
+|]
+    celper "foo bar{baz:bin}" $(luciusFile "external-nested.lucius")
+    celper "foo bar{baz:bin}" $(luciusFileDebug "external-nested.lucius")
+
+    celper "foo1 bar,foo2 bar{baz:bin}" [$lucius|
+foo1, foo2 {
+    bar {
+        baz: bin;
+    }
+}
+|]
+
+caseLuciusMedia :: Assertion
+caseLuciusMedia = do
+    celper "@media only screen{foo bar{baz:bin}}" [$lucius|
+@media only screen{
+    foo {
+        bar {
+            baz: bin;
+        }
+    }
+}
+|]
+    celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "external-media.lucius")
+    celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "external-media.lucius")
+
+caseForallFoldable :: Assertion
+caseForallFoldable = helper "12345" [$hamlet|
+$forall x <- set
+    #{x}
+|]
+  where
+    set = Set.fromList [1..5 :: Int]
+
+caseCassiusRemoveWhitespace :: Assertion
+caseCassiusRemoveWhitespace = celper "foo{bar:baz}" [$cassius|
+foo
+    bar     :    baz
+|]
+
+caseNonPolyHtml :: Assertion
+caseNonPolyHtml = do
+    helperHtml "<h1>HELLO WORLD</h1>" [$html|
+<h1>HELLO WORLD
+|]
+    helperHtml "<h1>HELLO WORLD</h1>" $(htmlFile "nonpolyhtml.hamlet")
+
+caseNonPolyHamlet :: Assertion
+caseNonPolyHamlet = do
+    let embed = [$hamlet|<p>EMBEDDED|]
+    helper "<h1>url</h1><p>EMBEDDED</p>" [$hamlet|
+<h1>@{Home}
+^{embed}
+|]
+    helper "<h1>url</h1>" $(hamletFile "nonpolyhamlet.hamlet")
+
+data Msg = Hello | Goodbye
+
+ihelper :: String -> IHamlet Msg Url -> Assertion
+ihelper res h = do
+    let x = Text.Blaze.Renderer.Text.renderHtml $ h showMsg render
+    T.pack res @=? x
+  where
+    showMsg Hello = preEscapedString "Hola"
+    showMsg Goodbye = preEscapedString "Adios"
+
+caseNonPolyIHamlet :: Assertion
+caseNonPolyIHamlet = do
+    let embed = [$ihamlet|<p>EMBEDDED|]
+    ihelper "<h1>Adios</h1><p>EMBEDDED</p>" [$ihamlet|
+<h1>_{Goodbye}
+^{embed}
+|]
+    ihelper "<h1>Hola</h1>" $(ihamletFile "nonpolyihamlet.hamlet")
+
+caseLuciusTrailingComment :: Assertion
+caseLuciusTrailingComment =
+    celper "foo{bar:baz}" [$lucius|foo{bar:baz;}/* ignored*/|]
