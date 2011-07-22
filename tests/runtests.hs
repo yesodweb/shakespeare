@@ -172,7 +172,7 @@ theArg = Arg
     { getArg = theArg
     , var = toHtml "<var>"
     , url = Home
-    , embed = [$hamlet|embed|]
+    , embed = [hamlet|embed|]
     , true = True
     , false = False
     , list = [theArg, theArg, theArg]
@@ -192,62 +192,62 @@ helper res h = do
     T.pack res @=? x
 
 caseEmpty :: Assertion
-caseEmpty = helper "" [$hamlet||]
+caseEmpty = helper "" [hamlet||]
 
 caseStatic :: Assertion
-caseStatic = helper "some static content" [$hamlet|some static content|]
+caseStatic = helper "some static content" [hamlet|some static content|]
 
 caseTag :: Assertion
 caseTag = do
-    helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [$hamlet|
+    helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [hamlet|
 <p .foo
   <#bar>baz
 |]
-    helper "<p class=\"foo.bar\"><div id=\"bar\">baz</div></p>" [$hamlet|
+    helper "<p class=\"foo.bar\"><div id=\"bar\">baz</div></p>" [hamlet|
 <p class=foo.bar
   <#bar>baz
 |]
 
 caseVar :: Assertion
 caseVar = do
-    helper "&lt;var&gt;" [$hamlet|#{var theArg}|]
+    helper "&lt;var&gt;" [hamlet|#{var theArg}|]
 
 caseVarChain :: Assertion
 caseVarChain = do
-    helper "&lt;var&gt;" [$hamlet|#{var (getArg (getArg (getArg theArg)))}|]
+    helper "&lt;var&gt;" [hamlet|#{var (getArg (getArg (getArg theArg)))}|]
 
 caseUrl :: Assertion
 caseUrl = do
-    helper (unpack $ render Home []) [$hamlet|@{url theArg}|]
+    helper (unpack $ render Home []) [hamlet|@{url theArg}|]
 
 caseUrlChain :: Assertion
 caseUrlChain = do
-    helper (unpack $ render Home []) [$hamlet|@{url (getArg (getArg (getArg theArg)))}|]
+    helper (unpack $ render Home []) [hamlet|@{url (getArg (getArg (getArg theArg)))}|]
 
 caseEmbed :: Assertion
 caseEmbed = do
-    helper "embed" [$hamlet|^{embed theArg}|]
+    helper "embed" [hamlet|^{embed theArg}|]
 
 caseEmbedChain :: Assertion
 caseEmbedChain = do
-    helper "embed" [$hamlet|^{embed (getArg (getArg (getArg theArg)))}|]
+    helper "embed" [hamlet|^{embed (getArg (getArg (getArg theArg)))}|]
 
 caseIf :: Assertion
 caseIf = do
-    helper "if" [$hamlet|
+    helper "if" [hamlet|
 $if true theArg
     if
 |]
 
 caseIfChain :: Assertion
 caseIfChain = do
-    helper "if" [$hamlet|
+    helper "if" [hamlet|
 $if true (getArg (getArg (getArg theArg)))
     if
 |]
 
 caseElse :: Assertion
-caseElse = helper "else" [$hamlet|
+caseElse = helper "else" [hamlet|
 $if false theArg
     if
 $else
@@ -255,7 +255,7 @@ $else
 |]
 
 caseElseChain :: Assertion
-caseElseChain = helper "else" [$hamlet|
+caseElseChain = helper "else" [hamlet|
 $if false (getArg (getArg (getArg theArg)))
     if
 $else
@@ -263,7 +263,7 @@ $else
 |]
 
 caseElseIf :: Assertion
-caseElseIf = helper "elseif" [$hamlet|
+caseElseIf = helper "elseif" [hamlet|
 $if false theArg
     if
 $elseif true theArg
@@ -273,7 +273,7 @@ $else
 |]
 
 caseElseIfChain :: Assertion
-caseElseIfChain = helper "elseif" [$hamlet|
+caseElseIfChain = helper "elseif" [hamlet|
 $if false(getArg(getArg(getArg theArg)))
     if
 $elseif true(getArg(getArg(getArg theArg)))
@@ -284,28 +284,28 @@ $else
 
 caseList :: Assertion
 caseList = do
-    helper "xxx" [$hamlet|
+    helper "xxx" [hamlet|
 $forall _x <- (list theArg)
     x
 |]
 
 caseListChain :: Assertion
 caseListChain = do
-    helper "urlurlurl" [$hamlet|
+    helper "urlurlurl" [hamlet|
 $forall x <-  list(getArg(getArg(getArg(getArg(getArg (theArg))))))
     @{url x}
 |]
 
 caseWith :: Assertion
 caseWith = do
-    helper "it's embedded" [$hamlet|
+    helper "it's embedded" [hamlet|
 $with n <- embed theArg
     it's ^{n}ded
 |]
 
 caseWithMulti :: Assertion
 caseWithMulti = do
-    helper "it's embedded" [$hamlet|
+    helper "it's embedded" [hamlet|
 $with n <- embed theArg, m <- true theArg
     $if m
         it's ^{n}ded
@@ -313,7 +313,7 @@ $with n <- embed theArg, m <- true theArg
 
 caseWithChain :: Assertion
 caseWithChain = do
-    helper "it's true" [$hamlet|
+    helper "it's true" [hamlet|
 $with n <- true(getArg(getArg(getArg(getArg theArg))))
     $if n
     	it's true
@@ -322,52 +322,52 @@ $with n <- true(getArg(getArg(getArg(getArg theArg))))
 -- in multi-with binding, make sure that a comma in a string doesn't confuse the parser.
 caseWithCommaString :: Assertion
 caseWithCommaString = do
-    helper "it's  , something" [$hamlet|
+    helper "it's  , something" [hamlet|
 $with n <- " , something"
     it's #{n}
 |]
 
 caseWithMultiBindingScope :: Assertion
 caseWithMultiBindingScope = do
-    helper "it's  , something" [$hamlet|
+    helper "it's  , something" [hamlet|
 $with n <- " , something", y <- n
     it's #{y}
 |]
 
 caseScriptNotEmpty :: Assertion
-caseScriptNotEmpty = helper "<script></script>" [$hamlet|<script|]
+caseScriptNotEmpty = helper "<script></script>" [hamlet|<script|]
 
 caseMetaEmpty :: Assertion
 caseMetaEmpty = do
-    helper "<meta>" [$hamlet|<meta|]
-    helper "<meta/>" [$xhamlet|<meta|]
-    helper "<meta>" [$hamlet|<meta>|]
-    helper "<meta/>" [$xhamlet|<meta>|]
+    helper "<meta>" [hamlet|<meta|]
+    helper "<meta/>" [xhamlet|<meta|]
+    helper "<meta>" [hamlet|<meta>|]
+    helper "<meta/>" [xhamlet|<meta>|]
 
 caseInputEmpty :: Assertion
 caseInputEmpty = do
-    helper "<input>" [$hamlet|<input|]
-    helper "<input/>" [$xhamlet|<input|]
-    helper "<input>" [$hamlet|<input>|]
-    helper "<input/>" [$xhamlet|<input>|]
+    helper "<input>" [hamlet|<input|]
+    helper "<input/>" [xhamlet|<input|]
+    helper "<input>" [hamlet|<input>|]
+    helper "<input/>" [xhamlet|<input>|]
 
 caseMultiClass :: Assertion
 caseMultiClass = do
-    helper "<div class=\"foo bar\"></div>" [$hamlet|<.foo.bar|]
-    helper "<div class=\"foo bar\"></div>" [$hamlet|<.foo.bar>|]
+    helper "<div class=\"foo bar\"></div>" [hamlet|<.foo.bar|]
+    helper "<div class=\"foo bar\"></div>" [hamlet|<.foo.bar>|]
 
 caseAttribOrder :: Assertion
 caseAttribOrder = do
-    helper "<meta 1 2 3>" [$hamlet|<meta 1 2 3|]
-    helper "<meta 1 2 3>" [$hamlet|<meta 1 2 3>|]
+    helper "<meta 1 2 3>" [hamlet|<meta 1 2 3|]
+    helper "<meta 1 2 3>" [hamlet|<meta 1 2 3>|]
 
 caseNothing :: Assertion
 caseNothing = do
-    helper "" [$hamlet|
+    helper "" [hamlet|
 $maybe _n <- nothing theArg
     nothing
 |]
-    helper "nothing" [$hamlet|
+    helper "nothing" [hamlet|
 $maybe _n <- nothing theArg
     something
 $nothing
@@ -375,120 +375,120 @@ $nothing
 |]
 
 caseNothingChain :: Assertion
-caseNothingChain = helper "" [$hamlet|
+caseNothingChain = helper "" [hamlet|
 $maybe n <- nothing(getArg(getArg(getArg theArg)))
     nothing #{n}
 |]
 
 caseJust :: Assertion
-caseJust = helper "it's just" [$hamlet|
+caseJust = helper "it's just" [hamlet|
 $maybe n <- just theArg
     it's #{n}
 |]
 
 caseJustChain :: Assertion
-caseJustChain = helper "it's just" [$hamlet|
+caseJustChain = helper "it's just" [hamlet|
 $maybe n <- just(getArg(getArg(getArg theArg)))
     it's #{n}
 |]
 
 caseConstructor :: Assertion
 caseConstructor = do
-    helper "url" [$hamlet|@{Home}|]
-    helper "suburl" [$hamlet|@{Sub SubUrl}|]
+    helper "url" [hamlet|@{Home}|]
+    helper "suburl" [hamlet|@{Sub SubUrl}|]
     let text = "<raw text>"
-    helper "<raw text>" [$hamlet|#{preEscapedString text}|]
+    helper "<raw text>" [hamlet|#{preEscapedString text}|]
 
 caseUrlParams :: Assertion
 caseUrlParams = do
-    helper "url?foo=bar&amp;foo1=bar1" [$hamlet|@?{urlParams theArg}|]
+    helper "url?foo=bar&amp;foo1=bar1" [hamlet|@?{urlParams theArg}|]
 
 caseEscape :: Assertion
 caseEscape = do
-    helper "#this is raw\n " [$hamlet|
+    helper "#this is raw\n " [hamlet|
 \#this is raw
 \
 \ 
 |]
-    helper "$@^" [$hamlet|$@^|]
+    helper "$@^" [hamlet|$@^|]
 
 caseEmptyStatementList :: Assertion
 caseEmptyStatementList = do
-    helper "" [$hamlet|$if True|]
-    helper "" [$hamlet|$maybe _x <- Nothing|]
+    helper "" [hamlet|$if True|]
+    helper "" [hamlet|$maybe _x <- Nothing|]
     let emptyList = []
-    helper "" [$hamlet|$forall _x <- emptyList|]
+    helper "" [hamlet|$forall _x <- emptyList|]
 
 caseAttribCond :: Assertion
 caseAttribCond = do
-    helper "<select></select>" [$hamlet|<select :False:selected|]
-    helper "<select selected></select>" [$hamlet|<select :True:selected|]
-    helper "<meta var=\"foo:bar\">" [$hamlet|<meta var=foo:bar|]
+    helper "<select></select>" [hamlet|<select :False:selected|]
+    helper "<select selected></select>" [hamlet|<select :True:selected|]
+    helper "<meta var=\"foo:bar\">" [hamlet|<meta var=foo:bar|]
     helper "<select selected></select>"
-        [$hamlet|<select :true theArg:selected|]
+        [hamlet|<select :true theArg:selected|]
 
-    helper "<select></select>" [$hamlet|<select :False:selected>|]
-    helper "<select selected></select>" [$hamlet|<select :True:selected>|]
-    helper "<meta var=\"foo:bar\">" [$hamlet|<meta var=foo:bar>|]
+    helper "<select></select>" [hamlet|<select :False:selected>|]
+    helper "<select selected></select>" [hamlet|<select :True:selected>|]
+    helper "<meta var=\"foo:bar\">" [hamlet|<meta var=foo:bar>|]
     helper "<select selected></select>"
-        [$hamlet|<select :true theArg:selected>|]
+        [hamlet|<select :true theArg:selected>|]
 
 caseNonAscii :: Assertion
 caseNonAscii = do
-    helper "עִבְרִי" [$hamlet|עִבְרִי|]
+    helper "עִבְרִי" [hamlet|עִבְרִי|]
 
 caseMaybeFunction :: Assertion
 caseMaybeFunction = do
-    helper "url?foo=bar&amp;foo1=bar1" [$hamlet|
+    helper "url?foo=bar&amp;foo1=bar1" [hamlet|
 $maybe x <- Just urlParams
     @?{x theArg}
 |]
 
 caseTrailingDollarSign :: Assertion
 caseTrailingDollarSign =
-    helper "trailing space \ndollar sign #" [$hamlet|trailing space #
+    helper "trailing space \ndollar sign #" [hamlet|trailing space #
 \
 dollar sign #\
 |]
 
 caseNonLeadingPercent :: Assertion
 caseNonLeadingPercent =
-    helper "<span style=\"height:100%\">foo</span>" [$hamlet|
+    helper "<span style=\"height:100%\">foo</span>" [hamlet|
 <span style=height:100%>foo
 |]
 
 caseQuotedAttribs :: Assertion
 caseQuotedAttribs =
-    helper "<input type=\"submit\" value=\"Submit response\">" [$hamlet|
+    helper "<input type=\"submit\" value=\"Submit response\">" [hamlet|
 <input type=submit value="Submit response"
 |]
 
 caseSpacedDerefs :: Assertion
 caseSpacedDerefs = do
-    helper "&lt;var&gt;" [$hamlet|#{var theArg}|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|<.#{var theArg}|]
+    helper "&lt;var&gt;" [hamlet|#{var theArg}|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}|]
 
 caseAttribVars :: Assertion
 caseAttribVars = do
-    helper "<div id=\"&lt;var&gt;\"></div>" [$hamlet|<##{var theArg}|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|<.#{var theArg}|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|< f=#{var theArg}|]
+    helper "<div id=\"&lt;var&gt;\"></div>" [hamlet|<##{var theArg}|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}|]
+    helper "<div f=\"&lt;var&gt;\"></div>" [hamlet|< f=#{var theArg}|]
 
-    helper "<div id=\"&lt;var&gt;\"></div>" [$hamlet|<##{var theArg}>|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [$hamlet|<.#{var theArg}>|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [$hamlet|< f=#{var theArg}>|]
+    helper "<div id=\"&lt;var&gt;\"></div>" [hamlet|<##{var theArg}>|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}>|]
+    helper "<div f=\"&lt;var&gt;\"></div>" [hamlet|< f=#{var theArg}>|]
 
 caseStringsAndHtml :: Assertion
 caseStringsAndHtml = do
     let str = "<string>"
     let html = preEscapedString "<html>"
-    helper "&lt;string&gt; <html>" [$hamlet|#{str} #{html}|]
+    helper "&lt;string&gt; <html>" [hamlet|#{str} #{html}|]
 
 caseNesting :: Assertion
 caseNesting = do
     helper
       "<table><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table>"
-      [$hamlet|
+      [hamlet|
 <table
   <tbody
     $forall user <- users
@@ -502,7 +502,7 @@ caseNesting = do
           , "<option value=\"false\">No</option>"
           , "</select>"
           ])
-        [$hamlet|
+        [hamlet|
 <select #"#{name}" name=#{name}
     <option :isBoolBlank val:selected
     <option value=true :isBoolTrue val:selected>Yes
@@ -518,11 +518,11 @@ caseNesting = do
 
 caseTrailingSpace :: Assertion
 caseTrailingSpace =
-    helper "" [$hamlet|        |]
+    helper "" [hamlet|        |]
 
 caseCurrency :: Assertion
 caseCurrency =
-    helper foo [$hamlet|#{foo}|]
+    helper foo [hamlet|#{foo}|]
   where
     foo = "eg: 5, $6, €7.01, £75"
 
@@ -538,36 +538,36 @@ caseParens = do
     let plus = (++)
         x = "x"
         y = "y"
-    helper "xy" [$hamlet|#{(plus x) y}|]
-    helper "xxy" [$hamlet|#{plus (plus x x) y}|]
+    helper "xy" [hamlet|#{(plus x) y}|]
+    helper "xxy" [hamlet|#{plus (plus x x) y}|]
     let alist = ["1", "2", "3"]
-    helper "123" [$hamlet|
+    helper "123" [hamlet|
 $forall x <- (id id id id alist)
     #{x}
 |]
 
 caseHamletLiterals :: Assertion
 caseHamletLiterals = do
-    helper "123" [$hamlet|#{show 123}|]
-    helper "123.456" [$hamlet|#{show 123.456}|]
-    helper "-123" [$hamlet|#{show -123}|]
-    helper "-123.456" [$hamlet|#{show -123.456}|]
+    helper "123" [hamlet|#{show 123}|]
+    helper "123.456" [hamlet|#{show 123.456}|]
+    helper "-123" [hamlet|#{show -123}|]
+    helper "-123.456" [hamlet|#{show -123.456}|]
 
 helper' :: String -> Html -> Assertion
 helper' res h = T.pack res @=? Text.Blaze.Renderer.Text.renderHtml h
 
 caseHamlet' :: Assertion
 caseHamlet' = do
-    helper' "foo" [$html|foo|]
-    helper' "foo" [$xhtml|foo|]
-    helper "<br>" $ const $ [$html|<br|]
-    helper "<br/>" $ const $ [$xhtml|<br|]
+    helper' "foo" [html|foo|]
+    helper' "foo" [xhtml|foo|]
+    helper "<br>" $ const $ [html|<br|]
+    helper "<br/>" $ const $ [xhtml|<br|]
 
     -- new with generalized stuff
-    helper' "foo" [$html|foo|]
-    helper' "foo" [$xhtml|foo|]
-    helper "<br>" $ const $ [$html|<br|]
-    helper "<br/>" $ const $ [$xhtml|<br|]
+    helper' "foo" [html|foo|]
+    helper' "foo" [xhtml|foo|]
+    helper "<br>" $ const $ [html|<br|]
+    helper "<br/>" $ const $ [xhtml|<br|]
 
 celper :: String -> Cassius Url -> Assertion
 celper res h = do
@@ -578,7 +578,7 @@ caseCassius :: Assertion
 caseCassius = do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip celper [$cassius|
+    flip celper [cassius|
 foo
     background: #{colorBlack}
     bar: baz
@@ -633,7 +633,7 @@ caseCassiusFileDebugChange = do
     celper "foo{var:2}" $(cassiusFileDebug "external2.cassius")
     writeFile "external2.cassius" "foo\n  #{var}: 1"
 
-jmixin = [$julius|var x;|]
+jmixin = [julius|var x;|]
 
 jelper :: String -> Julius Url -> Assertion
 jelper res h = T.pack res @=? renderJulius render h
@@ -642,7 +642,7 @@ caseJulius :: Assertion
 caseJulius = do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [$julius|שלום
+    flip jelper [julius|שלום
 #{var}
 @{Home}
 @?{urlp}
@@ -691,10 +691,10 @@ caseJuliusFileDebugChange = do
 caseComments :: Assertion
 caseComments = do
     -- FIXME reconsider Hamlet comment syntax?
-    helper "" [$hamlet|$# this is a comment
+    helper "" [hamlet|$# this is a comment
 $# another comment
 $#a third one|]
-    celper "" [$cassius|/* this is a comment */
+    celper "" [cassius|/* this is a comment */
 /* another comment */
 /*a third one*/|]
 
@@ -703,7 +703,7 @@ instance Show Url where
 
 casePseudo :: Assertion
 casePseudo = do
-    flip celper [$cassius|
+    flip celper [cassius|
 a:visited
     color: blue
 |] "a:visited{color:blue}"
@@ -716,13 +716,13 @@ caseDiffBindNames = do
 
 caseBlankLine :: Assertion
 caseBlankLine = do
-    helper "<p>foo</p>" [$hamlet|
+    helper "<p>foo</p>" [hamlet|
 <p
 
     foo
 
 |]
-    celper "foo{bar:baz}" [$cassius|
+    celper "foo{bar:baz}" [cassius|
 foo
 
     bar: baz
@@ -731,13 +731,13 @@ foo
 
 caseLeadingSpaces :: Assertion
 caseLeadingSpaces =
-    celper "foo{bar:baz}" [$cassius|
+    celper "foo{bar:baz}" [cassius|
   foo
     bar: baz
 |]
 
 caseTrailingSpaces :: Assertion
-caseTrailingSpaces = helper "" [$hamlet|
+caseTrailingSpaces = helper "" [hamlet|
 $if   True   
 $elseif   False   
 $else   
@@ -750,14 +750,14 @@ $forall   x     <-   empty
 
 caseCassiusAllSpaces :: Assertion
 caseCassiusAllSpaces = do
-    celper "h1{color:green }" [$cassius|
+    celper "h1{color:green }" [cassius|
     h1
         color: green 
     |]
 
 caseCassiusWhitespaceColons :: Assertion
 caseCassiusWhitespaceColons = do
-    celper "h1:hover{color:green ;font-family:sans-serif}" [$cassius|
+    celper "h1:hover{color:green ;font-family:sans-serif}" [cassius|
     h1:hover
         color: green 
         font-family:sans-serif
@@ -765,7 +765,7 @@ caseCassiusWhitespaceColons = do
 
 caseCassiusTrailingComments :: Assertion
 caseCassiusTrailingComments = do
-    celper "h1:hover {color:green ;font-family:sans-serif}" [$cassius|
+    celper "h1:hover {color:green ;font-family:sans-serif}" [cassius|
     h1:hover /* Please ignore this */
         color: green /* This is a comment. */
         /* Obviously this is ignored too. */
@@ -775,7 +775,7 @@ caseCassiusTrailingComments = do
 caseHamletAngleBrackets :: Assertion
 caseHamletAngleBrackets =
     helper "<p class=\"foo\" height=\"100\"><span id=\"bar\" width=\"50\">HELLO</span></p>"
-        [$hamlet|
+        [hamlet|
 <p.foo height="100"
     <span #bar width=50>HELLO
 |]
@@ -783,7 +783,7 @@ caseHamletAngleBrackets =
 caseHamletModuleNames :: Assertion
 caseHamletModuleNames =
     helper "oof oof 3.14 -5"
-    [$hamlet|#{Data.List.reverse foo} #
+    [hamlet|#{Data.List.reverse foo} #
 #{L.reverse foo} #
 #{show 3.14} #{show -5}|]
   where
@@ -792,7 +792,7 @@ caseHamletModuleNames =
 caseCassiusModuleNames :: Assertion
 caseCassiusModuleNames =
     celper "sel{bar:oof oof 3.14 -5}"
-    [$cassius|
+    [cassius|
 sel
     bar: #{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}
 |]
@@ -802,70 +802,70 @@ sel
 caseJuliusModuleNames :: Assertion
 caseJuliusModuleNames =
     jelper "oof oof 3.14 -5"
-    [$julius|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
+    [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
   where
     foo = "foo"
 
 caseSingleDollarAtCaret :: Assertion
 caseSingleDollarAtCaret = do
-    helper "$@^" [$hamlet|$@^|]
-    celper "sel{att:$@^}" [$cassius|
+    helper "$@^" [hamlet|$@^|]
+    celper "sel{att:$@^}" [cassius|
 sel
     att: $@^
 |]
-    jelper "$@^" [$julius|$@^|]
+    jelper "$@^" [julius|$@^|]
 
-    helper "#{@{^{" [$hamlet|#\{@\{^\{|]
-    celper "sel{att:#{@{^{}" [$cassius|
+    helper "#{@{^{" [hamlet|#\{@\{^\{|]
+    celper "sel{att:#{@{^{}" [cassius|
 sel
     att: #\{@\{^{
 |]
-    jelper "#{@{^{" [$julius|#\{@\{^\{|]
+    jelper "#{@{^{" [julius|#\{@\{^\{|]
 
 caseDollarOperator :: Assertion
 caseDollarOperator = do
     let val = (1, (2, 3))
-    helper "2" [$hamlet|#{ show $ fst $ snd val }|]
-    helper "2" [$hamlet|#{ show $ fst $ snd $ val}|]
+    helper "2" [hamlet|#{ show $ fst $ snd val }|]
+    helper "2" [hamlet|#{ show $ fst $ snd $ val}|]
 
-    celper "sel{att:2}" [$cassius|
+    celper "sel{att:2}" [cassius|
 sel
     att: #{ show $ fst $ snd val }
 |]
-    celper "sel{att:2}" [$cassius|
+    celper "sel{att:2}" [cassius|
 sel
     att: #{ show $ fst $ snd $ val}
 |]
 
-    jelper "2" [$julius|#{ show $ fst $ snd val }|]
-    jelper "2" [$julius|#{ show $ fst $ snd $ val}|]
+    jelper "2" [julius|#{ show $ fst $ snd val }|]
+    jelper "2" [julius|#{ show $ fst $ snd $ val}|]
 
 caseInARow :: Assertion
 caseInARow = do
-    helper "1" [$hamlet|#{ show $ const 1 2 }|]
+    helper "1" [hamlet|#{ show $ const 1 2 }|]
 
 caseEmbeddedSlash :: Assertion
 caseEmbeddedSlash = do
-    helper "///" [$hamlet|///|]
-    celper "sel{att:///}" [$cassius|
+    helper "///" [hamlet|///|]
+    celper "sel{att:///}" [cassius|
 sel
     att: ///
 |]
 
 caseStringLiterals :: Assertion
 caseStringLiterals = do
-    helper "string" [$hamlet|#{"string"}|]
-    helper "string" [$hamlet|#{id "string"}|]
-    helper "gnirts" [$hamlet|#{L.reverse $ id "string"}|]
-    helper "str&quot;ing" [$hamlet|#{"str\"ing"}|]
-    helper "str&lt;ing" [$hamlet|#{"str<ing"}|]
+    helper "string" [hamlet|#{"string"}|]
+    helper "string" [hamlet|#{id "string"}|]
+    helper "gnirts" [hamlet|#{L.reverse $ id "string"}|]
+    helper "str&quot;ing" [hamlet|#{"str\"ing"}|]
+    helper "str&lt;ing" [hamlet|#{"str<ing"}|]
 
 caseOperators = do
-    helper "3" [$hamlet|#{show $ (+) 1 2}|]
-    helper "6" [$hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
+    helper "3" [hamlet|#{show $ (+) 1 2}|]
+    helper "6" [hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
 
 caseHtmlComments = do
-    helper "<p>1</p><p>2 not ignored</p>" [$hamlet|
+    helper "<p>1</p><p>2 not ignored</p>" [hamlet|
 <p>1
 <!-- ignored comment -->
 <p
@@ -875,7 +875,7 @@ caseHtmlComments = do
 
 caseMultiCassius :: Assertion
 caseMultiCassius = do
-    celper "foo{bar:baz;bar:bin}" [$cassius|
+    celper "foo{bar:baz;bar:bin}" [cassius|
 foo
     bar: baz
     bar: bin
@@ -886,7 +886,7 @@ caseNestedMaybes = do
     let muser = Just "User" :: Maybe String
         mprof = Nothing :: Maybe Int
         m3 = Nothing :: Maybe String
-    helper "justnothing" [$hamlet|
+    helper "justnothing" [hamlet|
 $maybe user <- muser
     $maybe profile <- mprof
         First two are Just
@@ -906,7 +906,7 @@ caseLucius :: Assertion
 caseLucius = do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip celper [$lucius|
+    flip celper [lucius|
 foo {
     background: #{colorBlack};
     bar: baz;
@@ -930,15 +930,15 @@ bin {
 
 caseCondClass :: Assertion
 caseCondClass = do
-    helper "<p class=\"current\"></p>" [$hamlet|
+    helper "<p class=\"current\"></p>" [hamlet|
 <p :False:.ignored :True:.current
 |]
 
-    helper "<p class=\"1 3 2 4\"></p>" [$hamlet|
+    helper "<p class=\"1 3 2 4\"></p>" [hamlet|
 <p :True:.1 :True:class=2 :False:.a :False:class=b .3 class=4
 |]
 
-    helper "<p class=\"foo bar baz\"></p>" [$hamlet|
+    helper "<p class=\"foo bar baz\"></p>" [hamlet|
 <p class=foo class=bar class=baz
 |]
 
@@ -965,7 +965,7 @@ caseLuciusFileDebug = do
 
 caseLuciusNested :: Assertion
 caseLuciusNested = do
-    celper "foo bar{baz:bin}" [$lucius|
+    celper "foo bar{baz:bin}" [lucius|
 foo {
     bar {
         baz: bin;
@@ -975,7 +975,7 @@ foo {
     celper "foo bar{baz:bin}" $(luciusFile "external-nested.lucius")
     celper "foo bar{baz:bin}" $(luciusFileDebug "external-nested.lucius")
 
-    celper "foo1 bar,foo2 bar{baz:bin}" [$lucius|
+    celper "foo1 bar,foo2 bar{baz:bin}" [lucius|
 foo1, foo2 {
     bar {
         baz: bin;
@@ -985,7 +985,7 @@ foo1, foo2 {
 
 caseLuciusMedia :: Assertion
 caseLuciusMedia = do
-    celper "@media only screen{foo bar{baz:bin}}" [$lucius|
+    celper "@media only screen{foo bar{baz:bin}}" [lucius|
 @media only screen{
     foo {
         bar {
@@ -998,7 +998,7 @@ caseLuciusMedia = do
     celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "external-media.lucius")
 
 caseForallFoldable :: Assertion
-caseForallFoldable = helper "12345" [$hamlet|
+caseForallFoldable = helper "12345" [hamlet|
 $forall x <- set
     #{x}
 |]
@@ -1006,22 +1006,22 @@ $forall x <- set
     set = Set.fromList [1..5 :: Int]
 
 caseCassiusRemoveWhitespace :: Assertion
-caseCassiusRemoveWhitespace = celper "foo{bar:baz}" [$cassius|
+caseCassiusRemoveWhitespace = celper "foo{bar:baz}" [cassius|
 foo
     bar     :    baz
 |]
 
 caseNonPolyHtml :: Assertion
 caseNonPolyHtml = do
-    helperHtml "<h1>HELLO WORLD</h1>" [$html|
+    helperHtml "<h1>HELLO WORLD</h1>" [html|
 <h1>HELLO WORLD
 |]
     helperHtml "<h1>HELLO WORLD</h1>" $(htmlFile "nonpolyhtml.hamlet")
 
 caseNonPolyHamlet :: Assertion
 caseNonPolyHamlet = do
-    let embed = [$hamlet|<p>EMBEDDED|]
-    helper "<h1>url</h1><p>EMBEDDED</p>" [$hamlet|
+    let embed = [hamlet|<p>EMBEDDED|]
+    helper "<h1>url</h1><p>EMBEDDED</p>" [hamlet|
 <h1>@{Home}
 ^{embed}
 |]
@@ -1039,8 +1039,8 @@ ihelper res h = do
 
 caseNonPolyIHamlet :: Assertion
 caseNonPolyIHamlet = do
-    let embed = [$ihamlet|<p>EMBEDDED|]
-    ihelper "<h1>Adios</h1><p>EMBEDDED</p>" [$ihamlet|
+    let embed = [ihamlet|<p>EMBEDDED|]
+    ihelper "<h1>Adios</h1><p>EMBEDDED</p>" [ihamlet|
 <h1>_{Goodbye}
 ^{embed}
 |]
@@ -1048,4 +1048,4 @@ caseNonPolyIHamlet = do
 
 caseLuciusTrailingComment :: Assertion
 caseLuciusTrailingComment =
-    celper "foo{bar:baz}" [$lucius|foo{bar:baz;}/* ignored*/|]
+    celper "foo{bar:baz}" [lucius|foo{bar:baz;}/* ignored*/|]
