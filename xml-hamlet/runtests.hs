@@ -118,6 +118,9 @@ $else
         , X.NodeElement $ X.Element "four" [] []
         , X.NodeElement $ X.Element "seven" [] []
         ]
+    , it "recognizes clark notation" $ [xml|
+<{foo}bar {baz}bin="x"
+|] @?= [X.NodeElement $ X.Element "{foo}bar" [("{baz}bin", "x")] []]
     ]
   where
     bin = "bin"

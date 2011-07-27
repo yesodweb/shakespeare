@@ -78,7 +78,7 @@ mkAttrs :: Scope -> [(Maybe Deref, String, [Content])] -> Q Exp
 mkAttrs _ [] = [| [] |]
 mkAttrs scope ((mderef, name, value):rest) = do
     rest' <- mkAttrs scope rest
-    this <- [| ($(lift name), T.concat $(fmap ListE $ mapM go value)) |]
+    this <- [| ($(liftName name), T.concat $(fmap ListE $ mapM go value)) |]
     let with = [| $(return this) : $(return rest') |]
     case mderef of
         Nothing -> with
