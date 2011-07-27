@@ -1,0 +1,32 @@
+Name:                xml-hamlet
+Version:             0.0.0
+Synopsis:            Hamlet-style quasiquoter for XML content
+Homepage:            http://www.yesodweb.com/
+License:             BSD3
+License-file:        LICENSE
+Author:              Michael Snoyman
+Maintainer:          michael@snoyman.com
+Category:            Text
+Build-type:          Simple
+
+Cabal-version:       >=1.2
+
+Library
+  Exposed-modules:     Text.Hamlet.XML
+  Other-modules:       Text.Hamlet.Parse
+                       Text.Shakespeare
+  
+  Build-depends:       base                       >= 4        && < 5
+                     , xml-enumerator             >= 0.3.4    && < 0.4
+                     , text                       >= 0.10     && < 1.0
+                     , template-haskell
+                     , parsec                     >= 2.0      && < 3.2
+
+  Ghc-options:         -Wall
+
+test-suite runtests
+  main-is:             runtests.hs
+  type:                exitcode-stdio-1.0
+  ghc-options:         -Wall
+  build-depends:       hspec                      >= 0.6      && < 0.7
+                     , HUnit                      >= 1.2      && < 1.3
