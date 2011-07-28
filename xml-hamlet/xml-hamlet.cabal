@@ -9,7 +9,7 @@ Maintainer:          michael@snoyman.com
 Category:            Text
 Build-type:          Simple
 
-Cabal-version:       >=1.2
+Cabal-version:       >=1.8
 
 Library
   Exposed-modules:     Text.Hamlet.XML
