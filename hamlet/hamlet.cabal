@@ -50,9 +50,9 @@ library
                      Text.Css
     ghc-options:     -Wall
 
-test-suite runtests
-    hs-source-dirs: tests
-    main-is: runtests.hs
+test-suite test
+    hs-source-dirs: test
+    main-is: main.hs
     type: exitcode-stdio-1.0
 
     ghc-options:   -Wall
