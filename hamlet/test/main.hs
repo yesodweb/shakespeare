@@ -24,98 +24,445 @@ main :: IO ()
 main = hspecX $ descriptions [specs]
 
 specs = describe "hamlet"
-    [ it "empty" caseEmpty
-    , it "static" caseStatic
-    , it "tag" caseTag
-    , it "var" caseVar
-    , it "var chain " caseVarChain
-    , it "url" caseUrl
-    , it "url chain " caseUrlChain
-    , it "embed" caseEmbed
-    , it "embed chain " caseEmbedChain
-    , it "if" caseIf
-    , it "if chain " caseIfChain
-    , it "else" caseElse
-    , it "else chain " caseElseChain
-    , it "elseif" caseElseIf
-    , it "elseif chain " caseElseIfChain
-    , it "list" caseList
-    , it "list chain" caseListChain
-    , it "with" caseWith
-    , it "with multi" caseWithMulti
-    , it "with chain" caseWithChain
-    , it "with comma string" caseWithCommaString
-    , it "with multi scope" caseWithMultiBindingScope
-    , it "script not empty" caseScriptNotEmpty
-    , it "meta empty" caseMetaEmpty
-    , it "input empty" caseInputEmpty
-    , it "multiple classes" caseMultiClass
-    , it "attrib order" caseAttribOrder
-    , it "nothing" caseNothing
-    , it "nothing chain " caseNothingChain
-    , it "just" caseJust
-    , it "just chain " caseJustChain
-    , it "constructor" caseConstructor
-    , it "url + params" caseUrlParams
-    , it "escape" caseEscape
-    , it "empty statement list" caseEmptyStatementList
-    , it "attribute conditionals" caseAttribCond
-    , it "non-ascii" caseNonAscii
-    , it "maybe function" caseMaybeFunction
-    , it "trailing dollar sign" caseTrailingDollarSign
-    , it "non leading percent sign" caseNonLeadingPercent
-    , it "quoted attributes" caseQuotedAttribs
-    , it "spaced derefs" caseSpacedDerefs
-    , it "attrib vars" caseAttribVars
-    , it "strings and html" caseStringsAndHtml
-    , it "nesting" caseNesting
-    , it "trailing space" caseTrailingSpace
-    , it "currency symbols" caseCurrency
-    , it "external" caseExternal
-    , it "parens" caseParens
-    , it "hamlet literals" caseHamletLiterals
-    , it "hamlet' and xhamlet'" caseHamlet'
-    , it "cassius" caseCassius
-    , it "cassiusFile" caseCassiusFile
-    , it "cassiusFileDebug" caseCassiusFileDebug
-    , it "cassiusFileDebugChange" caseCassiusFileDebugChange
-    , it "julius" caseJulius
-    , it "juliusFile" caseJuliusFile
-    , it "juliusFileDebug" caseJuliusFileDebug
-    , it "juliusFileDebugChange" caseJuliusFileDebugChange
-    , it "comments" caseComments
-    , it "cassius pseudo-class" casePseudo
-    , it "blank line" caseBlankLine
-    , it "leading spaces" caseLeadingSpaces
-    , it "cassius all spaces" caseCassiusAllSpaces
-    , it "cassius whitespace and colons" caseCassiusWhitespaceColons
-    , it "cassius trailing comments" caseCassiusTrailingComments
-    , it "hamlet angle bracket syntax" caseHamletAngleBrackets
-    , it "hamlet module names" caseHamletModuleNames
-    , it "cassius module names" caseCassiusModuleNames
-    , it "julius module names" caseJuliusModuleNames
-    , it "single dollar at and caret" caseSingleDollarAtCaret
-    , it "dollar operator" caseDollarOperator
-    , it "in a row" caseInARow
-    , it "embedded slash" caseEmbeddedSlash
-    , it "string literals" caseStringLiterals
-    , it "interpolated operators" caseOperators
-    , it "HTML comments" caseHtmlComments
-    , it "multi cassius" caseMultiCassius
-    , it "nested maybes" caseNestedMaybes
-    , it "lucius" caseLucius
-    , it "lucius file" caseLuciusFile
-    , it "lucius file debug" caseLuciusFileDebug
-    , it "conditional class" caseCondClass
-    , it "lucius nested" caseLuciusNested
-    , it "lucius media" caseLuciusMedia
-    , it "forall on Foldable" caseForallFoldable
-    , it "cassius removes whitespace" caseCassiusRemoveWhitespace
-    , it "non-poly HTML" caseNonPolyHtml
-    , it "non-poly Hamlet " caseNonPolyHamlet
-    , it "non-poly IHamlet " caseNonPolyIHamlet
-    , it "lucius trailing comments" caseLuciusTrailingComment
-    ]
+  [ it "empty" caseEmpty
+  , it "static" caseStatic
+  , it "tag" caseTag
+  , it "var" caseVar
+  , it "var chain " caseVarChain
+  , it "url" caseUrl
+  , it "url chain " caseUrlChain
+  , it "embed" caseEmbed
+  , it "embed chain " caseEmbedChain
+  , it "if" caseIf
+  , it "if chain " caseIfChain
+  , it "else" caseElse
+  , it "else chain " caseElseChain
+  , it "elseif" caseElseIf
+  , it "elseif chain " caseElseIfChain
+  , it "list" caseList
+  , it "list chain" caseListChain
+  , it "with" caseWith
+  , it "with multi" caseWithMulti
+  , it "with chain" caseWithChain
+  , it "with comma string" caseWithCommaString
+  , it "with multi scope" caseWithMultiBindingScope
+  , it "script not empty" caseScriptNotEmpty
+  , it "meta empty" caseMetaEmpty
+  , it "input empty" caseInputEmpty
+  , it "multiple classes" caseMultiClass
+  , it "attrib order" caseAttribOrder
+  , it "nothing" caseNothing
+  , it "nothing chain " caseNothingChain
+  , it "just" caseJust
+  , it "just chain " caseJustChain
+  , it "constructor" caseConstructor
+  , it "url + params" caseUrlParams
+  , it "escape" caseEscape
+  , it "empty statement list" caseEmptyStatementList
+  , it "attribute conditionals" caseAttribCond
+  , it "non-ascii" caseNonAscii
+  , it "maybe function" caseMaybeFunction
+  , it "trailing dollar sign" caseTrailingDollarSign
+  , it "non leading percent sign" caseNonLeadingPercent
+  , it "quoted attributes" caseQuotedAttribs
+  , it "spaced derefs" caseSpacedDerefs
+  , it "attrib vars" caseAttribVars
+  , it "strings and html" caseStringsAndHtml
+  , it "nesting" caseNesting
+  , it "trailing space" caseTrailingSpace
+  , it "currency symbols" caseCurrency
+  , it "external" caseExternal
+  , it "parens" caseParens
+  , it "hamlet literals" caseHamletLiterals
+  , it "hamlet' and xhamlet'" caseHamlet'
+  , it "cassius" caseCassius
+  , it "cassiusFile" caseCassiusFile
+
+  , it "cassiusFileDebug" $ do
+    let var = "var"
+    let selector = "foo"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip celper $(cassiusFileDebug "test/external1.cassius") $ concat
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
+        ]
+
+  , it "cassiusFileDebugChange" $ do
+    let var = "var"
+    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
+    celper "foo{var:1}" $(cassiusFileDebug "test/external2.cassius")
+    writeFile "test/external2.cassius" "foo\n  #{var}: 2"
+    celper "foo{var:2}" $(cassiusFileDebug "test/external2.cassius")
+    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
+
+  , it "julius" $ do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper [julius|שלום
+#{var}
+@{Home}
+@?{urlp}
+^{jmixin}
+|] $ intercalate "\r\n"
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ] ++ "\r\n"
+
+
+  , it "juliusFile" $ do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper $(juliusFile "test/external1.julius") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
+
+
+  , it "juliusFileDebug" $ do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper $(juliusFileDebug "test/external1.julius") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
+
+  , it "juliusFileDebugChange" $ do
+      let var = "somevar"
+          test result = jelper result $(juliusFileDebug "test/external2.julius")
+      writeFile "test/external2.julius" "var #{var} = 1;"
+      test "var somevar = 1;"
+      writeFile "test/external2.julius" "var #{var} = 2;"
+      test "var somevar = 2;"
+      writeFile "test/external2.julius" "var #{var} = 1;"
+
+
+  , it "comments" $ do
+    -- FIXME reconsider Hamlet comment syntax?
+    helper "" [hamlet|$# this is a comment
+$# another comment
+$#a third one|]
+    celper "" [cassius|/* this is a comment */
+/* another comment */
+/*a third one*/|]
+
+
+  , it "cassius pseudo-class" $
+    flip celper [cassius|
+a:visited
+    color: blue
+|] "a:visited{color:blue}"
+
+
+  , it "ignores a blank line" $ do
+    helper "<p>foo</p>" [hamlet|
+<p
+
+    foo
+
+|]
+    celper "foo{bar:baz}" [cassius|
+foo
+
+    bar: baz
+
+|]
+
+
+  , it "leading spaces" $
+    celper "foo{bar:baz}" [cassius|
+  foo
+    bar: baz
+|]
+
+
+  , it "cassius all spaces" $
+    celper "h1{color:green }" [cassius|
+    h1
+        color: green 
+    |]
+
+
+  , it "cassius whitespace and colons" $ do
+    celper "h1:hover{color:green ;font-family:sans-serif}" [cassius|
+    h1:hover
+        color: green 
+        font-family:sans-serif
+    |]
+
+
+  , it "cassius trailing comments" $
+    celper "h1:hover {color:green ;font-family:sans-serif}" [cassius|
+    h1:hover /* Please ignore this */
+        color: green /* This is a comment. */
+        /* Obviously this is ignored too. */
+        font-family:sans-serif
+    |]
+
+
+  , it "hamlet angle bracket syntax" $
+      helper "<p class=\"foo\" height=\"100\"><span id=\"bar\" width=\"50\">HELLO</span></p>"
+        [hamlet|
+<p.foo height="100"
+    <span #bar width=50>HELLO
+|]
+
+
+
+  , it "hamlet module names" $
+    let foo = "foo" in
+      helper "oof oof 3.14 -5"
+        [hamlet|#{Data.List.reverse foo} #
+#{L.reverse foo} #
+#{show 3.14} #{show -5}|]
+
+
+  , it "cassius module names" $
+    let foo = "foo" in
+      celper "sel{bar:oof oof 3.14 -5}"
+        [cassius|
+sel
+    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}
+|]
+
+
+  , it "julius module names" $
+    let foo = "foo" in
+      jelper "oof oof 3.14 -5"
+        [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
+
+
+  , it "single dollar at and caret" $ do
+    helper "$@^" [hamlet|$@^|]
+    celper "sel{att:$@^}" [cassius|
+sel
+    att: $@^
+|]
+    jelper "$@^" [julius|$@^|]
+
+    helper "#{@{^{" [hamlet|#\{@\{^\{|]
+    celper "sel{att:#{@{^{}" [cassius|
+sel
+    att: #\{@\{^{
+|]
+    jelper "#{@{^{" [julius|#\{@\{^\{|]
+
+
+  , it "dollar operator" $ do
+    let val = (1, (2, 3))
+    helper "2" [hamlet|#{ show $ fst $ snd val }|]
+    helper "2" [hamlet|#{ show $ fst $ snd $ val}|]
+    jelper "2" [julius|#{ show $ fst $ snd val }|]
+    jelper "2" [julius|#{ show $ fst $ snd $ val}|]
+    celper "sel{att:2}" [cassius|
+sel
+    att: #{ show $ fst $ snd val }
+|]
+    celper "sel{att:2}" [cassius|
+sel
+    att: #{ show $ fst $ snd $ val}
+|]
+
+
+  , it "in a row" $ do
+    helper "1" [hamlet|#{ show $ const 1 2 }|]
+
+
+  , it "embedded slash" $ do
+    helper "///" [hamlet|///|]
+    celper "sel{att:///}" [cassius|
+sel
+    att: ///
+|]
+
+
+  , it "string literals" $ do
+    helper "string" [hamlet|#{"string"}|]
+    helper "string" [hamlet|#{id "string"}|]
+    helper "gnirts" [hamlet|#{L.reverse $ id "string"}|]
+    helper "str&quot;ing" [hamlet|#{"str\"ing"}|]
+    helper "str&lt;ing" [hamlet|#{"str<ing"}|]
+
+
+  , it "interpolated operators" $ do
+    helper "3" [hamlet|#{show $ (+) 1 2}|]
+    helper "6" [hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
+
+
+  , it "HTML comments" $ do
+    helper "<p>1</p><p>2 not ignored</p>" [hamlet|
+<p>1
+<!-- ignored comment -->
+<p
+    2
+    <!-- ignored --> not ignored<!-- ignored -->
+|]
+
+  , it "multi cassius" $ do
+    celper "foo{bar:baz;bar:bin}" [cassius|
+foo
+    bar: baz
+    bar: bin
+|]
+
+
+
+  , it "nested maybes" $ do
+    let muser = Just "User" :: Maybe String
+        mprof = Nothing :: Maybe Int
+        m3 = Nothing :: Maybe String
+    helper "justnothing" [hamlet|
+$maybe user <- muser
+    $maybe profile <- mprof
+        First two are Just
+        $maybe desc <- m3
+            \ and left us a description:
+            <p>#{desc}
+        $nothing
+        and has left us no description.
+    $nothing
+        justnothing
+$nothing
+    <h1>No such Person exists.
+   |]
+
+
+
+  , it "lucius" $ do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip celper [lucius|
+foo {
+    background: #{colorBlack};
+    bar: baz;
+    color: #{colorRed};
+}
+bin {
+        background-image: url(@{Home});
+        bar: bar;
+        color: #{(((Color 127) 100) 5)};
+        f#{var}x: someval;
+        unicode-test: שלום;
+        urlp: url(@?{urlp});
+}
+|] $ concat
+        [ "foo{background:#000;bar:baz;color:#F00}"
+        , "bin{"
+        , "background-image:url(url);"
+        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+        , "urlp:url(url?p=q)}"
+        ]
+
+
+
+  , it "lucius file" $ do
+      let var = "var"
+      let urlp = (Home, [(pack "p", pack "q")])
+      flip celper $(luciusFile "test/external1.lucius") $ concat
+          [ "foo{background:#000;bar:baz;color:#F00}"
+          , "bin{"
+          , "background-image:url(url);"
+          , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
+          , "urlp:url(url?p=q)}"
+          ]
+
+  , it "lucius file debug" caseLuciusFileDebug
+
+
+  , it "conditional class" $ do
+      helper "<p class=\"current\"></p>" 
+        [hamlet|<p :False:.ignored :True:.current|]
+
+      helper "<p class=\"1 3 2 4\"></p>"
+        [hamlet|<p :True:.1 :True:class=2 :False:.a :False:class=b .3 class=4|]
+
+      helper "<p class=\"foo bar baz\"></p>"
+        [hamlet|<p class=foo class=bar class=baz|]
+
+
+  , it "lucius nested" $ do
+      celper "foo bar{baz:bin}" $(luciusFile "test/external-nested.lucius")
+      celper "foo bar{baz:bin}" $(luciusFileDebug "test/external-nested.lucius")
+      celper "foo bar{baz:bin}" [lucius|
+        foo {
+            bar {
+                baz: bin;
+            }
+        }
+        |]
+      celper "foo1 bar,foo2 bar{baz:bin}" [lucius|
+        foo1, foo2 {
+            bar {
+                baz: bin;
+            }
+        }
+        |]
+
+
+  , it "lucius media" $ do
+      celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/external-media.lucius")
+      celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "test/external-media.lucius")
+      celper "@media only screen{foo bar{baz:bin}}" [lucius|
+        @media only screen{
+            foo {
+                bar {
+                    baz: bin;
+                }
+            }
+        }
+        |]
+
+
+  , it "forall on Foldable" $ do
+      let set = Set.fromList [1..5 :: Int]
+      helper "12345" [hamlet|
+$forall x <- set
+  #{x}
+|]
+
+  , it "cassius removes whitespace" $ do
+      celper "foo{bar:baz}" [cassius|
+      foo
+          bar     :    baz
+      |]
+
+
+  , it "non-poly HTML" $ do
+      helperHtml "<h1>HELLO WORLD</h1>" [html|
+  <h1>HELLO WORLD
+  |]
+      helperHtml "<h1>HELLO WORLD</h1>" $(htmlFile "test/nonpolyhtml.hamlet")
+
+
+  , it "non-poly Hamlet" $ do
+      let embed = [hamlet|<p>EMBEDDED|]
+      helper "<h1>url</h1><p>EMBEDDED</p>" [hamlet|
+  <h1>@{Home}
+  ^{embed}
+  |]
+      helper "<h1>url</h1>" $(hamletFile "test/nonpolyhamlet.hamlet")
+
+  , it "non-poly IHamlet" $ do
+      let embed = [ihamlet|<p>EMBEDDED|]
+      ihelper "<h1>Adios</h1><p>EMBEDDED</p>" [ihamlet|
+  <h1>_{Goodbye}
+  ^{embed}
+  |]
+      ihelper "<h1>Hola</h1>" $(ihamletFile "test/nonpolyihamlet.hamlet")
+  , it "lucius trailing comments" $
+      celper "foo{bar:baz}" [lucius|foo{bar:baz;}/* ignored*/|]
+  ]
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
@@ -611,102 +958,13 @@ caseCassiusFile = do
         , "urlp:url(url?p=q)}"
         ]
 
-caseCassiusFileDebug :: Assertion
-caseCassiusFileDebug = do
-    let var = "var"
-    let selector = "foo"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip celper $(cassiusFileDebug "test/external1.cassius") $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
-        ]
-
-caseCassiusFileDebugChange :: Assertion
-caseCassiusFileDebugChange = do
-    let var = "var"
-    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
-    celper "foo{var:1}" $(cassiusFileDebug "test/external2.cassius")
-    writeFile "test/external2.cassius" "foo\n  #{var}: 2"
-    celper "foo{var:2}" $(cassiusFileDebug "test/external2.cassius")
-    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
-
 jmixin = [julius|var x;|]
 
 jelper :: String -> Julius Url -> Assertion
 jelper res h = T.pack res @=? renderJulius render h
 
-caseJulius :: Assertion
-caseJulius = do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [julius|שלום
-#{var}
-@{Home}
-@?{urlp}
-^{jmixin}
-|] $ intercalate "\r\n"
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ] ++ "\r\n"
-
-caseJuliusFile :: Assertion
-caseJuliusFile = do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFile "test/external1.julius") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
-
-caseJuliusFileDebug :: Assertion
-caseJuliusFileDebug = do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFileDebug "test/external1.julius") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
-
-caseJuliusFileDebugChange :: Assertion
-caseJuliusFileDebugChange = do
-    let var = "somevar"
-    writeFile "test/external2.julius" "var #{var} = 1;"
-    jelper "var somevar = 1;" $(juliusFileDebug "test/external2.julius")
-    writeFile "test/external2.julius" "var #{var} = 2;"
-    jelper "var somevar = 2;" $(juliusFileDebug "test/external2.julius")
-    writeFile "test/external2.julius" "var #{var} = 1;"
-
-caseComments :: Assertion
-caseComments = do
-    -- FIXME reconsider Hamlet comment syntax?
-    helper "" [hamlet|$# this is a comment
-$# another comment
-$#a third one|]
-    celper "" [cassius|/* this is a comment */
-/* another comment */
-/*a third one*/|]
-
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
-
-casePseudo :: Assertion
-casePseudo = do
-    flip celper [cassius|
-a:visited
-    color: blue
-|] "a:visited{color:blue}"
 
 caseDiffBindNames :: Assertion
 caseDiffBindNames = do
@@ -714,27 +972,6 @@ caseDiffBindNames = do
     -- FIXME helper "123123" $(hamletFileDebug "test/external-debug3.hamlet")
     error "test has been disabled"
 
-caseBlankLine :: Assertion
-caseBlankLine = do
-    helper "<p>foo</p>" [hamlet|
-<p
-
-    foo
-
-|]
-    celper "foo{bar:baz}" [cassius|
-foo
-
-    bar: baz
-
-|]
-
-caseLeadingSpaces :: Assertion
-caseLeadingSpaces =
-    celper "foo{bar:baz}" [cassius|
-  foo
-    bar: baz
-|]
 
 caseTrailingSpaces :: Assertion
 caseTrailingSpaces = helper "" [hamlet|
@@ -748,212 +985,6 @@ $forall   x     <-   empty
   where
     empty = []
 
-caseCassiusAllSpaces :: Assertion
-caseCassiusAllSpaces = do
-    celper "h1{color:green }" [cassius|
-    h1
-        color: green 
-    |]
-
-caseCassiusWhitespaceColons :: Assertion
-caseCassiusWhitespaceColons = do
-    celper "h1:hover{color:green ;font-family:sans-serif}" [cassius|
-    h1:hover
-        color: green 
-        font-family:sans-serif
-    |]
-
-caseCassiusTrailingComments :: Assertion
-caseCassiusTrailingComments = do
-    celper "h1:hover {color:green ;font-family:sans-serif}" [cassius|
-    h1:hover /* Please ignore this */
-        color: green /* This is a comment. */
-        /* Obviously this is ignored too. */
-        font-family:sans-serif
-    |]
-
-caseHamletAngleBrackets :: Assertion
-caseHamletAngleBrackets =
-    helper "<p class=\"foo\" height=\"100\"><span id=\"bar\" width=\"50\">HELLO</span></p>"
-        [hamlet|
-<p.foo height="100"
-    <span #bar width=50>HELLO
-|]
-
-caseHamletModuleNames :: Assertion
-caseHamletModuleNames =
-    helper "oof oof 3.14 -5"
-    [hamlet|#{Data.List.reverse foo} #
-#{L.reverse foo} #
-#{show 3.14} #{show -5}|]
-  where
-    foo = "foo"
-
-caseCassiusModuleNames :: Assertion
-caseCassiusModuleNames =
-    celper "sel{bar:oof oof 3.14 -5}"
-    [cassius|
-sel
-    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}
-|]
-  where
-    foo = "foo"
-
-caseJuliusModuleNames :: Assertion
-caseJuliusModuleNames =
-    jelper "oof oof 3.14 -5"
-    [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
-  where
-    foo = "foo"
-
-caseSingleDollarAtCaret :: Assertion
-caseSingleDollarAtCaret = do
-    helper "$@^" [hamlet|$@^|]
-    celper "sel{att:$@^}" [cassius|
-sel
-    att: $@^
-|]
-    jelper "$@^" [julius|$@^|]
-
-    helper "#{@{^{" [hamlet|#\{@\{^\{|]
-    celper "sel{att:#{@{^{}" [cassius|
-sel
-    att: #\{@\{^{
-|]
-    jelper "#{@{^{" [julius|#\{@\{^\{|]
-
-caseDollarOperator :: Assertion
-caseDollarOperator = do
-    let val = (1, (2, 3))
-    helper "2" [hamlet|#{ show $ fst $ snd val }|]
-    helper "2" [hamlet|#{ show $ fst $ snd $ val}|]
-
-    celper "sel{att:2}" [cassius|
-sel
-    att: #{ show $ fst $ snd val }
-|]
-    celper "sel{att:2}" [cassius|
-sel
-    att: #{ show $ fst $ snd $ val}
-|]
-
-    jelper "2" [julius|#{ show $ fst $ snd val }|]
-    jelper "2" [julius|#{ show $ fst $ snd $ val}|]
-
-caseInARow :: Assertion
-caseInARow = do
-    helper "1" [hamlet|#{ show $ const 1 2 }|]
-
-caseEmbeddedSlash :: Assertion
-caseEmbeddedSlash = do
-    helper "///" [hamlet|///|]
-    celper "sel{att:///}" [cassius|
-sel
-    att: ///
-|]
-
-caseStringLiterals :: Assertion
-caseStringLiterals = do
-    helper "string" [hamlet|#{"string"}|]
-    helper "string" [hamlet|#{id "string"}|]
-    helper "gnirts" [hamlet|#{L.reverse $ id "string"}|]
-    helper "str&quot;ing" [hamlet|#{"str\"ing"}|]
-    helper "str&lt;ing" [hamlet|#{"str<ing"}|]
-
-caseOperators = do
-    helper "3" [hamlet|#{show $ (+) 1 2}|]
-    helper "6" [hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
-
-caseHtmlComments = do
-    helper "<p>1</p><p>2 not ignored</p>" [hamlet|
-<p>1
-<!-- ignored comment -->
-<p
-    2
-    <!-- ignored --> not ignored<!-- ignored -->
-|]
-
-caseMultiCassius :: Assertion
-caseMultiCassius = do
-    celper "foo{bar:baz;bar:bin}" [cassius|
-foo
-    bar: baz
-    bar: bin
-|]
-
-caseNestedMaybes :: Assertion
-caseNestedMaybes = do
-    let muser = Just "User" :: Maybe String
-        mprof = Nothing :: Maybe Int
-        m3 = Nothing :: Maybe String
-    helper "justnothing" [hamlet|
-$maybe user <- muser
-    $maybe profile <- mprof
-        First two are Just
-        $maybe desc <- m3
-            \ and left us a description:
-            <p>#{desc}
-        $nothing
-        and has left us no description.
-    $nothing
-        justnothing
-$nothing
-    <h1>No such Person exists.
-   |]
-
-
-caseLucius :: Assertion
-caseLucius = do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip celper [lucius|
-foo {
-    background: #{colorBlack};
-    bar: baz;
-    color: #{colorRed};
-}
-bin {
-        background-image: url(@{Home});
-        bar: bar;
-        color: #{(((Color 127) 100) 5)};
-        f#{var}x: someval;
-        unicode-test: שלום;
-        urlp: url(@?{urlp});
-}
-|] $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
-        ]
-
-caseCondClass :: Assertion
-caseCondClass = do
-    helper "<p class=\"current\"></p>" [hamlet|
-<p :False:.ignored :True:.current
-|]
-
-    helper "<p class=\"1 3 2 4\"></p>" [hamlet|
-<p :True:.1 :True:class=2 :False:.a :False:class=b .3 class=4
-|]
-
-    helper "<p class=\"foo bar baz\"></p>" [hamlet|
-<p class=foo class=bar class=baz
-|]
-
-caseLuciusFile :: Assertion
-caseLuciusFile = do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip celper $(luciusFile "test/external1.lucius") $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
-        ]
-
 caseLuciusFileDebug :: Assertion
 caseLuciusFileDebug = do
     let var = "var"
@@ -963,69 +994,7 @@ caseLuciusFileDebug = do
     celper "foo{var:2}" $(luciusFileDebug "test/external2.lucius")
     writeFile "test/external2.lucius" "foo{#{var}: 1}"
 
-caseLuciusNested :: Assertion
-caseLuciusNested = do
-    celper "foo bar{baz:bin}" [lucius|
-foo {
-    bar {
-        baz: bin;
-    }
-}
-|]
-    celper "foo bar{baz:bin}" $(luciusFile "test/external-nested.lucius")
-    celper "foo bar{baz:bin}" $(luciusFileDebug "test/external-nested.lucius")
 
-    celper "foo1 bar,foo2 bar{baz:bin}" [lucius|
-foo1, foo2 {
-    bar {
-        baz: bin;
-    }
-}
-|]
-
-caseLuciusMedia :: Assertion
-caseLuciusMedia = do
-    celper "@media only screen{foo bar{baz:bin}}" [lucius|
-@media only screen{
-    foo {
-        bar {
-            baz: bin;
-        }
-    }
-}
-|]
-    celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/external-media.lucius")
-    celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "test/external-media.lucius")
-
-caseForallFoldable :: Assertion
-caseForallFoldable = helper "12345" [hamlet|
-$forall x <- set
-    #{x}
-|]
-  where
-    set = Set.fromList [1..5 :: Int]
-
-caseCassiusRemoveWhitespace :: Assertion
-caseCassiusRemoveWhitespace = celper "foo{bar:baz}" [cassius|
-foo
-    bar     :    baz
-|]
-
-caseNonPolyHtml :: Assertion
-caseNonPolyHtml = do
-    helperHtml "<h1>HELLO WORLD</h1>" [html|
-<h1>HELLO WORLD
-|]
-    helperHtml "<h1>HELLO WORLD</h1>" $(htmlFile "test/nonpolyhtml.hamlet")
-
-caseNonPolyHamlet :: Assertion
-caseNonPolyHamlet = do
-    let embed = [hamlet|<p>EMBEDDED|]
-    helper "<h1>url</h1><p>EMBEDDED</p>" [hamlet|
-<h1>@{Home}
-^{embed}
-|]
-    helper "<h1>url</h1>" $(hamletFile "test/nonpolyhamlet.hamlet")
 
 data Msg = Hello | Goodbye
 
@@ -1036,16 +1005,3 @@ ihelper res h = do
   where
     showMsg Hello = preEscapedString "Hola"
     showMsg Goodbye = preEscapedString "Adios"
-
-caseNonPolyIHamlet :: Assertion
-caseNonPolyIHamlet = do
-    let embed = [ihamlet|<p>EMBEDDED|]
-    ihelper "<h1>Adios</h1><p>EMBEDDED</p>" [ihamlet|
-<h1>_{Goodbye}
-^{embed}
-|]
-    ihelper "<h1>Hola</h1>" $(ihamletFile "test/nonpolyihamlet.hamlet")
-
-caseLuciusTrailingComment :: Assertion
-caseLuciusTrailingComment =
-    celper "foo{bar:baz}" [lucius|foo{bar:baz;}/* ignored*/|]

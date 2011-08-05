@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE CPP #-}
--- | General parsers, functions and datatypes for all three languages.
+-- | General parsers, functions and datatypes for all Shakespeare languages.
 module Text.Shakespeare
     ( Deref (..)
     , Ident (..)
