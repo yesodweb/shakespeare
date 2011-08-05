@@ -1,26 +1,18 @@
-name:            hamlet
-version:         0.9.1
+name:            shakespeare
+version:         0.9.0
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
 maintainer:      Michael Snoyman <michael@snoyman.com>
-synopsis:        Haml-like template files that are compile-time checked
+synopsis:        A toolkit for making compile-time interpolated templates
 description:
-    Hamlet gives you a type-safe tool for generating HTML code. It works via Quasi-Quoting, and generating extremely efficient output code. The syntax is white-space sensitive, and it helps you avoid cross-site scripting issues and 404 errors. Please see the documentation at <http://docs.yesodweb.com/book/hamlet/> for more details.
+    Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation . Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
     .
-    Here is a quick overview of hamlet html. Due to haddock escaping issues, we can't properly show variable insertion, but we are still going to show some conditionals. Please see http://docs.yesodweb.com/book/templates for a thorough description
+    Note there is no dependency on haskell-src-extras.
     .
-    > !!!
-    > <html>
-    >     <head>
-    >         <title>Hamlet Demo
-    >     <body>
-    >         <h1>Information on John Doe
-    >         <h2>
-    >             $if isMarried person
-    >                 Married
-    >             $else
-    >                 Not married
+    packages that use this: shakespeare-js, shakespeare-css, shakespeare-interpolated, hamlet, and xml-hamlet
+    Please see the documentation at <http://docs.yesodweb.com/book/hamlet/> for more details.
+
 category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.8
@@ -29,7 +21,6 @@ homepage:        http://www.yesodweb.com/book/templates
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 0.9
                    , bytestring       >= 0.9     && < 0.10
                    , template-haskell
                    , blaze-html       >= 0.4     && < 0.5
@@ -39,8 +30,9 @@ library
                    , containers       >= 0.2     && < 0.5
                    , blaze-builder    >= 0.2     && < 0.4
                    , process          >= 1.0     && < 1.1
-    exposed-modules: Text.Hamlet
-    other-modules:   Text.Hamlet.Parse
+    exposed-modules: 
+                     Text.Romeo
+                     Text.Shakespeare
     ghc-options:     -Wall
 
 test-suite test

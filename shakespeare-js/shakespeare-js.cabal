@@ -1,0 +1,53 @@
+name:            shakespeare-js
+version:         0.9.0
+license:         BSD3
+license-file:    LICENSE
+author:          Michael Snoyman <michael@snoyman.com>
+maintainer:      Michael Snoyman <michael@snoyman.com>
+synopsis:        Stick your haskell variables into javascript/coffeescript at compile time.
+description:
+    .
+    > let foo = 'bar' in [js| function #{foo}(){}
+    .
+    Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation . Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
+    In this case, the variable type needs a ToJavascript instance.
+    .
+    There is also shakespeare-coffeescript for coffeescript templates. Coffescript is a language that compiles down to javascript. It expects a coffeescript compiler in your path, and variable should be a ToCoffee instance.
+    .
+    Please see http://docs.yesodweb.com/book/templates for a more thorough description and examples
+    .
+    shakespeare-js was originally called julius, and shakespeare originated from the hamlet template package.
+
+category:        Web, Yesod
+stability:       Stable
+cabal-version:   >= 1.8
+build-type:      Simple
+homepage:        http://www.yesodweb.com/book/templates
+
+library
+    build-depends:   base             >= 4       && < 5
+                   , shakespeare >= 0.9
+                   , template-haskell
+                   , text             >= 0.7     && < 0.12
+                   , process          >= 1.0     && < 1.1
+
+    exposed-modules:
+                     Text.Julius
+                     Text.Coffee
+    ghc-options:     -Wall
+
+test-suite test
+    hs-source-dirs: test
+    main-is: main.hs
+    type: exitcode-stdio-1.0
+
+    ghc-options:   -Wall
+    build-depends: shakespeare      >= 0.9     && < 0.10
+                 , base             >= 4       && < 5
+                 , HUnit
+                 , hspec
+
+
+source-repository head
+  type:     git
+  location: git://github.com/yesodweb/hamlet.git
