@@ -101,7 +101,7 @@ parseComment = do
 
 parseIndent :: Parser Int
 parseIndent =
-    sum `fmap` many ((char ' ' >> return 1) <|> (char '\t' >> return 4))
+    sum `fmap` many ((char ' ' >> return 1) <|> (char '\t' >> fail "Tabs are not allowed in Cassius indentation"))
 
 parseBlock :: Parser (Maybe Block)
 parseBlock = do

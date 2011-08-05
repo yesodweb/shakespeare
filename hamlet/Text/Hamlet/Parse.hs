@@ -68,7 +68,7 @@ parseLines set s =
 parseLine :: HamletSettings -> Parser (Int, Line)
 parseLine set = do
     ss <- fmap sum $ many ((char ' ' >> return 1) <|>
-                           (char '\t' >> return 4))
+                           (char '\t' >> fail "Tabs are not allowed in Hamlet indentation"))
     x <- doctype <|>
          comment <|>
          htmlComment <|>

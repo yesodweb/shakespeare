@@ -663,7 +663,7 @@ caseWithChain = do
     helper "it's true" [hamlet|
 $with n <- true(getArg(getArg(getArg(getArg theArg))))
     $if n
-    	it's true
+        it's true
 |]
 
 -- in multi-with binding, make sure that a comma in a string doesn't confuse the parser.
