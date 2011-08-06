@@ -6,9 +6,6 @@ import Test.Hspec.HUnit
 
 import Prelude hiding (reverse)
 import Text.Hamlet
-import Text.Cassius
-import Text.Lucius
-import Text.Julius
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
@@ -75,77 +72,7 @@ specs = describe "hamlet"
   , it "parens" caseParens
   , it "hamlet literals" caseHamletLiterals
   , it "hamlet' and xhamlet'" caseHamlet'
-  , it "cassius" caseCassius
-  , it "cassiusFile" caseCassiusFile
 
-  , it "cassiusFileDebug" $ do
-    let var = "var"
-    let selector = "foo"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip celper $(cassiusFileDebug "test/external1.cassius") $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
-        ]
-
-  , it "cassiusFileDebugChange" $ do
-    let var = "var"
-    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
-    celper "foo{var:1}" $(cassiusFileDebug "test/external2.cassius")
-    writeFile "test/external2.cassius" "foo\n  #{var}: 2"
-    celper "foo{var:2}" $(cassiusFileDebug "test/external2.cassius")
-    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
-
-  , it "julius" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [julius|שלום
-#{var}
-@{Home}
-@?{urlp}
-^{jmixin}
-|] $ intercalate "\r\n"
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ] ++ "\r\n"
-
-
-  , it "juliusFile" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFile "test/external1.julius") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
-
-
-  , it "juliusFileDebug" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFileDebug "test/external1.julius") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
-
-  , it "juliusFileDebugChange" $ do
-      let var = "somevar"
-          test result = jelper result $(juliusFileDebug "test/external2.julius")
-      writeFile "test/external2.julius" "var #{var} = 1;"
-      test "var somevar = 1;"
-      writeFile "test/external2.julius" "var #{var} = 2;"
-      test "var somevar = 2;"
-      writeFile "test/external2.julius" "var #{var} = 1;"
 
 
   , it "comments" $ do
@@ -153,16 +80,6 @@ specs = describe "hamlet"
     helper "" [hamlet|$# this is a comment
 $# another comment
 $#a third one|]
-    celper "" [cassius|/* this is a comment */
-/* another comment */
-/*a third one*/|]
-
-
-  , it "cassius pseudo-class" $
-    flip celper [cassius|
-a:visited
-    color: blue
-|] "a:visited{color:blue}"
 
 
   , it "ignores a blank line" $ do
@@ -172,43 +89,8 @@ a:visited
     foo
 
 |]
-    celper "foo{bar:baz}" [cassius|
-foo
-
-    bar: baz
-
-|]
 
 
-  , it "leading spaces" $
-    celper "foo{bar:baz}" [cassius|
-  foo
-    bar: baz
-|]
-
-
-  , it "cassius all spaces" $
-    celper "h1{color:green }" [cassius|
-    h1
-        color: green 
-    |]
-
-
-  , it "cassius whitespace and colons" $ do
-    celper "h1:hover{color:green ;font-family:sans-serif}" [cassius|
-    h1:hover
-        color: green 
-        font-family:sans-serif
-    |]
-
-
-  , it "cassius trailing comments" $
-    celper "h1:hover {color:green ;font-family:sans-serif}" [cassius|
-    h1:hover /* Please ignore this */
-        color: green /* This is a comment. */
-        /* Obviously this is ignored too. */
-        font-family:sans-serif
-    |]
 
 
   , it "hamlet angle bracket syntax" $
@@ -228,51 +110,19 @@ foo
 #{show 3.14} #{show -5}|]
 
 
-  , it "cassius module names" $
-    let foo = "foo" in
-      celper "sel{bar:oof oof 3.14 -5}"
-        [cassius|
-sel
-    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}
-|]
 
-
-  , it "julius module names" $
-    let foo = "foo" in
-      jelper "oof oof 3.14 -5"
-        [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
 
 
   , it "single dollar at and caret" $ do
     helper "$@^" [hamlet|$@^|]
-    celper "sel{att:$@^}" [cassius|
-sel
-    att: $@^
-|]
-    jelper "$@^" [julius|$@^|]
 
     helper "#{@{^{" [hamlet|#\{@\{^\{|]
-    celper "sel{att:#{@{^{}" [cassius|
-sel
-    att: #\{@\{^{
-|]
-    jelper "#{@{^{" [julius|#\{@\{^\{|]
 
 
   , it "dollar operator" $ do
     let val = (1, (2, 3))
     helper "2" [hamlet|#{ show $ fst $ snd val }|]
     helper "2" [hamlet|#{ show $ fst $ snd $ val}|]
-    jelper "2" [julius|#{ show $ fst $ snd val }|]
-    jelper "2" [julius|#{ show $ fst $ snd $ val}|]
-    celper "sel{att:2}" [cassius|
-sel
-    att: #{ show $ fst $ snd val }
-|]
-    celper "sel{att:2}" [cassius|
-sel
-    att: #{ show $ fst $ snd $ val}
-|]
 
 
   , it "in a row" $ do
@@ -281,10 +131,6 @@ sel
 
   , it "embedded slash" $ do
     helper "///" [hamlet|///|]
-    celper "sel{att:///}" [cassius|
-sel
-    att: ///
-|]
 
 
   , it "string literals" $ do
@@ -307,13 +153,6 @@ sel
 <p
     2
     <!-- ignored --> not ignored<!-- ignored -->
-|]
-
-  , it "multi cassius" $ do
-    celper "foo{bar:baz;bar:bin}" [cassius|
-foo
-    bar: baz
-    bar: bin
 |]
 
 
@@ -339,45 +178,8 @@ $nothing
 
 
 
-  , it "lucius" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip celper [lucius|
-foo {
-    background: #{colorBlack};
-    bar: baz;
-    color: #{colorRed};
-}
-bin {
-        background-image: url(@{Home});
-        bar: bar;
-        color: #{(((Color 127) 100) 5)};
-        f#{var}x: someval;
-        unicode-test: שלום;
-        urlp: url(@?{urlp});
-}
-|] $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
-        ]
 
 
-
-  , it "lucius file" $ do
-      let var = "var"
-      let urlp = (Home, [(pack "p", pack "q")])
-      flip celper $(luciusFile "test/external1.lucius") $ concat
-          [ "foo{background:#000;bar:baz;color:#F00}"
-          , "bin{"
-          , "background-image:url(url);"
-          , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-          , "urlp:url(url?p=q)}"
-          ]
-
-  , it "lucius file debug" caseLuciusFileDebug
 
 
   , it "conditional class" $ do
@@ -391,37 +193,6 @@ bin {
         [hamlet|<p class=foo class=bar class=baz|]
 
 
-  , it "lucius nested" $ do
-      celper "foo bar{baz:bin}" $(luciusFile "test/external-nested.lucius")
-      celper "foo bar{baz:bin}" $(luciusFileDebug "test/external-nested.lucius")
-      celper "foo bar{baz:bin}" [lucius|
-        foo {
-            bar {
-                baz: bin;
-            }
-        }
-        |]
-      celper "foo1 bar,foo2 bar{baz:bin}" [lucius|
-        foo1, foo2 {
-            bar {
-                baz: bin;
-            }
-        }
-        |]
-
-
-  , it "lucius media" $ do
-      celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/external-media.lucius")
-      celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "test/external-media.lucius")
-      celper "@media only screen{foo bar{baz:bin}}" [lucius|
-        @media only screen{
-            foo {
-                bar {
-                    baz: bin;
-                }
-            }
-        }
-        |]
 
 
   , it "forall on Foldable" $ do
@@ -431,11 +202,6 @@ $forall x <- set
   #{x}
 |]
 
-  , it "cassius removes whitespace" $ do
-      celper "foo{bar:baz}" [cassius|
-      foo
-          bar     :    baz
-      |]
 
 
   , it "non-poly HTML" $ do
@@ -460,8 +226,6 @@ $forall x <- set
   ^{embed}
   |]
       ihelper "<h1>Hola</h1>" $(ihamletFile "test/nonpolyihamlet.hamlet")
-  , it "lucius trailing comments" $
-      celper "foo{bar:baz}" [lucius|foo{bar:baz;}/* ignored*/|]
   ]
 
 data Url = Home | Sub SubUrl
@@ -916,52 +680,6 @@ caseHamlet' = do
     helper "<br>" $ const $ [html|<br|]
     helper "<br/>" $ const $ [xhtml|<br|]
 
-celper :: String -> Cassius Url -> Assertion
-celper res h = do
-    let x = renderCassius render h
-    T.pack res @=? x
-
-caseCassius :: Assertion
-caseCassius = do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip celper [cassius|
-foo
-    background: #{colorBlack}
-    bar: baz
-    color: #{colorRed}
-bin
-        background-image: url(@{Home})
-        bar: bar
-        color: #{(((Color 127) 100) 5)}
-        f#{var}x: someval
-        unicode-test: שלום
-        urlp: url(@?{urlp})
-|] $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
-        ]
-
-caseCassiusFile :: Assertion
-caseCassiusFile = do
-    let var = "var"
-    let selector = "foo"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip celper $(cassiusFile "test/external1.cassius") $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
-        ]
-
-jmixin = [julius|var x;|]
-
-jelper :: String -> Julius Url -> Assertion
-jelper res h = T.pack res @=? renderJulius render h
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
@@ -985,14 +703,6 @@ $forall   x     <-   empty
   where
     empty = []
 
-caseLuciusFileDebug :: Assertion
-caseLuciusFileDebug = do
-    let var = "var"
-    writeFile "test/external2.lucius" "foo{#{var}: 1}"
-    celper "foo{var:1}" $(luciusFileDebug "test/external2.lucius")
-    writeFile "test/external2.lucius" "foo{#{var}: 2}"
-    celper "foo{var:2}" $(luciusFileDebug "test/external2.lucius")
-    writeFile "test/external2.lucius" "foo{#{var}: 1}"
 
 
 
