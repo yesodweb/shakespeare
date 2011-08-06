@@ -19,7 +19,7 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import System.Process (readProcess)
 import Data.Monoid
-import Text.Romeo
+import Text.Shakespeare
 
 renderCoffee :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Coffee url -> IO TL.Text
 renderCoffee r s = do
@@ -39,12 +39,12 @@ instance ToCoffee [Char]  where toCoffee = fromLazyText . TL.pack
 instance ToCoffee TS.Text where toCoffee = fromText
 instance ToCoffee TL.Text where toCoffee = fromLazyText
 
-settings :: Q RomeoSettings
+settings :: Q ShakespeareSettings
 settings = do
   toExp <- [|toCoffee|]
   wrapExp <- [|Coffeescript|]
   unWrapExp <- [|unCoffeescript|]
-  return $ defaultRomeoSettings { varChar = '%'
+  return $ defaultShakespeareSettings { varChar = '%'
   , toBuilder = toExp
   , wrap = wrapExp
   , unwrap = unWrapExp
@@ -53,15 +53,15 @@ settings = do
 coffee :: QuasiQuoter
 coffee = QuasiQuoter { quoteExp = \s -> do
     rs <- settings
-    quoteExp (romeo rs) s
+    quoteExp (shakespeare rs) s
     }
 
 coffeeFile :: FilePath -> Q Exp
 coffeeFile fp = do
     rs <- settings
-    romeoFile rs fp
+    shakespeareFile rs fp
 
 coffeeFileDebug :: FilePath -> Q Exp
 coffeeFileDebug fp = do
     rs <- settings
-    romeoFileDebug rs fp
+    shakespeareFileDebug rs fp

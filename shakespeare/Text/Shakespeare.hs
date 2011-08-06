@@ -1,225 +1,205 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
--- | General parsers, functions and datatypes for all Shakespeare languages.
+{-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
+-- | For lack of a better name... a parameterized version of Julius.
 module Text.Shakespeare
-    ( Deref (..)
-    , Ident (..)
-    , Scope
-    , parseDeref
-    , parseHash
-    , parseVar
-    , parseAt
-    , parseUrl
-    , parseCaret
-    , parseUnder
-    , parseInt
-    , derefToExp
-    , flattenDeref
-    , readUtf8File
+    ( ShakespeareSettings (..)
+    , defaultShakespeareSettings
+    , shakespeare
+    , shakespeareFile
+    , shakespeareFileDebug
     ) where
 
+import Text.ParserCombinators.Parsec hiding (Line)
+import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Language.Haskell.TH (appE)
-import Data.Char (isUpper)
-import Text.ParserCombinators.Parsec
-import Data.List (intercalate)
-import Data.Ratio (Ratio, numerator, denominator, (%))
-import Data.Data (Data)
-import Data.Typeable (Typeable)
+import Language.Haskell.TH.Syntax.Internals
+import Data.Text.Lazy.Builder (Builder, fromText)
+import Data.Monoid
+import System.IO.Unsafe (unsafePerformIO)
+import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import qualified System.IO as SIO
-import qualified Data.Text.Lazy.IO as TIO
+import Text.Shakespeare.Base
 
-newtype Ident = Ident String
-    deriving (Show, Eq, Read, Data, Typeable)
+-- move to Shakespeare?
+readFileQ :: FilePath -> Q [Char]
+readFileQ fp = do
+    qRunIO $ readFileUtf8 fp
 
-type Scope = [(Ident, Exp)]
+-- move to Shakespeare?
+readFileUtf8 :: FilePath -> IO String
+readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
-data Deref = DerefModulesIdent [String] Ident
-           | DerefIdent Ident
-           | DerefIntegral Integer
-           | DerefRational Rational
-           | DerefString String
-           | DerefBranch Deref Deref
-    deriving (Show, Eq, Read, Data, Typeable)
+data ShakespeareSettings = ShakespeareSettings
+    { varChar :: Char
+    , urlChar :: Char
+    , intChar :: Char
+    , toBuilder :: Exp
+    , wrap :: Exp
+    , unwrap :: Exp
+    }
+defaultShakespeareSettings :: ShakespeareSettings
+defaultShakespeareSettings = ShakespeareSettings {
+    varChar = '#'
+  , urlChar = '@'
+  , intChar = '^'
+}
 
-instance Lift Ident where
-    lift (Ident s) = [|Ident|] `appE` lift s
-instance Lift Deref where
-    lift (DerefModulesIdent v s) = do
-        dl <- [|DerefModulesIdent|]
-        v' <- lift v
-        s' <- lift s
-        return $ dl `AppE` v' `AppE` s'
-    lift (DerefIdent s) = do
-        dl <- [|DerefIdent|]
-        s' <- lift s
-        return $ dl `AppE` s'
-    lift (DerefBranch x y) = do
-        x' <- lift x
-        y' <- lift y
-        db <- [|DerefBranch|]
-        return $ db `AppE` x' `AppE` y'
-    lift (DerefIntegral i) = [|DerefIntegral|] `appE` lift i
-    lift (DerefRational r) = do
-        n <- lift $ numerator r
-        d <- lift $ denominator r
-        per <- [|(%) :: Int -> Int -> Ratio Int|]
-        dr <- [|DerefRational|]
-        return $ dr `AppE` (InfixE (Just n) per (Just d))
-    lift (DerefString s) = [|DerefString|] `appE` lift s
 
-parseDeref :: Parser Deref
-parseDeref = do
-    skipMany $ oneOf " \t"
-    x <- derefSingle
-    res <- deref' $ (:) x
-    skipMany $ oneOf " \t"
-    return res
-  where
-    delim = (many1 (char ' ') >> return())
-            <|> lookAhead (char '(' >> return ())
-    derefOp = try $ do
-        _ <- char '('
-        x <- many1 $ noneOf " \t\n\r()"
-        _ <- char ')'
-        return $ DerefIdent $ Ident x
-    derefParens = between (char '(') (char ')') parseDeref
-    derefSingle = derefOp <|> derefParens <|> numeric <|> strLit<|> ident
-    deref' lhs =
-        dollar <|> derefSingle'
-               <|> return (foldl1 DerefBranch $ lhs [])
+instance Lift ShakespeareSettings where
+    lift (ShakespeareSettings x1 x2 x3 x4 x5 x6) =
+        [|ShakespeareSettings
+            $(lift x1) $(lift x2) $(lift x3)
+            $(liftExp x4) $(liftExp x5) $(liftExp x6)|]
       where
-        dollar = do
-            _ <- try $ delim >> char '$'
-            rhs <- parseDeref
-            let lhs' = foldl1 DerefBranch $ lhs []
-            return $ DerefBranch lhs' rhs
-        derefSingle' = do
-            x <- try $ delim >> derefSingle
-            deref' $ lhs . (:) x
-    numeric = do
-        n <- (char '-' >> return "-") <|> return ""
-        x <- many1 digit
-        y <- (char '.' >> fmap Just (many1 digit)) <|> return Nothing
-        return $ case y of
-            Nothing -> DerefIntegral $ read' "Integral" $ n ++ x
-            Just z -> DerefRational $ toRational
-                       (read' "Rational" $ n ++ x ++ '.' : z :: Double)
-    strLit = do
-        _ <- char '"'
-        chars <- many quotedChar
-        _ <- char '"'
-        return $ DerefString chars
-    quotedChar = (char '\\' >> escapedChar) <|> noneOf "\""
-    escapedChar =
-        (char 'n' >> return '\n') <|>
-        (char 'r' >> return '\r') <|>
-        (char 'b' >> return '\b') <|>
-        (char 't' >> return '\t') <|>
-        (char '\\' >> return '\\') <|>
-        (char '"' >> return '"') <|>
-        (char '\'' >> return '\'')
-    ident = do
-        mods <- many modul
-        func <- many1 (alphaNum <|> char '_' <|> char '\'')
-        let func' = Ident func
-        return $
-            if null mods
-                then DerefIdent func'
-                else DerefModulesIdent mods func'
-    modul = try $ do
-        c <- upper
-        cs <- many (alphaNum <|> char '_')
-        _ <- char '.'
-        return $ c : cs
+        liftExp (VarE n) = [|VarE $(liftName n)|]
+        liftExp (ConE n) = [|ConE $(liftName n)|]
+        liftExp _ = error "liftExp only supports VarE and ConE"
+        liftName (Name (OccName a) b) = [|Name (OccName $(lift a)) $(liftFlavour b)|]
+        liftFlavour NameS = [|NameS|]
+        liftFlavour (NameQ (ModName a)) = [|NameQ (ModName $(lift a))|]
+        liftFlavour (NameU _) = error "liftFlavour NameU" -- [|NameU $(lift $ fromIntegral a)|]
+        liftFlavour (NameL _) = error "liftFlavour NameL" -- [|NameU $(lift $ fromIntegral a)|]
+        liftFlavour (NameG ns (PkgName p) (ModName m)) = [|NameG $(liftNS ns) (PkgName $(lift p)) (ModName $(lift m))|]
+        liftNS VarName = [|VarName|]
+        liftNS DataName = [|DataName|]
 
-read' :: Read a => String -> String -> a
-read' t s =
-    case reads s of
-        (x, _):_ -> x
-        [] -> error $ t ++ " read failed: " ++ s
+type Shakespeare url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Builder
 
-expType :: Ident -> Name -> Exp
-expType (Ident (c:_)) = if isUpper c || c == ':' then ConE else VarE
-expType (Ident "") = error "Bad Ident"
+data Content = ContentRaw String
+             | ContentVar Deref
+             | ContentUrl Deref
+             | ContentUrlParam Deref
+             | ContentMix Deref
+    deriving (Show, Eq)
+type Contents = [Content]
 
-derefToExp :: Scope -> Deref -> Exp
-derefToExp s (DerefBranch x y) = derefToExp s x `AppE` derefToExp s y
-derefToExp _ (DerefModulesIdent mods i@(Ident s)) =
-    expType i $ Name (mkOccName s) (NameQ $ mkModName $ intercalate "." mods)
-derefToExp scope (DerefIdent i@(Ident s)) =
-    case lookup i scope of
-        Just e -> e
-        Nothing -> expType i $ mkName s
-derefToExp _ (DerefIntegral i) = LitE $ IntegerL i
-derefToExp _ (DerefRational r) = LitE $ RationalL r
-derefToExp _ (DerefString s) = LitE $ StringL s
+contentFromString :: ShakespeareSettings -> (String -> [Content])
+contentFromString rs s = do
+    compressContents $ either (error . show) id $ parse (parseContents rs) s s
+  where
+    compressContents :: Contents -> Contents
+    compressContents [] = []
+    compressContents (ContentRaw x:ContentRaw y:z) =
+        compressContents $ ContentRaw (x ++ y) : z
+    compressContents (x:y) = x : compressContents y
 
--- FIXME shouldn't we use something besides a list here?
-flattenDeref :: Deref -> Maybe [String]
-flattenDeref (DerefIdent (Ident x)) = Just [x]
-flattenDeref (DerefBranch (DerefIdent (Ident x)) y) = do
-    y' <- flattenDeref y
-    Just $ y' ++ [x]
-flattenDeref _ = Nothing
+parseContents :: ShakespeareSettings -> Parser Contents
+parseContents = many1 . parseContent
+  where
+    parseContent :: ShakespeareSettings -> Parser Content
+    parseContent ShakespeareSettings {..} =
+        parseHash' <|> parseAt' <|> parseCaret' <|> parseChar
+      where
+        parseHash' = either ContentRaw ContentVar `fmap` parseVar varChar
+        parseAt' =
+            either ContentRaw go `fmap` parseUrl urlChar '?'
+          where
+            go (d, False) = ContentUrl d
+            go (d, True) = ContentUrlParam d
+        parseCaret' = either ContentRaw ContentMix `fmap` parseInt intChar
+        parseChar = ContentRaw `fmap` (many1 $ noneOf [varChar, urlChar, intChar])
 
-parseHash :: Parser (Either String Deref)
-parseHash = parseVar '#'
+contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
+contentsToShakespeare rs a = do
+    r <- newName "_render"
+    c <- mapM (contentToBuilder r) a
+    d <- case c of
+            [] -> [|mempty|]
+            [x] -> return x
+            _ -> do
+                mc <- [|mconcat|]
+                return $ mc `AppE` ListE c
+    return $ LamE [VarP r] d
+      where
+        contentToBuilder :: Name -> Content -> Q Exp
+        contentToBuilder _ (ContentRaw s') = do
+            ts <- [|fromText . TS.pack|]
+            return $ (wrap rs) `AppE` (ts `AppE` LitE (StringL s'))
+        contentToBuilder _ (ContentVar d) = do
+            return $ (wrap rs) `AppE` ((toBuilder rs) `AppE` derefToExp [] d)
+        contentToBuilder r (ContentUrl d) = do
+            ts <- [|fromText|]
+            return $ (wrap rs) `AppE` (ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE []))
+        contentToBuilder r (ContentUrlParam d) = do
+            ts <- [|fromText|]
+            up <- [|\r' (u, p) -> r' u p|]
+            return $ (wrap rs) `AppE` (ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d))
+        contentToBuilder r (ContentMix d) = do
+            return $ derefToExp [] d `AppE` VarE r
 
-parseVar :: Char -> Parser (Either String Deref)
-parseVar c = do
-    _ <- char c
-    (char '\\' >> return (Left [c])) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
-        return $ Right deref) <|> (do
-            -- Check for hash just before newline
-            _ <- lookAhead (oneOf "\r\n" >> return ()) <|> eof
-            return $ Left ""
-            ) <|> return (Left [c])
+shakespeare :: ShakespeareSettings -> QuasiQuoter
+shakespeare r = QuasiQuoter { quoteExp = shakespeareFromString r }
 
-parseAt :: Parser (Either String (Deref, Bool))
-parseAt = parseUrl '@' '?'
+shakespeareFromString :: ShakespeareSettings -> String -> Q Exp
+shakespeareFromString r s = do
+    contentsToShakespeare r $ contentFromString r s
 
-parseUrl :: Char -> Char -> Parser (Either String (Deref, Bool))
-parseUrl c d = do
-    _ <- char c
-    (char '\\' >> return (Left [c])) <|> (do
-        x <- (char d >> return True) <|> return False
-        (do
-            _ <- char '{'
-            deref <- parseDeref
-            _ <- char '}'
-            return $ Right (deref, x))
-                <|> return (Left $ if x then [c, d] else [c]))
+shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
+shakespeareFile r fp = readFileQ fp >>= shakespeareFromString r
 
-parseCaret :: Parser (Either String Deref)
-parseCaret = parseInt '^'
+data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
 
-parseInt :: Char -> Parser (Either String Deref)
-parseInt c = do
-    _ <- char c
-    (char '\\' >> return (Left [c])) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
-        return $ Right deref) <|> return (Left [c])
+getVars :: Content -> [(Deref, VarType)]
+getVars ContentRaw{} = []
+getVars (ContentVar d) = [(d, VTPlain)]
+getVars (ContentUrl d) = [(d, VTUrl)]
+getVars (ContentUrlParam d) = [(d, VTUrlParam)]
+getVars (ContentMix d) = [(d, VTMixin)]
 
-parseUnder :: Parser (Either String Deref)
-parseUnder = do
-    _ <- char '_'
-    (char '\\' >> return (Left "_")) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
-        return $ Right deref) <|> return (Left "_")
+data VarExp url = EPlain Builder
+                | EUrl url
+                | EUrlParam (url, [(TS.Text, TS.Text)])
+                | EMixin (Shakespeare url)
 
-readUtf8File :: FilePath -> IO TL.Text
-readUtf8File fp = do
-    h <- SIO.openFile fp SIO.ReadMode
-    SIO.hSetEncoding h SIO.utf8_bom
-    TIO.hGetContents h
+shakespeareFileDebug :: ShakespeareSettings -> FilePath -> Q Exp
+shakespeareFileDebug rs fp = do
+    s <- readFileQ fp
+    let b = concatMap getVars $ contentFromString rs s
+    c <- mapM vtToExp b
+    rt <- [|shakespeareRuntime|]
+    wrap' <- [|\x -> $(return $ wrap rs) . x|]
+    r' <- lift rs
+    return $ wrap' `AppE` (rt `AppE` r' `AppE` (LitE $ StringL fp) `AppE` ListE c)
+  where
+    vtToExp :: (Deref, VarType) -> Q Exp
+    vtToExp (d, vt) = do
+        d' <- lift d
+        c' <- c vt
+        return $ TupE [d', c' `AppE` derefToExp [] d]
+      where
+        c :: VarType -> Q Exp
+        c VTPlain = [|EPlain . $(return $ toBuilder rs)|]
+        c VTUrl = [|EUrl|]
+        c VTUrlParam = [|EUrlParam|]
+        c VTMixin = [|\x -> EMixin $ \r -> $(return $ unwrap rs) $ x r|]
+
+
+shakespeareRuntime :: ShakespeareSettings -> FilePath -> [(Deref, VarExp url)] -> Shakespeare url
+shakespeareRuntime rs fp cd render' = unsafePerformIO $ do
+    s <- readFileUtf8 fp
+    return $ mconcat $ map go $ contentFromString rs s
+  where
+    go :: Content -> Builder
+    go (ContentRaw s) = fromText $ TS.pack s
+    go (ContentVar d) =
+        case lookup d cd of
+            Just (EPlain s) -> s
+            _ -> error $ show d ++ ": expected EPlain"
+    go (ContentUrl d) =
+        case lookup d cd of
+            Just (EUrl u) -> fromText $ render' u []
+            _ -> error $ show d ++ ": expected EUrl"
+    go (ContentUrlParam d) =
+        case lookup d cd of
+            Just (EUrlParam (u, p)) ->
+                fromText $ render' u p
+            _ -> error $ show d ++ ": expected EUrlParam"
+    go (ContentMix d) =
+        case lookup d cd of
+            Just (EMixin m) -> m render'
+            _ -> error $ show d ++ ": expected EMixin"

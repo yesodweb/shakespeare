@@ -18,7 +18,7 @@ module Text.Lucius
     ) where
 
 import Text.Cassius hiding (Cassius, renderCassius, cassius, cassiusFile, cassiusFileDebug)
-import Text.Shakespeare
+import Text.Shakespeare.Base
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import qualified Data.Text as TS

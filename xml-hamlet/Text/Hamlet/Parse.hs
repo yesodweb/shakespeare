@@ -8,7 +8,7 @@ module Text.Hamlet.Parse
     )
     where
 
-import Text.Shakespeare
+import Text.Shakespeare.Base
 import Control.Applicative ((<$>), Applicative (..))
 import Control.Monad
 import Data.Data

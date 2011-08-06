@@ -3,7 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
-module Text.Julius
+-- | This module is currently in an identity crisis. Originally called Julius, now being changed to just Javascript (shakespeare-javascript)
+module Text.Javascript
     ( Julius
     , Javascript (..)
     , ToJavascript (..)
@@ -19,7 +20,7 @@ import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
 import Data.Monoid
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import Text.Romeo
+import Text.Shakespeare
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -37,12 +38,12 @@ instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
 instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
 
-settings :: Q RomeoSettings
+settings :: Q ShakespeareSettings
 settings = do
   toJExp <- [|toJavascript|]
   wrapExp <- [|Javascript|]
   unWrapExp <- [|unJavascript|]
-  return $ defaultRomeoSettings { toBuilder = toJExp
+  return $ defaultShakespeareSettings { toBuilder = toJExp
   , wrap = wrapExp
   , unwrap = unWrapExp
   }
@@ -50,15 +51,15 @@ settings = do
 julius :: QuasiQuoter
 julius = QuasiQuoter { quoteExp = \s -> do
     rs <- settings
-    quoteExp (romeo rs) s
+    quoteExp (shakespeare rs) s
     }
 
 juliusFile :: FilePath -> Q Exp
 juliusFile fp = do
     rs <- settings
-    romeoFile rs fp
+    shakespeareFile rs fp
 
 juliusFileDebug :: FilePath -> Q Exp
 juliusFileDebug fp = do
     rs <- settings
-    romeoFileDebug rs fp
+    shakespeareFileDebug rs fp

@@ -31,24 +31,9 @@ library
                    , blaze-builder    >= 0.2     && < 0.4
                    , process          >= 1.0     && < 1.1
     exposed-modules: 
-                     Text.Romeo
                      Text.Shakespeare
+                     Text.Shakespeare.Base
     ghc-options:     -Wall
-
-test-suite test
-    hs-source-dirs: test
-    main-is: main.hs
-    type: exitcode-stdio-1.0
-
-    ghc-options:   -Wall
-    build-depends: hamlet           >= 0.9     && < 0.10
-                 , base             >= 4       && < 5
-                 , parsec           >= 2       && < 4
-                 , containers       >= 0.2     && < 0.5
-                 , text             >= 0.7     && < 1
-                 , HUnit
-                 , hspec
-                 , blaze-html       >= 0.4     && < 0.5
 
 
 source-repository head

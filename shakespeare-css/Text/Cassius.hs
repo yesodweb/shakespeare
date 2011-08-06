@@ -35,7 +35,7 @@ module Text.Cassius
 
 import Text.Css
 import Text.MkSizeType
-import Text.Shakespeare
+import Text.Shakespeare.Base
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Printf (printf)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))

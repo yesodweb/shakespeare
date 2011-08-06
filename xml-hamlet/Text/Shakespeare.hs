@@ -1,1 +1,0 @@
-../../hamlet/Text/Shakespeare.hs

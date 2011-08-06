@@ -12,7 +12,7 @@ import Data.Text (Text, pack)
 import Language.Haskell.TH.Syntax
 import System.IO.Unsafe (unsafePerformIO)
 import Text.ParserCombinators.Parsec (Parser, parse)
-import Text.Shakespeare
+import Text.Shakespeare.Base
 import Language.Haskell.TH
 
 class ToCss a where

@@ -32,7 +32,7 @@ module Text.Hamlet
     , HamletRules (..)
     ) where
 
-import Text.Shakespeare
+import Text.Shakespeare.Base
 import Text.Hamlet.Parse
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote

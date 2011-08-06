@@ -5,7 +5,7 @@ import Test.Hspec
 import Test.Hspec.HUnit
 
 import Prelude hiding (reverse)
-import Text.Julius
+import Text.Javascript
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
