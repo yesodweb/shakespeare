@@ -1,0 +1,59 @@
+name:            shakespeare-interpolated
+version:         0.9.0
+license:         BSD3
+license-file:    LICENSE
+author:          Greg Weber <greg@gregweber.info>
+maintainer:      Greg Weber <greg@gregweber.info>
+synopsis:        interpolation with quasi-quotation: stick haskell variables into haskell strings
+description:
+    .
+    > let foo = 'bar' in [t| 1,#{foo}
+    .
+    interpolation with quasi-quotation: stick haskell variables into haskell strings
+    .
+    Note there is no dependency on haskell-src-extras. If you don't mind that dependency, you may want to look at using these packages: Interpolation, interpolatedstring-perl6, interpolatedstring-qq.
+    .
+    This package has 1 other feature that those others may not (but would be easy to duplicate): instead of using quasi-quoting you can also use an external file.
+    .
+    This package also uses blaze-builder for efficiently constructing strings (I am not sure what the other packages use). This might be of interest to you for large templates or performance sensitive code, or otherwise having a nice interface to blaze-builder
+    .
+    Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation . Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
+    In this case, the variable type needs a ToText instance.
+    .
+    Please see http://docs.yesodweb.com/book/templates for a more thorough description and examples of the shakespeare family of template languages.
+
+category:        Web, Yesod
+stability:       Stable
+cabal-version:   >= 1.8
+build-type:      Simple
+homepage:        http://www.yesodweb.com/book/templates
+
+library
+    build-depends:   base             >= 4       && < 5
+                   , shakespeare >= 0.9
+                   , template-haskell
+                   , text             >= 0.7     && < 0.12
+                   , process          >= 1.0     && < 1.1
+
+    exposed-modules:
+                     Text.Javascript
+                     Text.Coffee
+    ghc-options:     -Wall
+
+test-suite test
+    hs-source-dirs: test
+    main-is: main.hs
+    type: exitcode-stdio-1.0
+
+    ghc-options:   -Wall
+    build-depends: shakespeare      >= 0.9     && < 0.10
+                 , shakespeare-js
+                 , base             >= 4       && < 5
+                 , HUnit
+                 , hspec
+                 , text             >= 0.7     && < 0.12
+
+
+source-repository head
+  type:     git
+  location: git://github.com/yesodweb/hamlet.git
