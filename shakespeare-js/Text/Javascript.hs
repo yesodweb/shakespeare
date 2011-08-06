@@ -9,9 +9,12 @@ module Text.Javascript
     , Javascript (..)
     , ToJavascript (..)
     , renderJulius
+    , js
     , julius
     , juliusFile
+    , jsFile
     , juliusFileDebug
+    , jsFileDebug
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -48,18 +51,25 @@ settings = do
   , unwrap = unWrapExp
   }
 
-julius :: QuasiQuoter
-julius = QuasiQuoter { quoteExp = \s -> do
+js, julius :: QuasiQuoter
+js = QuasiQuoter { quoteExp = \s -> do
     rs <- settings
     quoteExp (shakespeare rs) s
     }
 
-juliusFile :: FilePath -> Q Exp
-juliusFile fp = do
+julius = js
+
+jsFile, juliusFile :: FilePath -> Q Exp
+jsFile fp = do
     rs <- settings
     shakespeareFile rs fp
 
-juliusFileDebug :: FilePath -> Q Exp
+juliusFile = jsFile
+
+
+jsFileDebug, juliusFileDebug :: FilePath -> Q Exp
 juliusFileDebug fp = do
     rs <- settings
     shakespeareFileDebug rs fp
+
+juliusFileDebug = jsFileDebug
