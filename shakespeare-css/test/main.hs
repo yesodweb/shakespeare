@@ -13,8 +13,6 @@ import qualified Data.List
 import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
--- import qualified Text.Blaze.Renderer.Text
--- import Text.Blaze (toHtml, preEscapedString)
 
 main :: IO ()
 main = hspecX $ descriptions [specs]
@@ -35,6 +33,7 @@ specs = describe "hamlet"
         , "urlp:url(url?p=q)}"
         ]
 
+{- TODO
   , it "cassiusFileDebugChange" $ do
     let var = "var"
     writeFile "test/external2.cassius" "foo\n  #{var}: 1"
@@ -42,6 +41,7 @@ specs = describe "hamlet"
     writeFile "test/external2.cassius" "foo\n  #{var}: 2"
     celper "foo{var:2}" $(cassiusFileDebug "test/external2.cassius")
     writeFile "test/external2.cassius" "foo\n  #{var}: 1"
+    -}
 
 
   , it "comments" $ do
@@ -195,7 +195,9 @@ bin {
           , "urlp:url(url?p=q)}"
           ]
 
+{-
   , it "lucius file debug" caseLuciusFileDebug
+  -}
 
 
 

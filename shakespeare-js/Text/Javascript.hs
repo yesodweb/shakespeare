@@ -68,7 +68,7 @@ juliusFile = jsFile
 
 
 jsFileDebug, juliusFileDebug :: FilePath -> Q Exp
-juliusFileDebug fp = do
+jsFileDebug fp = do
     rs <- settings
     shakespeareFileDebug rs fp
 
