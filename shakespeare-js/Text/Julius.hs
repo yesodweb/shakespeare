@@ -4,7 +4,7 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 -- | This module is currently in an identity crisis. Originally called Julius, now being changed to just Javascript (shakespeare-javascript)
-module Text.Javascript
+module Text.Julius
     ( Julius
     , Javascript (..)
     , ToJavascript (..)
