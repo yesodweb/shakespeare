@@ -2,7 +2,7 @@
 
 CABAL=cabal
 
-PACKAGES="shakespeare shakespeare-css shakespeare-js hamlet xml-hamlet"
+PACKAGES="shakespeare shakespeare-css shakespeare-js shakespeare-text hamlet xml-hamlet"
 for package in $PACKAGES
 do
     echo Installing $package
