@@ -1,0 +1,137 @@
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
+import Test.HUnit hiding (Test)
+import Test.Hspec
+import Test.Hspec.HUnit
+
+import Prelude hiding (reverse)
+import Text.Shakespeare.Text
+import Data.List (intercalate)
+import qualified Data.Text.Lazy as T
+import qualified Data.List
+import qualified Data.List as L
+import Data.Text (Text, pack, unpack)
+import Data.Monoid (mappend)
+
+main :: IO ()
+main = hspecX $ descriptions [specs]
+
+specs = describe "shakespeare-text"
+  [ it "text" $ do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper [text|שלום
+#{var}
+@{Home}
+@?{urlp}
+^{jmixin}
+|] $ intercalate "\r\n"
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ] ++ "\r\n"
+
+
+  , it "textFile" $ do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper $(textFile "test/external1.text") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
+
+
+  , it "textFileDebug" $ do
+    let var = "var"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper $(textFileDebug "test/external1.text") $ unlines
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "var x;"
+        ]
+
+{- TODO
+  , it "textFileDebugChange" $ do
+      let var = "somevar"
+          test result = jelper result $(textFileDebug "test/external2.text")
+      writeFile "test/external2.text" "var #{var} = 1;"
+      test "var somevar = 1;"
+      writeFile "test/external2.text" "var #{var} = 2;"
+      test "var somevar = 2;"
+      writeFile "test/external2.text" "var #{var} = 1;"
+      -}
+
+
+  , it "text module names" $
+    let foo = "foo" in
+      jelper "oof oof 3.14 -5"
+        [text|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
+
+
+  , it "single dollar at and caret" $ do
+    jelper "$@^" [text|$@^|]
+    jelper "#{@{^{" [text|#\{@\{^\{|]
+
+
+  , it "dollar operator" $ do
+    let val = (1, (2, 3))
+    jelper "2" [text|#{ show $ fst $ snd val }|]
+    jelper "2" [text|#{ show $ fst $ snd $ val}|]
+  ]
+
+
+
+data Url = Home | Sub SubUrl
+data SubUrl = SubUrl
+render :: Url -> [(Text, Text)] -> Text
+render Home qs = pack "url" `mappend` showParams qs
+render (Sub SubUrl) qs = pack "suburl" `mappend` showParams qs
+
+showParams :: [(Text, Text)] -> Text
+showParams [] = pack ""
+showParams z =
+    pack $ '?' : intercalate "&" (map go z)
+  where
+    go (x, y) = go' x ++ '=' : go' y
+    go' = concatMap encodeUrlChar . unpack
+
+-- | Taken straight from web-encodings; reimplemented here to avoid extra
+-- dependencies.
+encodeUrlChar :: Char -> String
+encodeUrlChar c
+    -- List of unreserved characters per RFC 3986
+    -- Gleaned from http://en.wikipedia.org/wiki/Percent-encoding
+    | 'A' <= c && c <= 'Z' = [c]
+    | 'a' <= c && c <= 'z' = [c]
+    | '0' <= c && c <= '9' = [c]
+encodeUrlChar c@'-' = [c]
+encodeUrlChar c@'_' = [c]
+encodeUrlChar c@'.' = [c]
+encodeUrlChar c@'~' = [c]
+encodeUrlChar ' ' = "+"
+encodeUrlChar y =
+    let (a, c) = fromEnum y `divMod` 16
+        b = a `mod` 16
+        showHex' x
+            | x < 10 = toEnum $ x + (fromEnum '0')
+            | x < 16 = toEnum $ x - 10 + (fromEnum 'A')
+            | otherwise = error $ "Invalid argument to showHex: " ++ show x
+     in ['%', showHex' b, showHex' c]
+
+
+
+
+jmixin = [text|var x;|]
+
+jelper :: String -> text Url -> Assertion
+jelper res h = T.pack res @=? rendertext render h
+
+instance Show Url where
+    show _ = "FIXME remove this instance show Url"

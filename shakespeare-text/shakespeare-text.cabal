@@ -1,4 +1,4 @@
-name:            shakespeare-interpolated
+name:            shakespeare-text
 version:         0.9.0
 license:         BSD3
 license-file:    LICENSE
@@ -30,14 +30,11 @@ homepage:        http://www.yesodweb.com/book/templates
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare >= 0.9
+                   , shakespeare      >= 0.10
                    , template-haskell
                    , text             >= 0.7     && < 0.12
-                   , process          >= 1.0     && < 1.1
 
-    exposed-modules:
-                     Text.Javascript
-                     Text.Coffee
+    exposed-modules: Text.Shakespeare.Text
     ghc-options:     -Wall
 
 test-suite test
@@ -47,7 +44,7 @@ test-suite test
 
     ghc-options:   -Wall
     build-depends: shakespeare      >= 0.9     && < 0.10
-                 , shakespeare-js
+                 , shakespeare-text
                  , base             >= 4       && < 5
                  , HUnit
                  , hspec
