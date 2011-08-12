@@ -3,48 +3,44 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
--- | This module is currently in an identity crisis. Originally called Julius, now being changed to just Javascript (shakespeare-javascript)
-module Text.Julius
-    ( Julius
-    , Javascript (..)
-    , ToJavascript (..)
-    , renderJulius
+module Text.Shakespeare.Text
+    ( TextUrl
+    , ToText (..)
+    , renderTextUrl
     , text
     , textFile
-    , textFileDebug
     , textFileDebug
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
-import Data.Monoid
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
 
-renderJavascript :: Javascript -> TL.Text
-renderJavascript (Javascript b) = toLazyText b
+renderText :: Builder -> TL.Text
+renderText = toLazyText
 
-renderJulius :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Julius url -> TL.Text
-renderJulius r s = renderJavascript $ s r
+renderTextUrl :: Render url -> TextUrl url -> TL.Text
+renderTextUrl r s = renderText $ s r
 
-newtype Javascript = Javascript { unJavascript :: Builder }
-    deriving Monoid
-type Julius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Javascript
+type QueryString = [(TS.Text, TS.Text)]
+type Render url = (url -> QueryString -> TS.Text)
+type TextUrl url = Render url -> Builder
 
-class ToJavascript a where
-    toJavascript :: a -> Builder
-instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
-instance ToJavascript TS.Text where toJavascript = fromText
-instance ToJavascript TL.Text where toJavascript = fromLazyText
+class ToText a where
+    toText :: a -> Builder
+instance ToText [Char ] where toText = fromLazyText . TL.pack
+instance ToText TS.Text where toText = fromText
+instance ToText TL.Text where toText = fromLazyText
 
 settings :: Q ShakespeareSettings
 settings = do
-  toJExp <- [|toJavascript|]
-  wrapExp <- [|Javascript|]
-  unWrapExp <- [|unJavascript|]
-  return $ defaultShakespeareSettings { toBuilder = toJExp
+  toTExp <- [|toText|]
+  wrapExp <- [|id|]
+  unWrapExp <- [|id|]
+  return $ defaultShakespeareSettings { toBuilder = toTExp
   , wrap = wrapExp
   , unwrap = unWrapExp
   }

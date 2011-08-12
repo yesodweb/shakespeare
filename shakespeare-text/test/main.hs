@@ -20,7 +20,7 @@ specs = describe "shakespeare-text"
   [ it "text" $ do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [text|שלום
+    flip telper [text|שלום
 #{var}
 @{Home}
 @?{urlp}
@@ -37,7 +37,7 @@ specs = describe "shakespeare-text"
   , it "textFile" $ do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(textFile "test/external1.text") $ unlines
+    flip telper $(textFile "test/external1.text") $ unlines
         [ "שלום"
         , var
         , "url"
@@ -49,7 +49,7 @@ specs = describe "shakespeare-text"
   , it "textFileDebug" $ do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(textFileDebug "test/external1.text") $ unlines
+    flip telper $(textFileDebug "test/external1.text") $ unlines
         [ "שלום"
         , var
         , "url"
@@ -60,7 +60,7 @@ specs = describe "shakespeare-text"
 {- TODO
   , it "textFileDebugChange" $ do
       let var = "somevar"
-          test result = jelper result $(textFileDebug "test/external2.text")
+          test result = telper result $(textFileDebug "test/external2.text")
       writeFile "test/external2.text" "var #{var} = 1;"
       test "var somevar = 1;"
       writeFile "test/external2.text" "var #{var} = 2;"
@@ -71,19 +71,19 @@ specs = describe "shakespeare-text"
 
   , it "text module names" $
     let foo = "foo" in
-      jelper "oof oof 3.14 -5"
+      telper "oof oof 3.14 -5"
         [text|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
 
 
   , it "single dollar at and caret" $ do
-    jelper "$@^" [text|$@^|]
-    jelper "#{@{^{" [text|#\{@\{^\{|]
+    telper "$@^" [text|$@^|]
+    telper "#{@{^{" [text|#\{@\{^\{|]
 
 
   , it "dollar operator" $ do
     let val = (1, (2, 3))
-    jelper "2" [text|#{ show $ fst $ snd val }|]
-    jelper "2" [text|#{ show $ fst $ snd $ val}|]
+    telper "2" [text|#{ show $ fst $ snd val }|]
+    telper "2" [text|#{ show $ fst $ snd $ val}|]
   ]
 
 
@@ -130,8 +130,8 @@ encodeUrlChar y =
 
 jmixin = [text|var x;|]
 
-jelper :: String -> text Url -> Assertion
-jelper res h = T.pack res @=? rendertext render h
+telper :: String -> TextUrl Url -> Assertion
+telper res h = T.pack res @=? renderTextUrl render h
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
