@@ -12,6 +12,7 @@ module Text.Shakespeare
     , shakespeare
     , shakespeareFile
     , shakespeareFileDebug
+    , RenderUrl
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -41,20 +42,22 @@ data ShakespeareSettings = ShakespeareSettings
     , toBuilder :: Exp
     , wrap :: Exp
     , unwrap :: Exp
+    , justVarInterpolation :: Bool
     }
 defaultShakespeareSettings :: ShakespeareSettings
 defaultShakespeareSettings = ShakespeareSettings {
     varChar = '#'
   , urlChar = '@'
   , intChar = '^'
+  , justVarInterpolation = False
 }
 
 
 instance Lift ShakespeareSettings where
-    lift (ShakespeareSettings x1 x2 x3 x4 x5 x6) =
+    lift (ShakespeareSettings x1 x2 x3 x4 x5 x6 x7) =
         [|ShakespeareSettings
             $(lift x1) $(lift x2) $(lift x3)
-            $(liftExp x4) $(liftExp x5) $(liftExp x6)|]
+            $(liftExp x4) $(liftExp x5) $(liftExp x6) $(lift x7)|]
       where
         liftExp (VarE n) = [|VarE $(liftName n)|]
         liftExp (ConE n) = [|ConE $(liftName n)|]
@@ -68,7 +71,9 @@ instance Lift ShakespeareSettings where
         liftNS VarName = [|VarName|]
         liftNS DataName = [|DataName|]
 
-type Shakespeare url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Builder
+type QueryParameters = [(TS.Text, TS.Text)]
+type RenderUrl url = (url -> QueryParameters -> TS.Text)
+type Shakespeare url = RenderUrl url -> Builder
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -108,13 +113,15 @@ contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do
     r <- newName "_render"
     c <- mapM (contentToBuilder r) a
-    d <- case c of
-            [] -> [|mempty|]
-            [x] -> return x
-            _ -> do
-                mc <- [|mconcat|]
-                return $ mc `AppE` ListE c
-    return $ LamE [VarP r] d
+    template <- case c of
+                  [] -> [|mempty|]
+                  [x] -> return x
+                  _ -> do
+                      mc <- [|mconcat|]
+                      return $ mc `AppE` ListE c
+    if justVarInterpolation rs
+      then return template
+      else return $ LamE [VarP r] template
       where
         contentToBuilder :: Name -> Content -> Q Exp
         contentToBuilder _ (ContentRaw s') = do

@@ -8,6 +8,7 @@ import Prelude hiding (reverse)
 import Text.Shakespeare.Text
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.Builder
 import qualified Data.List
 import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
@@ -70,22 +71,36 @@ specs = describe "shakespeare-text"
 
 
   , it "text module names" $
-    let foo = "foo" in
-      telper "oof oof 3.14 -5"
-        [text|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
+      let foo = "foo" in
+        telper "oof oof 3.14 -5"
+          [text|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
 
+  , it "stext module names" $
+      let foo = "foo" in
+        st "oof oof 3.14 -5"
+          [stext|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
 
   , it "single dollar at and caret" $ do
-    telper "$@^" [text|$@^|]
-    telper "#{@{^{" [text|#\{@\{^\{|]
+      telper "$@^" [text|$@^|]
+      telper "#{@{^{" [text|#\{@\{^\{|]
 
+  , it "single dollar at and caret" $ do
+      st "$@^" [stext|$@^|]
+      st "#{@{^{" [stext|#\{@\{^\{|]
 
   , it "dollar operator" $ do
-    let val = (1, (2, 3))
-    telper "2" [text|#{ show $ fst $ snd val }|]
-    telper "2" [text|#{ show $ fst $ snd $ val}|]
+      let val = (1, (2, 3))
+      telper "2" [text|#{ show $ fst $ snd val }|]
+      telper "2" [text|#{ show $ fst $ snd $ val}|]
+
+  , it "dollar operator" $ do
+      let val = (1, (2, 3))
+      st "2" [stext|#{ show $ fst $ snd val }|]
+      st "2" [stext|#{ show $ fst $ snd $ val}|]
   ]
 
+st :: String -> Data.Text.Lazy.Builder.Builder -> Assertion
+st a b = (T.fromStrict $ pack a) @=? Data.Text.Lazy.Builder.toLazyText b
 
 
 data Url = Home | Sub SubUrl

@@ -7,6 +7,7 @@ module Text.Shakespeare.Text
     ( TextUrl
     , ToText (..)
     , renderTextUrl
+    , stext
     , text
     , textFile
     , textFileDebug
@@ -22,12 +23,10 @@ import Text.Shakespeare
 renderText :: Builder -> TL.Text
 renderText = toLazyText
 
-renderTextUrl :: Render url -> TextUrl url -> TL.Text
+renderTextUrl :: RenderUrl url -> TextUrl url -> TL.Text
 renderTextUrl r s = renderText $ s r
 
-type QueryString = [(TS.Text, TS.Text)]
-type Render url = (url -> QueryString -> TS.Text)
-type TextUrl url = Render url -> Builder
+type TextUrl url = RenderUrl url -> Builder
 
 class ToText a where
     toText :: a -> Builder
@@ -44,6 +43,13 @@ settings = do
   , wrap = wrapExp
   , unwrap = unWrapExp
   }
+
+stext :: QuasiQuoter
+stext = 
+  QuasiQuoter { quoteExp = \s -> do
+    rs <- settings
+    quoteExp (shakespeare rs { justVarInterpolation = True }) s
+    }
 
 text :: QuasiQuoter
 text = QuasiQuoter { quoteExp = \s -> do
