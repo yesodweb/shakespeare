@@ -12,6 +12,8 @@ module Text.Shakespeare
     , shakespeare
     , shakespeareFile
     , shakespeareFileDebug
+    -- * low-level
+    , shakespeareFromString
     , RenderUrl
     ) where
 
@@ -113,15 +115,15 @@ contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do
     r <- newName "_render"
     c <- mapM (contentToBuilder r) a
-    template <- case c of
-                  [] -> [|mempty|]
-                  [x] -> return x
-                  _ -> do
-                      mc <- [|mconcat|]
-                      return $ mc `AppE` ListE c
+    compiledTemplate <- case c of
+        []  -> [|mempty|]
+        [x] -> return x
+        _   -> do
+              mc <- [|mconcat|]
+              return $ mc `AppE` ListE c
     if justVarInterpolation rs
-      then return template
-      else return $ LamE [VarP r] template
+      then return compiledTemplate
+      else return $ LamE [VarP r] compiledTemplate
       where
         contentToBuilder :: Name -> Content -> Q Exp
         contentToBuilder _ (ContentRaw s') = do

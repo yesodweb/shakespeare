@@ -7,7 +7,7 @@ import Test.Hspec.HUnit
 import Prelude hiding (reverse)
 import Text.Shakespeare.Text
 import Data.List (intercalate)
-import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder
 import qualified Data.List
 import qualified Data.List as L
@@ -99,8 +99,8 @@ specs = describe "shakespeare-text"
       st "2" [stext|#{ show $ fst $ snd $ val}|]
   ]
 
-st :: String -> Data.Text.Lazy.Builder.Builder -> Assertion
-st a b = (T.fromStrict $ pack a) @=? Data.Text.Lazy.Builder.toLazyText b
+st :: String -> TL.Text -> Assertion
+st a b = pack a @=? TL.toStrict b
 
 
 data Url = Home | Sub SubUrl
@@ -146,7 +146,7 @@ encodeUrlChar y =
 jmixin = [text|var x;|]
 
 telper :: String -> TextUrl Url -> Assertion
-telper res h = T.pack res @=? renderTextUrl render h
+telper res h = pack res @=? TL.toStrict (renderTextUrl render h)
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"

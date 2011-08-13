@@ -48,7 +48,9 @@ stext :: QuasiQuoter
 stext = 
   QuasiQuoter { quoteExp = \s -> do
     rs <- settings
-    quoteExp (shakespeare rs { justVarInterpolation = True }) s
+    render <- [|renderText|]
+    rendered <- shakespeareFromString rs { justVarInterpolation = True } s
+    return (render `AppE` rendered)
     }
 
 text :: QuasiQuoter
