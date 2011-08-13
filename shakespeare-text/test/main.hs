@@ -77,7 +77,7 @@ specs = describe "shakespeare-text"
 
   , it "stext module names" $
       let foo = "foo" in
-        st "oof oof 3.14 -5"
+        simpT "oof oof 3.14 -5"
           [stext|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
 
   , it "single dollar at and caret" $ do
@@ -85,8 +85,8 @@ specs = describe "shakespeare-text"
       telper "#{@{^{" [text|#\{@\{^\{|]
 
   , it "single dollar at and caret" $ do
-      st "$@^" [stext|$@^|]
-      st "#{@{^{" [stext|#\{@\{^\{|]
+      simpT "$@^" [stext|$@^|]
+      simpT "#{@{^{" [stext|#\{@\{^\{|]
 
   , it "dollar operator" $ do
       let val = (1, (2, 3))
@@ -95,12 +95,12 @@ specs = describe "shakespeare-text"
 
   , it "dollar operator" $ do
       let val = (1, (2, 3))
-      st "2" [stext|#{ show $ fst $ snd val }|]
-      st "2" [stext|#{ show $ fst $ snd $ val}|]
+      simpT "2" [stext|#{ show $ fst $ snd val }|]
+      simpT "2" [stext|#{ show $ fst $ snd $ val}|]
   ]
 
-st :: String -> TL.Text -> Assertion
-st a b = pack a @=? TL.toStrict b
+simpT :: String -> TL.Text -> Assertion
+simpT a b = pack a @=? TL.toStrict b
 
 
 data Url = Home | Sub SubUrl

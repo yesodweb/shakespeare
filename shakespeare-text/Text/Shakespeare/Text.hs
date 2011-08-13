@@ -11,6 +11,8 @@ module Text.Shakespeare.Text
     , text
     , textFile
     , textFileDebug
+    , st -- | strict text
+    , lt -- | lazy text, same as stext :)
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -44,7 +46,7 @@ settings = do
   , unwrap = unWrapExp
   }
 
-stext :: QuasiQuoter
+stext, lt, st, text :: QuasiQuoter
 stext = 
   QuasiQuoter { quoteExp = \s -> do
     rs <- settings
@@ -52,8 +54,16 @@ stext =
     rendered <- shakespeareFromString rs { justVarInterpolation = True } s
     return (render `AppE` rendered)
     }
+lt = stext
 
-text :: QuasiQuoter
+st = 
+  QuasiQuoter { quoteExp = \s -> do
+    rs <- settings
+    render <- [|TL.toStrict . renderText|]
+    rendered <- shakespeareFromString rs { justVarInterpolation = True } s
+    return (render `AppE` rendered)
+    }
+
 text = QuasiQuoter { quoteExp = \s -> do
     rs <- settings
     quoteExp (shakespeare rs) s
