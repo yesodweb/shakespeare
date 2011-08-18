@@ -1,3 +1,14 @@
 Please see the documentation site:
 
 http://docs.yesodweb.com/hamlet/
+
+# Install
+
+This repo contains several templating packages.
+You are recommended to install them from hackage using `cabal install`
+
+## From this Repo
+
+Only do this if you need the latest version
+
+   cabal update && ./install-all.sh

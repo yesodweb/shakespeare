@@ -4,7 +4,9 @@ All these projects were born out of the hamlet html templating language. Hamlet 
 
 # Install
 
-Install with ./install-all.sh
+Install with:
+
+   cabal update && ./install-all.sh
 
 # Testing
 
