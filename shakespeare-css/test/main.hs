@@ -288,9 +288,9 @@ encodeUrlChar y =
 
 
 
-celper :: String -> Cassius Url -> Assertion
+celper :: String -> CssUrl Url -> Assertion
 celper res h = do
-    let x = renderCassius render h
+    let x = renderCssUrl render h
     T.pack res @=? x
 
 caseCassius :: Assertion

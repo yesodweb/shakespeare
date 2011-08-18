@@ -5,19 +5,15 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Lucius
-    ( -- * Datatypes
-      Lucius
-      -- * Rendering
-    , renderLucius
-      -- * Parsing
-    , lucius
+    ( -- * Parsing
+      lucius
     , luciusFile
     , luciusFileDebug
       -- * Re-export cassius
     , module Text.Cassius
     ) where
 
-import Text.Cassius hiding (Cassius, renderCassius, cassius, cassiusFile, cassiusFileDebug)
+import Text.Cassius hiding (cassius, cassiusFile, cassiusFileDebug)
 import Text.Shakespeare.Base
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
@@ -29,13 +25,6 @@ import Text.Css
 import Data.Char (isSpace)
 import Control.Applicative ((<$>))
 import Data.Either (partitionEithers)
-
-type Lucius a = C.Cassius a
-
-renderLucius :: (url -> [(TS.Text, TS.Text)] -> TS.Text)
-             -> Lucius url
-             -> TL.Text
-renderLucius = C.renderCassius
 
 -- |
 --

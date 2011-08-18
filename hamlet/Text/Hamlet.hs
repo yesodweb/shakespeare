@@ -9,18 +9,18 @@
 module Text.Hamlet
     ( -- * Plain HTML
       Html
-    , html
-    , htmlFile
-    , xhtml
-    , xhtmlFile
+    , shamlet
+    , shamletFile
+    , xshamlet
+    , xshamletFile
       -- * Hamlet
-    , Hamlet
+    , HtmlUrl
     , hamlet
     , hamletFile
     , xhamlet
     , xhamletFile
       -- * I18N Hamlet
-    , IHamlet
+    , HtmlUrlI18n
     , ihamlet
     , ihamletFile
       -- * Internal, for making more
@@ -52,10 +52,10 @@ type Render url = url -> [(Text, Text)] -> Text
 type Translate msg = msg -> Html
 
 -- | A function generating an 'Html' given a URL-rendering function.
-type Hamlet url = Render url -> Html
+type HtmlUrl url = Render url -> Html
 
 -- | A function generating an 'Html' given a message translator and a URL rendering function.
-type IHamlet msg url = Translate msg -> Render url -> Html
+type HtmlUrlI18n msg url = Translate msg -> Render url -> Html
 
 docsToExp :: Env -> HamletRules -> Scope -> [Doc] -> Q Exp
 docsToExp env hr scope docs = do
@@ -142,11 +142,11 @@ contentToExp env hr scope (ContentMsg d) =
         Just wrender -> wrender $ \render ->
             return $ hrFromHtml hr `AppE` (render `AppE` derefToExp scope d)
 
-html :: QuasiQuoter
-html = hamletWithSettings htmlRules defaultHamletSettings
+shamlet :: QuasiQuoter
+shamlet = hamletWithSettings htmlRules defaultHamletSettings
 
-xhtml :: QuasiQuoter
-xhtml = hamletWithSettings htmlRules xhtmlHamletSettings
+xshamlet :: QuasiQuoter
+xshamlet = hamletWithSettings htmlRules xhtmlHamletSettings
 
 htmlRules :: Q HamletRules
 htmlRules = do
@@ -228,11 +228,11 @@ hamletFile = hamletFileWithSettings hamletRules defaultHamletSettings
 xhamletFile :: FilePath -> Q Exp
 xhamletFile = hamletFileWithSettings hamletRules xhtmlHamletSettings
 
-htmlFile :: FilePath -> Q Exp
-htmlFile = hamletFileWithSettings htmlRules defaultHamletSettings
+shamletFile :: FilePath -> Q Exp
+shamletFile = hamletFileWithSettings htmlRules defaultHamletSettings
 
-xhtmlFile :: FilePath -> Q Exp
-xhtmlFile = hamletFileWithSettings htmlRules xhtmlHamletSettings
+xshamletFile :: FilePath -> Q Exp
+xshamletFile = hamletFileWithSettings htmlRules xhtmlHamletSettings
 
 ihamletFile :: FilePath -> Q Exp
 ihamletFile = hamletFileWithSettings ihamletRules defaultHamletSettings

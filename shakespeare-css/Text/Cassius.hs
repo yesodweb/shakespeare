@@ -5,13 +5,13 @@
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Cassius
     ( -- * Datatypes
-      Cassius
-    , Css
+      Css
+    , CssUrl
       -- * Type class
     , ToCss (..)
       -- * Rendering
-    , renderCassius
     , renderCss
+    , renderCssUrl
       -- * Parsing
     , cassius
     , cassiusFile
@@ -77,10 +77,10 @@ colorRed = Color 255 0 0
 colorBlack :: Color
 colorBlack = Color 0 0 0
 
-renderCassius :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Cassius url -> TL.Text
-renderCassius r s = renderCss $ s r
+renderCssUrl :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> CssUrl url -> TL.Text
+renderCssUrl r s = renderCss $ s r
 
-type Cassius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Css
+type CssUrl url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Css
 
 parseBlocks :: Parser [Block]
 parseBlocks = (map compressBlock . catMaybes) `fmap` many parseBlock

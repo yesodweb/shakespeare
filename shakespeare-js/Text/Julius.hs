@@ -5,10 +5,11 @@
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 -- | This module is currently in an identity crisis. Originally called Julius, now being changed to just Javascript (shakespeare-javascript)
 module Text.Julius
-    ( Julius
+    ( JavascriptUrl
     , Javascript (..)
     , ToJavascript (..)
-    , renderJulius
+    , renderJavascript
+    , renderJavascriptUrl
     , js
     , julius
     , juliusFile
@@ -28,12 +29,12 @@ import Text.Shakespeare
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
 
-renderJulius :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Julius url -> TL.Text
-renderJulius r s = renderJavascript $ s r
+renderJavascriptUrl :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> JavascriptUrl url -> TL.Text
+renderJavascriptUrl r s = renderJavascript $ s r
 
 newtype Javascript = Javascript { unJavascript :: Builder }
     deriving Monoid
-type Julius url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Javascript
+type JavascriptUrl url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Javascript
 
 class ToJavascript a where
     toJavascript :: a -> Builder

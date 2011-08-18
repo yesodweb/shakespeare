@@ -205,10 +205,10 @@ $forall x <- set
 
 
   , it "non-poly HTML" $ do
-      helperHtml "<h1>HELLO WORLD</h1>" [html|
+      helperHtml "<h1>HELLO WORLD</h1>" [shamlet|
   <h1>HELLO WORLD
   |]
-      helperHtml "<h1>HELLO WORLD</h1>" $(htmlFile "test/nonpolyhtml.hamlet")
+      helperHtml "<h1>HELLO WORLD</h1>" $(shamletFile "test/nonpolyhtml.hamlet")
 
 
   , it "non-poly Hamlet" $ do
@@ -269,7 +269,7 @@ data Arg url = Arg
     { getArg :: Arg url
     , var :: Html
     , url :: Url
-    , embed :: Hamlet url
+    , embed :: HtmlUrl url
     , true :: Bool
     , false :: Bool
     , list :: [Arg url]
@@ -297,7 +297,7 @@ helperHtml res h = do
     let x = Text.Blaze.Renderer.Text.renderHtml h
     T.pack res @=? x
 
-helper :: String -> Hamlet Url -> Assertion
+helper :: String -> HtmlUrl Url -> Assertion
 helper res h = do
     let x = Text.Blaze.Renderer.Text.renderHtml $ h render
     T.pack res @=? x
@@ -669,16 +669,16 @@ helper' res h = T.pack res @=? Text.Blaze.Renderer.Text.renderHtml h
 
 caseHamlet' :: Assertion
 caseHamlet' = do
-    helper' "foo" [html|foo|]
-    helper' "foo" [xhtml|foo|]
-    helper "<br>" $ const $ [html|<br|]
-    helper "<br/>" $ const $ [xhtml|<br|]
+    helper' "foo" [shamlet|foo|]
+    helper' "foo" [xshamlet|foo|]
+    helper "<br>" $ const $ [shamlet|<br|]
+    helper "<br/>" $ const $ [xshamlet|<br|]
 
     -- new with generalized stuff
-    helper' "foo" [html|foo|]
-    helper' "foo" [xhtml|foo|]
-    helper "<br>" $ const $ [html|<br|]
-    helper "<br/>" $ const $ [xhtml|<br|]
+    helper' "foo" [shamlet|foo|]
+    helper' "foo" [xshamlet|foo|]
+    helper "<br>" $ const $ [shamlet|<br|]
+    helper "<br/>" $ const $ [xshamlet|<br|]
 
 
 instance Show Url where
@@ -708,7 +708,7 @@ $forall   x     <-   empty
 
 data Msg = Hello | Goodbye
 
-ihelper :: String -> IHamlet Msg Url -> Assertion
+ihelper :: String -> HtmlUrlI18n Msg Url -> Assertion
 ihelper res h = do
     let x = Text.Blaze.Renderer.Text.renderHtml $ h showMsg render
     T.pack res @=? x

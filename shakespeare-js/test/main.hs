@@ -130,8 +130,8 @@ encodeUrlChar y =
 
 jmixin = [julius|var x;|]
 
-jelper :: String -> Julius Url -> Assertion
-jelper res h = T.pack res @=? renderJulius render h
+jelper :: String -> JavascriptUrl Url -> Assertion
+jelper res h = T.pack res @=? renderJavascriptUrl render h
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
