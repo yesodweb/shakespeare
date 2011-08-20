@@ -43,7 +43,7 @@ test-suite test
                  , shakespeare      >= 0.10    && < 0.11
                  , base             >= 4       && < 5
                  , HUnit
-                 , hspec
+                 , hspec >= 0.6.1 && < 0.7
                  , text             >= 0.7     && < 0.12
 
 

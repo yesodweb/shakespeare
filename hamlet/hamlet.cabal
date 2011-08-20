@@ -55,7 +55,7 @@ test-suite test
                  , containers       >= 0.2     && < 0.5
                  , text             >= 0.7     && < 1
                  , HUnit
-                 , hspec
+                 , hspec >= 0.6.1 && < 0.7
                  , blaze-html       >= 0.4     && < 0.5
 
 
