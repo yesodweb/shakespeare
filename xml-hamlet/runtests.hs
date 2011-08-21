@@ -121,6 +121,9 @@ $else
     , it "recognizes clark notation" $ [xml|
 <{foo}bar {baz}bin="x"
 |] @?= [X.NodeElement $ X.Element "{foo}bar" [("{baz}bin", "x")] []]
+    , it "recognizes clark with URLs" $ [xml|
+<{http://www.example.com/foo/bar}baz>
+|] @?= [X.NodeElement $ X.Element "{http://www.example.com/foo/bar}baz" [] []]
     ]
   where
     bin = "bin"

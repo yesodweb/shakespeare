@@ -189,7 +189,7 @@ parseLine = do
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
     angle = do
         _ <- char '<'
-        name' <- many  $ noneOf " \t.#\r\n!>"
+        name' <- many  $ noneOf " \t\r\n>"
         let name = if null name' then "div" else name'
         xs <- many $ try ((many $ oneOf " \t") >>
               (tagCond <|> tagAttrib Nothing))
