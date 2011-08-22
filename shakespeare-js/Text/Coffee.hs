@@ -5,7 +5,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Coffee
     ( ToCoffee (..)
-    , Coffee
+    , CoffeeUrl
     , Coffeescript
     , coffee
     , coffeeFile
@@ -22,7 +22,7 @@ import System.Process (readProcess)
 import Data.Monoid
 import Text.Shakespeare
 
-renderCoffee :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Coffee url -> IO TL.Text
+renderCoffee :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> CoffeeUrl url -> IO TL.Text
 renderCoffee r s = do
   out <- readProcess "coffee" ["-epb", TL.unpack $ toLazyText $ unCoffee $ s r] []
   return $ TL.pack out
@@ -31,7 +31,7 @@ renderCoffee r s = do
 newtype Coffeescript = Coffeescript { unCoffeescript :: Builder }
     deriving Monoid
 
-type Coffee url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Coffeescript
+type CoffeeUrl url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Coffeescript
 
 -- the types that can be placed in a template
 class ToCoffee c where
