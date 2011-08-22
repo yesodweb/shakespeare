@@ -6,6 +6,7 @@
 module Text.Coffee
     ( ToCoffee (..)
     , Coffee
+    , Coffeescript
     , coffee
     , coffeeFile
     , coffeeFileDebug
