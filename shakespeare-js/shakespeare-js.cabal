@@ -29,7 +29,7 @@ library
                    , shakespeare      >= 0.10    && < 0.11
                    , template-haskell
                    , text             >= 0.7     && < 0.12
-                   , process          >= 1.0     && < 1.1
+                   , process          >= 1.0     && < 1.2
 
     exposed-modules:
                      Text.Julius
