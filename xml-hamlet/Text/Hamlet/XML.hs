@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Hamlet.XML
     ( xml
     , xmlFile
