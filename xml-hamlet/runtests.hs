@@ -84,11 +84,11 @@ $with ys <- xs
         , X.NodeElement $ X.Element "word" [] [X.NodeContent "baz"]
         ]
     , it "handles maybe" $ [xml|
-$maybe x <- Just 5
+$maybe _x <- Just five
     <one>
 $nothing
     <two>
-$maybe x <- Nothing
+$maybe _x <- Nothing
     <three>
 $nothing
     <four>
@@ -130,3 +130,6 @@ $else
     nodes = [X.NodeInstruction $ X.Instruction "ifoo" "ibar"]
     true = "true"
     xs = ["foo", "bar", "baz"]
+
+five :: Int
+five = 5
