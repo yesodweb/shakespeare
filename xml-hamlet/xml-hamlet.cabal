@@ -8,6 +8,7 @@ Author:              Michael Snoyman
 Maintainer:          michael@snoyman.com
 Category:            Text
 Build-type:          Simple
+Description:         Hamlet-style quasiquoter for XML content
 
 Cabal-version:       >=1.8
 

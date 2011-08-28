@@ -6,9 +6,6 @@ author:          Michael Snoyman <michael@snoyman.com>
 maintainer:      Michael Snoyman <michael@snoyman.com>
 synopsis:        Stick your haskell variables into javascript/coffeescript at compile time.
 description:
-    .
-    > let foo = 'bar' in [js| function #{foo}(){}
-    .
     Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation . Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
     In this case, the variable type needs a ToJavascript instance.
     .
