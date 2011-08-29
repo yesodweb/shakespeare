@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 import Test.HUnit hiding (Test)
 import Test.Hspec
-import Test.Hspec.HUnit
+import Test.Hspec.HUnit ()
 
 import Prelude hiding (reverse)
 import Text.Julius
@@ -16,6 +16,7 @@ import Data.Monoid (mappend)
 main :: IO ()
 main = hspecX $ descriptions [specs]
 
+specs :: IO [IO Spec]
 specs = describe "hamlet"
   [ it "julius" $ do
     let var = "var"
@@ -70,9 +71,11 @@ specs = describe "hamlet"
 
 
   , it "julius module names" $
-    let foo = "foo" in
+    let foo = "foo"
+        double = 3.14 :: Double
+        int = -5 :: Int in
       jelper "oof oof 3.14 -5"
-        [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
+        [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
 
   , it "single dollar at and caret" $ do
@@ -81,7 +84,7 @@ specs = describe "hamlet"
 
 
   , it "dollar operator" $ do
-    let val = (1, (2, 3))
+    let val = (1 :: Int, (2 :: Int, 3 :: Int))
     jelper "2" [julius|#{ show $ fst $ snd val }|]
     jelper "2" [julius|#{ show $ fst $ snd $ val}|]
   ]
@@ -128,6 +131,7 @@ encodeUrlChar y =
 
 
 
+jmixin :: JavascriptUrl u
 jmixin = [julius|var x;|]
 
 jelper :: String -> JavascriptUrl Url -> Assertion

@@ -2,13 +2,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 import Test.HUnit hiding (Test)
 import Test.Hspec
-import Test.Hspec.HUnit
+import Test.Hspec.HUnit ()
 
 import Prelude hiding (reverse)
 import Text.Shakespeare.Text
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder
 import qualified Data.List
 import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
@@ -17,6 +16,7 @@ import Data.Monoid (mappend)
 main :: IO ()
 main = hspecX $ descriptions [specs]
 
+specs :: IO [IO Spec]
 specs = describe "shakespeare-text"
   [ it "text" $ do
     let var = "var"
@@ -71,14 +71,18 @@ specs = describe "shakespeare-text"
 
 
   , it "text module names" $
-      let foo = "foo" in
+      let foo = "foo"
+          double = 3.14 :: Double
+          int = -5 :: Int in
         telper "oof oof 3.14 -5"
-          [text|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
+          [text|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
   , it "stext module names" $
-      let foo = "foo" in
+      let foo = "foo"
+          double = 3.14 :: Double
+          int = -5 :: Int in
         simpT "oof oof 3.14 -5"
-          [stext|#{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}|]
+          [stext|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
   , it "single dollar at and caret" $ do
       telper "$@^" [text|$@^|]
@@ -89,12 +93,12 @@ specs = describe "shakespeare-text"
       simpT "#{@{^{" [stext|#\{@\{^\{|]
 
   , it "dollar operator" $ do
-      let val = (1, (2, 3))
+      let val = (1 :: Int, (2 :: Int, 3 :: Int))
       telper "2" [text|#{ show $ fst $ snd val }|]
       telper "2" [text|#{ show $ fst $ snd $ val}|]
 
   , it "dollar operator" $ do
-      let val = (1, (2, 3))
+      let val = (1 :: Int, (2 :: Int, 3 :: Int))
       simpT "2" [stext|#{ show $ fst $ snd val }|]
       simpT "2" [stext|#{ show $ fst $ snd $ val}|]
   ]
@@ -143,6 +147,7 @@ encodeUrlChar y =
 
 
 
+jmixin :: TextUrl url
 jmixin = [text|var x;|]
 
 telper :: String -> TextUrl Url -> Assertion
