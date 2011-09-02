@@ -11,7 +11,6 @@ pkgs=( shakespeare
        shakespeare-js
        shakespeare-text
        hamlet
-       xml-hamlet
      )
 
 # install each sub-respository
