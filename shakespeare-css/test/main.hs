@@ -17,6 +17,7 @@ import Data.Monoid (mappend)
 main :: IO ()
 main = hspecX $ descriptions [specs]
 
+specs :: IO [IO Spec]
 specs = describe "hamlet"
   [ it "cassius" caseCassius
   , it "cassiusFile" caseCassiusFile
