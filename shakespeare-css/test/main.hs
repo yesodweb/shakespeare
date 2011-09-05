@@ -122,7 +122,7 @@ sel
 
 
   , it "dollar operator" $ do
-    let val = (1, (2, 3))
+    let val = (1, (2, 3)) :: (Integer, (Integer, Integer))
     celper "sel{att:2}" [cassius|
 sel
     att: #{ show $ fst $ snd val }
