@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 import Test.HUnit hiding (Test)
 import Test.Hspec
-import Test.Hspec.HUnit
+import Test.Hspec.HUnit ()
 
 import Prelude hiding (reverse)
 import Text.Cassius
@@ -101,11 +101,14 @@ foo
 
 
   , it "cassius module names" $
-    let foo = "foo" in
+    let foo = "foo"
+        dub = 3.14::Double
+        int = -5::Int
+    in
       celper "sel{bar:oof oof 3.14 -5}"
         [cassius|
 sel
-    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}
+    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show dub} #{show int}
 |]
 
 
