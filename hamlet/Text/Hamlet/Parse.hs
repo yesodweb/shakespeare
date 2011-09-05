@@ -110,7 +110,7 @@ parseLine set = do
     nonComments = (many1 $ noneOf "\r\n<") <|> (do
         _ <- char '<'
         (do
-            try $ string "!--"
+            _ <- try $ string "!--"
             _ <- manyTill anyChar $ try $ string "-->"
             return "") <|> return "<")
     backslash = do
