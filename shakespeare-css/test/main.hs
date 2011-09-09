@@ -225,6 +225,32 @@ bin {
         |]
 
 
+  , it "lucius charset" $ do
+      celper (concat ["@charset \"utf-8\";\r\n"
+        , "#content ul{list-style:none;padding:0 5em}@charset \"utf-8\";\r\n"
+        , "#content ul li{padding:1em 0}@charset \"utf-8\";\r\n"
+        , "#content ul li a{color:#419a56;font-family:'TeXGyreHerosBold',helvetica,arial,sans-serif;font-weight:bold;text-transform:uppercase;white-space:nowrap}"
+        ]) [lucius|
+@charset "utf-8";
+#content ul
+{
+    list-style: none;
+    padding: 0 5em;
+    li
+    {
+        padding: 1em 0;
+        a
+        {
+            color: #419a56;
+            font-family: 'TeXGyreHerosBold',helvetica,arial,sans-serif;
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+    }
+}
+|]
+
   , it "lucius media" $ do
       celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/external-media.lucius")
       celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "test/external-media.lucius")
