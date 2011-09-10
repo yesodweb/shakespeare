@@ -80,7 +80,7 @@ parseDeref = do
     return res
   where
     delim = (many1 (char ' ') >> return())
-            <|> lookAhead (char '(' >> return ())
+            <|> lookAhead (oneOf "(\"" >> return ())
     derefOp = try $ do
         _ <- char '('
         x <- many1 $ noneOf " \t\n\r()"
