@@ -37,16 +37,11 @@ import Text.Hamlet.Parse
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
-import Data.Monoid (Monoid (..))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.IO as TIO
-import qualified System.IO as SIO
 import Text.Blaze (Html, preEscapedText, toHtml)
 import qualified Data.Foldable as F
-import Control.Applicative ((<$>))
-import Control.Monad (ap)
 
 type Render url = url -> [(Text, Text)] -> Text
 type Translate msg = msg -> Html
@@ -170,9 +165,11 @@ hamletRules = do
                     }
             h <- f env
             return $ LamE [VarP r] h
-    let em (Env (Just urender) Nothing) e =
-            urender $ \ur -> return (e `AppE` ur)
     return $ HamletRules i ur em
+  where
+    em (Env (Just urender) Nothing) e =
+            urender $ \ur' -> return (e `AppE` ur')
+    em _ _ = error "bad Env"
 
 ihamlet :: QuasiQuoter
 ihamlet = hamletWithSettings ihamletRules defaultHamletSettings
@@ -189,9 +186,11 @@ ihamletRules = do
                     }
             h <- f env
             return $ LamE [VarP m, VarP u] h
-    let em (Env (Just urender) (Just mrender)) e =
-            urender $ \ur -> mrender $ \mr -> return (e `AppE` mr `AppE` ur)
     return $ HamletRules i ur em
+  where
+    em (Env (Just urender) (Just mrender)) e =
+          urender $ \ur' -> mrender $ \mr -> return (e `AppE` mr `AppE` ur')
+    em _ _ = error "bad Env"
 
 hamletWithSettings :: Q HamletRules -> HamletSettings -> QuasiQuoter
 hamletWithSettings hr set =

@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 import Test.HUnit hiding (Test)
 import Test.Hspec
-import Test.Hspec.HUnit
+import Test.Hspec.HUnit ()
 
 import Prelude hiding (reverse)
 import Text.Cassius
@@ -17,6 +17,7 @@ import Data.Monoid (mappend)
 main :: IO ()
 main = hspecX $ descriptions [specs]
 
+specs :: IO [IO Spec]
 specs = describe "hamlet"
   [ it "cassius" caseCassius
   , it "cassiusFile" caseCassiusFile
@@ -100,11 +101,14 @@ foo
 
 
   , it "cassius module names" $
-    let foo = "foo" in
+    let foo = "foo"
+        dub = 3.14::Double
+        int = -5::Int
+    in
       celper "sel{bar:oof oof 3.14 -5}"
         [cassius|
 sel
-    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show 3.14} #{show -5}
+    bar: #{Data.List.reverse foo} #{L.reverse foo} #{show dub} #{show int}
 |]
 
 
@@ -122,7 +126,7 @@ sel
 
 
   , it "dollar operator" $ do
-    let val = (1, (2, 3))
+    let val = (1, (2, 3)) :: (Integer, (Integer, Integer))
     celper "sel{att:2}" [cassius|
 sel
     att: #{ show $ fst $ snd val }
@@ -220,6 +224,32 @@ bin {
         }
         |]
 
+
+  , it "lucius charset" $ do
+      celper (concat ["@charset \"utf-8\";\r\n"
+        , "#content ul{list-style:none;padding:0 5em}@charset \"utf-8\";\r\n"
+        , "#content ul li{padding:1em 0}@charset \"utf-8\";\r\n"
+        , "#content ul li a{color:#419a56;font-family:'TeXGyreHerosBold',helvetica,arial,sans-serif;font-weight:bold;text-transform:uppercase;white-space:nowrap}"
+        ]) [lucius|
+@charset "utf-8";
+#content ul
+{
+    list-style: none;
+    padding: 0 5em;
+    li
+    {
+        padding: 1em 0;
+        a
+        {
+            color: #419a56;
+            font-family: 'TeXGyreHerosBold',helvetica,arial,sans-serif;
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+    }
+}
+|]
 
   , it "lucius media" $ do
       celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/external-media.lucius")
