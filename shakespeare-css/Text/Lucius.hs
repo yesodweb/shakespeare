@@ -138,8 +138,13 @@ parseTopLevels =
   where
     go front = do
         whiteSpace
-        ((media <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
+        ((charset <|> media <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
             <|> (return $ map compressTopLevel $ front [])
+    charset = do
+        _ <- try $ string "@charset "
+        cs <- many1 $ noneOf ";"
+        _ <- char ';'
+        return $ TopCharset cs
     media = do
         _ <- try $ string "@media "
         name <- many1 $ noneOf "{"

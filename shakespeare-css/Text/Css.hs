@@ -26,7 +26,7 @@ data Css' = Css'
     { _cssSelectors :: Builder
     , _cssAttributes :: [(Builder, Builder)]
     }
-data CssTop = Media String [Css'] | Css Css'
+data CssTop = Media String [Css'] | Css Css' | Charset String
 
 type Css = [CssTop]
 
@@ -55,6 +55,7 @@ cssFileDebug parseBlocks' parseBlocks fp = do
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
   where
     go :: TopLevel -> [Content] -- FIXME use blockToCss
+    go (TopCharset cs) = [ContentRaw "@charset ", ContentRaw cs, ContentRaw ";"]
     go (MediaBlock _ blocks) = concatMap (go . TopBlock) blocks
     go (TopBlock (Block x y z)) =
         intercalate [ContentRaw ","] x ++
@@ -79,6 +80,7 @@ cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     return $ foldr ($) [] $ map goTop a
   where
     goTop :: TopLevel -> Css -> Css
+    goTop (TopCharset cs) x = Charset cs : x
     goTop (TopBlock b) x = map Css (go b []) ++ x
     goTop (MediaBlock s b) x = Media s (foldr go [] b) : x
     go :: Block -> [Css'] -> [Css']
@@ -127,7 +129,7 @@ getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
 data Block = Block Selector Pairs [Block]
 
-data TopLevel = TopBlock Block | MediaBlock String [Block]
+data TopLevel = TopBlock Block | MediaBlock String [Block] | TopCharset String
 
 type Pairs = [Pair]
 
@@ -138,6 +140,7 @@ type Selector = [Contents]
 compressTopLevel :: TopLevel -> TopLevel
 compressTopLevel (TopBlock b) = TopBlock $ compressBlock b
 compressTopLevel (MediaBlock s b) = MediaBlock s $ map compressBlock b
+compressTopLevel x@TopCharset{} = x
 
 compressBlock :: Block -> Block
 compressBlock (Block x y blocks) =
@@ -187,6 +190,7 @@ topLevelsToCassius a = do
   where
     go r (TopBlock b) = [|(++) $ map Css ($(blockToCss r b) [])|]
     go r (MediaBlock s b) = [|(:) $ Media $(lift s) $(blocksToCassius r b)|]
+    go r (TopCharset cs) = [|(:) $ Charset $(lift cs)|]
 
 blocksToCassius :: Name -> [Block] -> Q Exp
 blocksToCassius r a = do
@@ -202,6 +206,9 @@ renderCss =
         fromText (pack s) `mappend`
         singleton '{' `mappend`
         foldr mappend (singleton '}') (map renderCss' x)
+    go (Charset cs) = fromText (pack "@charset ") `mappend`
+                      fromText (pack cs) `mappend`
+                      singleton ';'
 
 renderCss' :: Css' -> Builder
 renderCss' (Css' _x []) = mempty
