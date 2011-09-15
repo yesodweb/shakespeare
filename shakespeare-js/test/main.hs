@@ -16,7 +16,7 @@ import Data.Monoid (mappend)
 main :: IO ()
 main = hspecX $ descriptions [specs]
 
-specs :: IO [IO Spec]
+specs :: [Spec]
 specs = describe "hamlet"
   [ it "julius" $ do
     let var = "var"
