@@ -51,6 +51,7 @@ library
                    , blaze-builder    >= 0.2     && < 0.4
                    , process          >= 1.0     && < 1.2
     exposed-modules: Text.Hamlet
+                     Text.Hamlet.RT
     other-modules:   Text.Hamlet.Parse
     ghc-options:     -Wall
 
