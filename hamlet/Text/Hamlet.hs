@@ -24,6 +24,7 @@ module Text.Hamlet
     , ihamlet
     , ihamletFile
       -- * Internal, for making more
+    , HamletSettings
     , hamletWithSettings
     , hamletFileWithSettings
     , defaultHamletSettings
