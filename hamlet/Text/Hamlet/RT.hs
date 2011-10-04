@@ -79,6 +79,8 @@ parseHamletRT set s =
     convert x@(DocContent (ContentEmbed deref)) = do
         y <- flattenDeref' x deref
         return $ SDTemplate y
+    convert (DocContent ContentMsg{}) =
+        error "Runtime hamlet does not currently support message interpolation"
     convert x@(DocCond conds els) = do
         conds' <- mapM go conds
         els' <- maybe (return []) (mapM convert) els
@@ -88,6 +90,7 @@ parseHamletRT set s =
             deref' <- flattenDeref' x deref
             docs'' <- mapM convert docs'
             return (deref', docs'')
+    convert DocWith{} = error "Runtime hamlet does not currently support $with"
 
 renderHamletRT :: Failure HamletException m
                => HamletRT
