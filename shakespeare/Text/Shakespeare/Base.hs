@@ -68,8 +68,12 @@ instance Lift Deref where
         d <- lift $ denominator r
         per <- [|(%) :: Int -> Int -> Ratio Int|]
         dr <- [|DerefRational|]
-        return $ dr `AppE` (InfixE (Just n) per (Just d))
+        return $ dr `AppE` InfixE (Just n) per (Just d)
     lift (DerefString s) = [|DerefString|] `appE` lift s
+
+derefParens, derefCurlyBrackets :: Parser Deref
+derefParens        = between (char '(') (char ')') parseDeref
+derefCurlyBrackets = between (char '{') (char '}') parseDeref
 
 parseDeref :: Parser Deref
 parseDeref = do
@@ -86,7 +90,6 @@ parseDeref = do
         x <- many1 $ noneOf " \t\n\r()"
         _ <- char ')'
         return $ DerefIdent $ Ident x
-    derefParens = between (char '(') (char ')') parseDeref
     derefSingle = derefOp <|> derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'
@@ -115,13 +118,9 @@ parseDeref = do
         return $ DerefString chars
     quotedChar = (char '\\' >> escapedChar) <|> noneOf "\""
     escapedChar =
-        (char 'n' >> return '\n') <|>
-        (char 'r' >> return '\r') <|>
-        (char 'b' >> return '\b') <|>
-        (char 't' >> return '\t') <|>
-        (char '\\' >> return '\\') <|>
-        (char '"' >> return '"') <|>
-        (char '\'' >> return '\'')
+        let cecs = [('n', '\n'),  ('r', '\r'), ('b', '\b'), ('t', '\t')
+                   ,('\\', '\\'), ('"', '"'),  ('\'', '\'')]
+        in choice [ char c >> return ec | (c, ec) <- cecs]
     ident = do
         mods <- many modul
         func <- many1 (alphaNum <|> char '_' <|> char '\'')
@@ -173,9 +172,7 @@ parseVar :: Char -> Parser (Either String Deref)
 parseVar c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
+        deref <- derefCurlyBrackets
         return $ Right deref) <|> (do
             -- Check for hash just before newline
             _ <- lookAhead (oneOf "\r\n" >> return ()) <|> eof
@@ -191,9 +188,7 @@ parseUrl c d = do
     (char '\\' >> return (Left [c])) <|> (do
         x <- (char d >> return True) <|> return False
         (do
-            _ <- char '{'
-            deref <- parseDeref
-            _ <- char '}'
+            deref <- derefCurlyBrackets
             return $ Right (deref, x))
                 <|> return (Left $ if x then [c, d] else [c]))
 
@@ -204,18 +199,14 @@ parseInt :: Char -> Parser (Either String Deref)
 parseInt c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
+        deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left [c])
 
 parseUnder :: Parser (Either String Deref)
 parseUnder = do
     _ <- char '_'
     (char '\\' >> return (Left "_")) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
+        deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left "_")
 
 readUtf8File :: FilePath -> IO TL.Text
