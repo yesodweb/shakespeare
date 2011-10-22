@@ -43,6 +43,7 @@ import Data.Text (Text, pack)
 import qualified Data.Text.Lazy as TL
 import Text.Blaze (Html, preEscapedText, toHtml)
 import qualified Data.Foldable as F
+import Control.Monad (mplus)
 
 type Render url = url -> [(Text, Text)] -> Text
 type Translate msg = msg -> Html
@@ -253,10 +254,7 @@ strToExp "" = error "strToExp on empty string"
 -- first is performed. In there are no true values, then the second argument is
 -- performed, if supplied.
 condH :: Monad m => [(Bool, m ())] -> Maybe (m ()) -> m ()
-condH [] Nothing = return ()
-condH [] (Just x) = x
-condH ((True, y):_) _ = y
-condH ((False, _):rest) z = condH rest z
+condH bms mm = fromMaybe (return ()) $ lookup True bms `mplus` mm
 
 -- | Runs the second argument with the value in the first, if available.
 -- Otherwise, runs the third argument, if available.
