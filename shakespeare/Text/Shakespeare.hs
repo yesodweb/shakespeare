@@ -29,8 +29,8 @@ import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
 
 -- move to Shakespeare?
-readFileQ :: FilePath -> Q [Char]
-readFileQ fp = do
+readFileQ :: FilePath -> Q String
+readFileQ fp =
     qRunIO $ readFileUtf8 fp
 
 -- move to Shakespeare?
@@ -86,7 +86,7 @@ data Content = ContentRaw String
 type Contents = [Content]
 
 contentFromString :: ShakespeareSettings -> (String -> [Content])
-contentFromString rs s = do
+contentFromString rs s =
     compressContents $ either (error . show) id $ parse (parseContents rs) s s
   where
     compressContents :: Contents -> Contents
@@ -109,7 +109,7 @@ parseContents = many1 . parseContent
             go (d, False) = ContentUrl d
             go (d, True) = ContentUrlParam d
         parseCaret' = either ContentRaw ContentMix `fmap` parseInt intChar
-        parseChar = ContentRaw `fmap` (many1 $ noneOf [varChar, urlChar, intChar])
+        parseChar = ContentRaw `fmap` many1 (noneOf [varChar, urlChar, intChar])
 
 contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do
@@ -128,16 +128,16 @@ contentsToShakespeare rs a = do
         contentToBuilder :: Name -> Content -> Q Exp
         contentToBuilder _ (ContentRaw s') = do
             ts <- [|fromText . TS.pack|]
-            return $ (wrap rs) `AppE` (ts `AppE` LitE (StringL s'))
+            return $ wrap rs `AppE` (ts `AppE` LitE (StringL s'))
         contentToBuilder _ (ContentVar d) = do
-            return $ (wrap rs) `AppE` ((toBuilder rs) `AppE` derefToExp [] d)
+            return $ wrap rs `AppE` (toBuilder rs `AppE` derefToExp [] d)
         contentToBuilder r (ContentUrl d) = do
             ts <- [|fromText|]
-            return $ (wrap rs) `AppE` (ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE []))
+            return $ wrap rs `AppE` (ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE []))
         contentToBuilder r (ContentUrlParam d) = do
             ts <- [|fromText|]
             up <- [|\r' (u, p) -> r' u p|]
-            return $ (wrap rs) `AppE` (ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d))
+            return $ wrap rs `AppE` (ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d))
         contentToBuilder r (ContentMix d) = do
             return $ derefToExp [] d `AppE` VarE r
 
