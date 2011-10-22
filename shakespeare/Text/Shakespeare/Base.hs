@@ -68,7 +68,7 @@ instance Lift Deref where
         d <- lift $ denominator r
         per <- [|(%) :: Int -> Int -> Ratio Int|]
         dr <- [|DerefRational|]
-        return $ dr `AppE` (InfixE (Just n) per (Just d))
+        return $ dr `AppE` InfixE (Just n) per (Just d)
     lift (DerefString s) = [|DerefString|] `appE` lift s
 
 derefParens, derefCurlyBrackets :: Parser Deref
