@@ -115,13 +115,9 @@ parseDeref = do
         return $ DerefString chars
     quotedChar = (char '\\' >> escapedChar) <|> noneOf "\""
     escapedChar =
-        (char 'n' >> return '\n') <|>
-        (char 'r' >> return '\r') <|>
-        (char 'b' >> return '\b') <|>
-        (char 't' >> return '\t') <|>
-        (char '\\' >> return '\\') <|>
-        (char '"' >> return '"') <|>
-        (char '\'' >> return '\'')
+        let cecs = [('n', '\n'),  ('r', '\r'), ('b', '\b'), ('t', '\t')
+                   ,('\\', '\\'), ('"', '"'),  ('\'', '\'')]
+        in choice [ char c >> return ec | (c, ec) <- cecs]
     ident = do
         mods <- many modul
         func <- many1 (alphaNum <|> char '_' <|> char '\'')
