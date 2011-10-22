@@ -71,6 +71,10 @@ instance Lift Deref where
         return $ dr `AppE` (InfixE (Just n) per (Just d))
     lift (DerefString s) = [|DerefString|] `appE` lift s
 
+derefParens, derefCurlyBrackets :: Parser Deref
+derefParens        = between (char '(') (char ')') parseDeref
+derefCurlyBrackets = between (char '{') (char '}') parseDeref
+
 parseDeref :: Parser Deref
 parseDeref = do
     skipMany $ oneOf " \t"
@@ -86,7 +90,6 @@ parseDeref = do
         x <- many1 $ noneOf " \t\n\r()"
         _ <- char ')'
         return $ DerefIdent $ Ident x
-    derefParens = between (char '(') (char ')') parseDeref
     derefSingle = derefOp <|> derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'
@@ -169,9 +172,7 @@ parseVar :: Char -> Parser (Either String Deref)
 parseVar c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
+        deref <- derefCurlyBrackets
         return $ Right deref) <|> (do
             -- Check for hash just before newline
             _ <- lookAhead (oneOf "\r\n" >> return ()) <|> eof
@@ -187,9 +188,7 @@ parseUrl c d = do
     (char '\\' >> return (Left [c])) <|> (do
         x <- (char d >> return True) <|> return False
         (do
-            _ <- char '{'
-            deref <- parseDeref
-            _ <- char '}'
+            deref <- derefCurlyBrackets
             return $ Right (deref, x))
                 <|> return (Left $ if x then [c, d] else [c]))
 
@@ -200,18 +199,14 @@ parseInt :: Char -> Parser (Either String Deref)
 parseInt c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
+        deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left [c])
 
 parseUnder :: Parser (Either String Deref)
 parseUnder = do
     _ <- char '_'
     (char '\\' >> return (Left "_")) <|> (do
-        _ <- char '{'
-        deref <- parseDeref
-        _ <- char '}'
+        deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left "_")
 
 readUtf8File :: FilePath -> IO TL.Text
