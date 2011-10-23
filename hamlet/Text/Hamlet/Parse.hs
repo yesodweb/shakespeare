@@ -201,17 +201,12 @@ parseLine set = do
         content cr
     tagIdent = char '#' >> TagIdent <$> tagAttribValue NotInQuotes
     tagCond = do
-        _ <- char ':'
-        d <- parseDeref
-        _ <- char ':'
+        d <- between (char ':') (char ':') parseDeref
         tagClass (Just d) <|> tagAttrib (Just d)
     tagClass x = char '.' >> (TagClass . (,) x) <$> tagAttribValue NotInQuotes
     tagAttrib cond = do
         s <- many1 $ noneOf " \t=\r\n>"
-        v <- (do
-            _ <- char '='
-            s' <- tagAttribValue NotInQuotesAttr
-            return s') <|> return []
+        v <- (char '=' >> tagAttribValue NotInQuotesAttr) <|> return []
         return $ TagAttrib (cond, s, v)
     tag' = foldr tag'' ("div", [], [])
     tag'' (TagName s) (_, y, z) = (s, y, z)
@@ -226,10 +221,7 @@ parseLine set = do
         xs <- many $ try ((many $ oneOf " \t") >>
               (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrib Nothing))
         _ <- many $ oneOf " \t"
-        c <- (eol >> return []) <|> (do
-            _ <- char '>'
-            c <- content InContent
-            return c)
+        c <- (eol >> return []) <|> (char '>' >> content InContent)
         let (tn, attr, classes) = tag' $ TagName name : xs
         return $ LineTag tn attr c classes
 
@@ -367,7 +359,7 @@ attrToContent (Nothing, k, [(Nothing, v)]) =
   ++ [DocContent $ ContentRaw "\""]
 attrToContent (Nothing, k, v) = -- only for class
       DocContent (ContentRaw (' ' : k ++ "=\""))
-    : concat (map go $ init v)
+    : concatMap go (init v)
     ++ go' (last v)
     ++ [DocContent $ ContentRaw "\""]
   where
@@ -450,7 +442,7 @@ parseConds :: HamletSettings
            -> Result ([(Deref, [Doc])], Maybe [Doc], [Nest])
 parseConds set front (Nest LineElse inside:rest) = do
     inside' <- nestToDoc set inside
-    Ok $ (front [], Just inside', rest)
+    Ok (front [], Just inside', rest)
 parseConds set front (Nest (LineElseIf d) inside:rest) = do
     inside' <- nestToDoc set inside
     parseConds set (front . (:) (d, inside')) rest
