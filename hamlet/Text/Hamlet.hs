@@ -259,6 +259,4 @@ condH bms mm = fromMaybe (return ()) $ lookup True bms `mplus` mm
 -- | Runs the second argument with the value in the first, if available.
 -- Otherwise, runs the third argument, if available.
 maybeH :: Monad m => Maybe v -> (v -> m ()) -> Maybe (m ()) -> m ()
-maybeH Nothing _ Nothing = return ()
-maybeH Nothing _ (Just x) = x
-maybeH (Just v) f _ = f v
+maybeH mv f mm = fromMaybe (return ()) $ fmap f mv `mplus` mm
