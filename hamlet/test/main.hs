@@ -251,6 +251,12 @@ $forall x <- set
         <dt>#{name}
         <dd>#{show age}
 |]
+  , it "list syntax for interpolation" $ do
+      helper "<ul><li>1</li><li>2</li><li>3</li></ul>" [hamlet|
+<ul>
+    $forall num <- [1, 2, 3]
+        <li>#{show num}
+|]
   ]
 
 data Url = Home | Sub SubUrl

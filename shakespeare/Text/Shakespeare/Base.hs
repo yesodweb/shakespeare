@@ -43,6 +43,7 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefRational Rational
            | DerefString String
            | DerefBranch Deref Deref
+           | DerefList [Deref]
     deriving (Show, Eq, Read, Data, Typeable)
 
 instance Lift Ident where
@@ -75,13 +76,15 @@ derefParens, derefCurlyBrackets :: Parser Deref
 derefParens        = between (char '(') (char ')') parseDeref
 derefCurlyBrackets = between (char '{') (char '}') parseDeref
 
+derefList :: Parser Deref
+derefList = between (char '[') (char ']') (fmap DerefList $ sepBy parseDeref (char ','))
+
 parseDeref :: Parser Deref
-parseDeref = do
-    skipMany $ oneOf " \t"
+parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
     x <- derefSingle
     res <- deref' $ (:) x
     skipMany $ oneOf " \t"
-    return res
+    return res))
   where
     delim = (many1 (char ' ') >> return())
             <|> lookAhead (oneOf "(\"" >> return ())
@@ -156,6 +159,7 @@ derefToExp scope (DerefIdent i@(Ident s)) =
 derefToExp _ (DerefIntegral i) = LitE $ IntegerL i
 derefToExp _ (DerefRational r) = LitE $ RationalL r
 derefToExp _ (DerefString s) = LitE $ StringL s
+derefToExp s (DerefList ds) = ListE $ map (derefToExp s) ds
 
 -- FIXME shouldn't we use something besides a list here?
 flattenDeref :: Deref -> Maybe [String]
