@@ -257,6 +257,8 @@ $forall x <- set
     $forall num <- [1, 2, 3]
         <li>#{show num}
 |]
+  , it "infix operators" $
+      helper "5" [hamlet|#{show $ (4 + 5) - (2 + 2)}|]
   ]
 
 data Url = Home | Sub SubUrl

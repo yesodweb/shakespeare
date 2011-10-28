@@ -22,7 +22,7 @@ module Text.Shakespeare.Base
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH (appE)
-import Data.Char (isUpper)
+import Data.Char (isUpper, isSymbol)
 import Text.ParserCombinators.Parsec
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator, (%))
@@ -31,6 +31,7 @@ import Data.Typeable (Typeable)
 import qualified Data.Text.Lazy as TL
 import qualified System.IO as SIO
 import qualified Data.Text.Lazy.IO as TIO
+import Control.Monad (when)
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
@@ -82,9 +83,10 @@ derefList = between (char '[') (char ']') (fmap DerefList $ sepBy parseDeref (ch
 parseDeref :: Parser Deref
 parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
     x <- derefSingle
-    res <- deref' $ (:) x
-    skipMany $ oneOf " \t"
-    return res))
+    (derefInfix x) <|> (do
+        res <- deref' $ (:) x
+        skipMany $ oneOf " \t"
+        return res)))
   where
     delim = (many1 (char ' ') >> return())
             <|> lookAhead (oneOf "(\"" >> return ())
@@ -93,6 +95,15 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
         x <- many1 $ noneOf " \t\n\r()"
         _ <- char ')'
         return $ DerefIdent $ Ident x
+    derefInfix x = try $ do
+        _ <- many1 $ oneOf " \t"
+        op <- many1 (satisfy $ \x -> isSymbol x || x `elem` "-") <?> "operator"
+        -- special handling for $, which we don't deal with
+        when (op == "$") $ fail "don't handle $"
+        let op' = DerefIdent $ Ident op
+        _ <- many1 (oneOf " \t")
+        y <- derefSingle
+        return $ DerefBranch (DerefBranch op' x) y
     derefSingle = derefOp <|> derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'
