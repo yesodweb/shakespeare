@@ -72,6 +72,7 @@ instance Lift Deref where
         dr <- [|DerefRational|]
         return $ dr `AppE` InfixE (Just n) per (Just d)
     lift (DerefString s) = [|DerefString|] `appE` lift s
+    lift (DerefList x) = [|DerefList $(lift x)|]
 
 derefParens, derefCurlyBrackets :: Parser Deref
 derefParens        = between (char '(') (char ')') parseDeref
@@ -97,7 +98,7 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
         return $ DerefIdent $ Ident x
     derefInfix x = try $ do
         _ <- many1 $ oneOf " \t"
-        op <- many1 (satisfy $ \x -> isSymbol x || x `elem` "-") <?> "operator"
+        op <- many1 (satisfy $ \c -> isSymbol c || c `elem` "-") <?> "operator"
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
         let op' = DerefIdent $ Ident op
