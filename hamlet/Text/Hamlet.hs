@@ -62,31 +62,43 @@ docsToExp env hr scope docs = do
         [x] -> return x
         _ -> return $ DoE $ map NoBindS exps
 
+unIdent :: Ident -> String
+unIdent (Ident s) = s
+
 docToExp :: Env -> HamletRules -> Scope -> Doc -> Q Exp
-docToExp env hr scope (DocForall list ident@(Ident name) inside) = do
+docToExp env hr scope (DocForall list idents inside) = do
     let list' = derefToExp scope list
-    name' <- newName name
-    let scope' = (ident, VarE name') : scope
+    names <- mapM (newName . unIdent) idents
+    let pairs = zip idents (map VarE names)
+    let scope' = pairs ++ scope
     mh <- [|F.mapM_|]
     inside' <- docsToExp env hr scope' inside
-    let lam = LamE [VarP name'] inside'
+    let lam = flip LamE inside' $ case names of
+            [x] -> [VarP x]
+            _ -> [TupP $ map VarP names]
     return $ mh `AppE` lam `AppE` list'
 docToExp env hr scope (DocWith [] inside) = do
     inside' <- docsToExp env hr scope inside
     return $ inside'
-docToExp env hr scope (DocWith ((deref,ident@(Ident name)):dis) inside) = do
+docToExp env hr scope (DocWith ((deref, idents):dis) inside) = do
     let deref' = derefToExp scope deref
-    name' <- newName name
-    let scope' = (ident, VarE name') : scope
+    names <- mapM (newName . unIdent) idents
+    let pairs = zip idents (map VarE names)
+    let scope' = pairs ++ scope
     inside' <- docToExp env hr scope' (DocWith dis inside)
-    let lam = LamE [VarP name'] inside'
+    let lam = flip LamE inside' $ case names of
+            [x] -> [VarP x]
+            _ -> [TupP $ map VarP names]
     return $ lam `AppE` deref'
-docToExp env hr scope (DocMaybe val ident@(Ident name) inside mno) = do
+docToExp env hr scope (DocMaybe val idents inside mno) = do
     let val' = derefToExp scope val
-    name' <- newName name
-    let scope' = (ident, VarE name') : scope
+    names <- mapM (newName . unIdent) idents
+    let pairs = zip idents (map VarE names)
+    let scope' = pairs ++ scope
     inside' <- docsToExp env hr scope' inside
-    let inside'' = LamE [VarP name'] inside'
+    let inside'' = flip LamE inside' $ case names of
+            [x] -> [VarP x]
+            _ -> [TupP $ map VarP names]
     ninside' <- case mno of
                     Nothing -> [|Nothing|]
                     Just no -> do

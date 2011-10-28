@@ -226,6 +226,31 @@ $forall x <- set
   ^{embed}
   |]
       ihelper "<h1>Hola</h1>" $(ihamletFile "test/nonpolyihamlet.hamlet")
+
+  , it "pattern-match tuples: forall" $ do
+      let people = [("Michael", 26), ("Miriam", 25)]
+      helper "<dl><dt>Michael</dt><dd>26</dd><dt>Miriam</dt><dd>25</dd></dl>" [hamlet|
+<dl>
+    $forall (name, age) <- people
+        <dt>#{name}
+        <dd>#{show age}
+|]
+  , it "pattern-match tuples: maybe" $ do
+      let people = Just ("Michael", 26)
+      helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+<dl>
+    $maybe (name, age) <- people
+        <dt>#{name}
+        <dd>#{show age}
+|]
+  , it "pattern-match tuples: with" $ do
+      let people = ("Michael", 26)
+      helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+<dl>
+    $with (name, age) <- people
+        <dt>#{name}
+        <dd>#{show age}
+|]
   ]
 
 data Url = Home | Sub SubUrl

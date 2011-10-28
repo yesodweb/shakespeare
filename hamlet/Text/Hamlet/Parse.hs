@@ -43,12 +43,12 @@ data Content = ContentRaw String
              | ContentMsg Deref
     deriving (Show, Eq, Read, Data, Typeable)
 
-data Line = LineForall Deref Ident
+data Line = LineForall Deref [Ident]
           | LineIf Deref
           | LineElseIf Deref
           | LineElse
-          | LineWith [(Deref, Ident)]
-          | LineMaybe Deref Ident
+          | LineWith [(Deref, [Ident])]
+          | LineMaybe Deref [Ident]
           | LineNothing
           | LineTag
             { _lineTagName :: String
@@ -132,7 +132,7 @@ parseLine set = do
         eol
         return $ LineElseIf x
     binding = do
-        y <- ident
+        y <- identPattern
         spaces
         _ <- string "<-"
         spaces
@@ -213,7 +213,16 @@ parseLine set = do
     tag'' (TagIdent s) (x, y, z) = (x, (Nothing, "id", s) : y, z)
     tag'' (TagClass s) (x, y, z) = (x, y, s : z)
     tag'' (TagAttrib s) (x, y, z) = (x, s : y, z)
+
+    ident :: Parser Ident
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
+
+    identPattern :: Parser [Ident]
+    identPattern = (between
+        (char '(' >> spaces)
+        (spaces >> char ')' >> spaces)
+        (sepBy1 ident (spaces >> char ',' >> spaces))
+        ) <|> (return <$> ident)
     angle = do
         _ <- char '<'
         name' <- many  $ noneOf " \t.#\r\n!>"
@@ -241,10 +250,10 @@ nestLines ((i, l):rest) =
     let (deeper, rest') = span (\(i', _) -> i' > i) rest
      in Nest l (nestLines deeper) : nestLines rest'
 
-data Doc = DocForall Deref Ident [Doc]
-         | DocWith [(Deref,Ident)] [Doc]
+data Doc = DocForall Deref [Ident] [Doc]
+         | DocWith [(Deref, [Ident])] [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
-         | DocMaybe Deref Ident [Doc] (Maybe [Doc])
+         | DocMaybe Deref [Ident] [Doc] (Maybe [Doc])
          | DocContent Content
     deriving (Show, Eq, Read, Data, Typeable)
 
