@@ -1,0 +1,86 @@
+name:            shakespeare-mega
+version:         0.10.4
+license:         BSD3
+license-file:    LICENSE
+author:          Michael Snoyman <michael@snoyman.com>
+maintainer:      Michael Snoyman <michael@snoyman.com>
+synopsis:        Haml-like template files that are compile-time checked
+description:     mega installer
+category:        Web, Yesod
+stability:       Stable
+cabal-version:   >= 1.8
+build-type:      Simple
+homepage:        http://www.yesodweb.com/book/templates
+extra-source-files:
+  test/double-foralls.hamlet
+  test/external-debug.hamlet
+  test/external-debug2.hamlet
+  test/external-debug3.hamlet
+  test/external.hamlet
+  test/main.hs
+  test/nonpolyhamlet.hamlet
+  test/nonpolyhtml.hamlet
+  test/nonpolyihamlet.hamlet
+  test/tmp.hs
+
+library
+    hs-source-dirs:
+                   shakespeare
+                   shakespeare-js
+                   shakespeare-css
+                   shakespeare-text
+                   hamlet
+    build-depends:
+                   -- shakespeare
+                   -- shakespeare-js
+                   -- shakespeare-css
+                   -- shakespeare-text
+
+                   -- hamlet
+                     base             >= 4       && < 5
+                   , bytestring       >= 0.9     && < 0.10
+                   , template-haskell
+                   , blaze-html       >= 0.4     && < 0.5
+                   , parsec           >= 2       && < 4
+                   , failure          >= 0.1     && < 0.2
+                   , text             >= 0.7     && < 0.12
+                   , containers       >= 0.2     && < 0.5
+                   , blaze-builder    >= 0.2     && < 0.4
+                   , process          >= 1.0     && < 1.2
+
+
+    exposed-modules:
+                     -- hamlet
+                     Text.Hamlet
+                     Text.Hamlet.RT
+
+                     -- shakespeare-css
+                     Text.Cassius
+                     Text.Lucius
+
+                     -- shakespeare-js
+                     Text.Julius
+                     Text.Coffee
+
+                     -- shakespeare
+                     Text.Shakespeare
+                     Text.Shakespeare.Base
+
+                     -- shakespeare-text
+                     Text.Shakespeare.Text
+
+    other-modules:
+                     -- hamlet
+                     Text.Hamlet.Parse
+
+                     -- shakespeare-css
+                     Text.MkSizeType
+                     Text.Css
+
+    ghc-options:     -Wall
+
+
+source-repository head
+  type:     git
+  location: git://github.com/yesodweb/hamlet.git
+
