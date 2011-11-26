@@ -1,0 +1,5 @@
+shakespeare
+shakespeare-js
+shakespeare-css
+shakespeare-text
+hamlet
