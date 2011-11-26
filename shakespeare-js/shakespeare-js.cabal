@@ -40,7 +40,7 @@ library
 
 test-suite test
     hs-source-dirs: test
-    main-is: main.hs
+    main-is: ../test.hs
     type: exitcode-stdio-1.0
 
     ghc-options:   -Wall

@@ -1,5 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+module HamletTest (specs) where 
+
 import Test.HUnit hiding (Test)
 import Test.Hspec
 import Test.Hspec.HUnit
@@ -16,9 +18,6 @@ import Data.Monoid (mappend)
 import qualified Data.Set as Set
 import qualified Text.Blaze.Renderer.Text
 import Text.Blaze (toHtml, preEscapedString)
-
-main :: IO ()
-main = hspecX $ descriptions [specs]
 
 specs = describe "hamlet"
   [ it "empty" caseEmpty
@@ -208,7 +207,7 @@ $forall x <- set
       helperHtml "<h1>HELLO WORLD</h1>" [shamlet|
   <h1>HELLO WORLD
   |]
-      helperHtml "<h1>HELLO WORLD</h1>" $(shamletFile "test/nonpolyhtml.hamlet")
+      helperHtml "<h1>HELLO WORLD</h1>" $(shamletFile "test/hamlets/nonpolyhtml.hamlet")
 
 
   , it "non-poly Hamlet" $ do
@@ -217,7 +216,7 @@ $forall x <- set
   <h1>@{Home}
   ^{embed}
   |]
-      helper "<h1>url</h1>" $(hamletFile "test/nonpolyhamlet.hamlet")
+      helper "<h1>url</h1>" $(hamletFile "test/hamlets/nonpolyhamlet.hamlet")
 
   , it "non-poly IHamlet" $ do
       let embed = [ihamlet|<p>EMBEDDED|]
@@ -225,7 +224,7 @@ $forall x <- set
   <h1>_{Goodbye}
   ^{embed}
   |]
-      ihelper "<h1>Hola</h1>" $(ihamletFile "test/nonpolyihamlet.hamlet")
+      ihelper "<h1>Hola</h1>" $(ihamletFile "test/hamlets/nonpolyihamlet.hamlet")
 
   , it "pattern-match tuples: forall" $ do
       let people = [("Michael", 26), ("Miriam", 25)]
@@ -674,8 +673,8 @@ caseCurrency =
 
 caseExternal :: Assertion
 caseExternal = do
-    helper "foo<br>" $(hamletFile "test/external.hamlet")
-    helper "foo<br/>" $(xhamletFile "test/external.hamlet")
+    helper "foo<br>" $(hamletFile "test/hamlets/external.hamlet")
+    helper "foo<br/>" $(xhamletFile "test/hamlets/external.hamlet")
   where
     foo = "foo"
 
@@ -722,7 +721,7 @@ instance Show Url where
 caseDiffBindNames :: Assertion
 caseDiffBindNames = do
     let list = words "1 2 3"
-    -- FIXME helper "123123" $(hamletFileDebug "test/external-debug3.hamlet")
+    -- FIXME helper "123123" $(hamletFileDebug "test/hamlets/external-debug3.hamlet")
     error "test has been disabled"
 
 

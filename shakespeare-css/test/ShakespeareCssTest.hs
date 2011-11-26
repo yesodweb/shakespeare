@@ -1,5 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+module ShakespeareCssTest (specs) where
+
 import Test.HUnit hiding (Test)
 import Test.Hspec
 import Test.Hspec.HUnit ()
@@ -14,11 +16,8 @@ import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 
-main :: IO ()
-main = hspecX $ descriptions [specs]
-
 specs :: [Spec]
-specs = describe "hamlet"
+specs = describe "shakespeare-css"
   [ it "cassius" caseCassius
   , it "cassiusFile" caseCassiusFile
 
@@ -26,7 +25,7 @@ specs = describe "hamlet"
     let var = "var"
     let selector = "foo"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip celper $(cassiusFileDebug "test/external1.cassius") $ concat
+    flip celper $(cassiusFileDebug "test/cassiuses/external1.cassius") $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
         , "bin{"
         , "background-image:url(url);"
@@ -37,11 +36,11 @@ specs = describe "hamlet"
 {- TODO
   , it "cassiusFileDebugChange" $ do
     let var = "var"
-    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
-    celper "foo{var:1}" $(cassiusFileDebug "test/external2.cassius")
-    writeFile "test/external2.cassius" "foo\n  #{var}: 2"
-    celper "foo{var:2}" $(cassiusFileDebug "test/external2.cassius")
-    writeFile "test/external2.cassius" "foo\n  #{var}: 1"
+    writeFile "test/cassiuses/external2.cassius" "foo\n  #{var}: 1"
+    celper "foo{var:1}" $(cassiusFileDebug "test/cassiuses/external2.cassius")
+    writeFile "test/cassiuses/external2.cassius" "foo\n  #{var}: 2"
+    celper "foo{var:2}" $(cassiusFileDebug "test/cassiuses/external2.cassius")
+    writeFile "test/cassiuses/external2.cassius" "foo\n  #{var}: 1"
     -}
 
 
@@ -191,7 +190,7 @@ bin {
   , it "lucius file" $ do
       let var = "var"
       let urlp = (Home, [(pack "p", pack "q")])
-      flip celper $(luciusFile "test/external1.lucius") $ concat
+      flip celper $(luciusFile "test/cassiuses/external1.lucius") $ concat
           [ "foo{background:#000;bar:baz;color:#F00}"
           , "bin{"
           , "background-image:url(url);"
@@ -207,8 +206,8 @@ bin {
 
 
   , it "lucius nested" $ do
-      celper "foo bar{baz:bin}" $(luciusFile "test/external-nested.lucius")
-      celper "foo bar{baz:bin}" $(luciusFileDebug "test/external-nested.lucius")
+      celper "foo bar{baz:bin}" $(luciusFile "test/cassiuses/external-nested.lucius")
+      celper "foo bar{baz:bin}" $(luciusFileDebug "test/cassiuses/external-nested.lucius")
       celper "foo bar{baz:bin}" [lucius|
         foo {
             bar {
@@ -252,8 +251,8 @@ bin {
 |]
 
   , it "lucius media" $ do
-      celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/external-media.lucius")
-      celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "test/external-media.lucius")
+      celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/cassiuses/external-media.lucius")
+      celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "test/cassiuses/external-media.lucius")
       celper "@media only screen{foo bar{baz:bin}}" [lucius|
         @media only screen{
             foo {
@@ -352,7 +351,7 @@ caseCassiusFile = do
     let var = "var"
     let selector = "foo"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip celper $(cassiusFile "test/external1.cassius") $ concat
+    flip celper $(cassiusFile "test/cassiuses/external1.cassius") $ concat
         [ "foo{background:#000;bar:baz;color:#F00}"
         , "bin{"
         , "background-image:url(url);"
@@ -367,8 +366,8 @@ instance Show Url where
 caseLuciusFileDebug :: Assertion
 caseLuciusFileDebug = do
     let var = "var"
-    writeFile "test/external2.lucius" "foo{#{var}: 1}"
-    celper "foo{var:1}" $(luciusFileDebug "test/external2.lucius")
-    writeFile "test/external2.lucius" "foo{#{var}: 2}"
-    celper "foo{var:2}" $(luciusFileDebug "test/external2.lucius")
-    writeFile "test/external2.lucius" "foo{#{var}: 1}"
+    writeFile "test/cassiuses/external2.lucius" "foo{#{var}: 1}"
+    celper "foo{var:1}" $(luciusFileDebug "test/cassiuses/external2.lucius")
+    writeFile "test/cassiuses/external2.lucius" "foo{#{var}: 2}"
+    celper "foo{var:2}" $(luciusFileDebug "test/cassiuses/external2.lucius")
+    writeFile "test/cassiuses/external2.lucius" "foo{#{var}: 1}"

@@ -1,27 +1,26 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+module ShakespeareTextTest (specs) where
+
 import Test.HUnit hiding (Test)
 import Test.Hspec
 import Test.Hspec.HUnit ()
 
 import Prelude hiding (reverse)
-import Text.Julius
+import Text.Shakespeare.Text
 import Data.List (intercalate)
-import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy as TL
 import qualified Data.List
 import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 
-main :: IO ()
-main = hspecX $ descriptions [specs]
-
 specs :: [Spec]
-specs = describe "hamlet"
-  [ it "julius" $ do
+specs = describe "shakespeare-text"
+  [ it "text" $ do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [julius|שלום
+    flip telper [text|שלום
 #{var}
 @{Home}
 @?{urlp}
@@ -35,10 +34,10 @@ specs = describe "hamlet"
         ] ++ "\r\n"
 
 
-  , it "juliusFile" $ do
+  , it "textFile" $ do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFile "test/external1.julius") $ unlines
+    flip telper $(textFile "test/texts/external1.text") $ unlines
         [ "שלום"
         , var
         , "url"
@@ -47,10 +46,10 @@ specs = describe "hamlet"
         ]
 
 
-  , it "juliusFileDebug" $ do
+  , it "textFileDebug" $ do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFileDebug "test/external1.julius") $ unlines
+    flip telper $(textFileDebug "test/texts/external1.text") $ unlines
         [ "שלום"
         , var
         , "url"
@@ -59,36 +58,52 @@ specs = describe "hamlet"
         ]
 
 {- TODO
-  , it "juliusFileDebugChange" $ do
+  , it "textFileDebugChange" $ do
       let var = "somevar"
-          test result = jelper result $(juliusFileDebug "test/external2.julius")
-      writeFile "test/external2.julius" "var #{var} = 1;"
+          test result = telper result $(textFileDebug "test/texts/external2.text")
+      writeFile "test/texts/external2.text" "var #{var} = 1;"
       test "var somevar = 1;"
-      writeFile "test/external2.julius" "var #{var} = 2;"
+      writeFile "test/texts/external2.text" "var #{var} = 2;"
       test "var somevar = 2;"
-      writeFile "test/external2.julius" "var #{var} = 1;"
+      writeFile "test/texts/external2.text" "var #{var} = 1;"
       -}
 
 
-  , it "julius module names" $
-    let foo = "foo"
-        double = 3.14 :: Double
-        int = -5 :: Int in
-      jelper "oof oof 3.14 -5"
-        [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
+  , it "text module names" $
+      let foo = "foo"
+          double = 3.14 :: Double
+          int = -5 :: Int in
+        telper "oof oof 3.14 -5"
+          [text|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
+  , it "stext module names" $
+      let foo = "foo"
+          double = 3.14 :: Double
+          int = -5 :: Int in
+        simpT "oof oof 3.14 -5"
+          [stext|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
   , it "single dollar at and caret" $ do
-    jelper "$@^" [julius|$@^|]
-    jelper "#{@{^{" [julius|#\{@\{^\{|]
+      telper "$@^" [text|$@^|]
+      telper "#{@{^{" [text|#\{@\{^\{|]
 
+  , it "single dollar at and caret" $ do
+      simpT "$@^" [stext|$@^|]
+      simpT "#{@{^{" [stext|#\{@\{^\{|]
 
   , it "dollar operator" $ do
-    let val = (1 :: Int, (2 :: Int, 3 :: Int))
-    jelper "2" [julius|#{ show $ fst $ snd val }|]
-    jelper "2" [julius|#{ show $ fst $ snd $ val}|]
+      let val = (1 :: Int, (2 :: Int, 3 :: Int))
+      telper "2" [text|#{ show $ fst $ snd val }|]
+      telper "2" [text|#{ show $ fst $ snd $ val}|]
+
+  , it "dollar operator" $ do
+      let val = (1 :: Int, (2 :: Int, 3 :: Int))
+      simpT "2" [stext|#{ show $ fst $ snd val }|]
+      simpT "2" [stext|#{ show $ fst $ snd $ val}|]
   ]
 
+simpT :: String -> TL.Text -> Assertion
+simpT a b = pack a @=? TL.toStrict b
 
 
 data Url = Home | Sub SubUrl
@@ -131,11 +146,11 @@ encodeUrlChar y =
 
 
 
-jmixin :: JavascriptUrl u
-jmixin = [julius|var x;|]
+jmixin :: TextUrl url
+jmixin = [text|var x;|]
 
-jelper :: String -> JavascriptUrl Url -> Assertion
-jelper res h = T.pack res @=? renderJavascriptUrl render h
+telper :: String -> TextUrl Url -> Assertion
+telper res h = pack res @=? TL.toStrict (renderTextUrl render h)
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
