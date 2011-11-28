@@ -15,10 +15,11 @@ description:
     .
     shakespeare-js was originally called julius, and shakespeare originated from the hamlet template package.
 extra-source-files:
-  test/external1.coffee
-  test/external1.julius
-  test/external2.julius
-  test/main.hs
+  test/juliuses/external1.coffee
+  test/juliuses/external1.julius
+  test/juliuses/external2.julius
+  test/ShakespeareJsTest.hs
+  test.hs
 
 category:        Web, Yesod
 stability:       Stable
