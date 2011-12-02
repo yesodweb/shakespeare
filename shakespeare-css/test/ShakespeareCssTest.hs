@@ -11,6 +11,7 @@ import Text.Cassius
 import Text.Lucius
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
+import qualified Data.Text as TS
 import qualified Data.List
 import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
@@ -283,6 +284,8 @@ foo {
     bar: #{myvar};
 }
 |]
+
+  , it "lucius runtime" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "foo { bar: #{myvar}}") [(TS.pack "myvar", TS.pack "baz")]
   ]
 
 data Url = Home | Sub SubUrl

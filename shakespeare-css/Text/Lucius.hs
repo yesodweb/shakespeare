@@ -9,6 +9,9 @@ module Text.Lucius
       lucius
     , luciusFile
     , luciusFileDebug
+      -- ** Runtime
+    , luciusRT
+    , luciusRT'
       -- * Re-export cassius
     , module Text.Cassius
     ) where
@@ -17,12 +20,14 @@ import Text.Cassius hiding (cassius, cassiusFile, cassiusFileDebug)
 import Text.Shakespeare.Base
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
+import Data.Text (Text, pack, unpack)
 import qualified Data.Text.Lazy as TL
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
 import Data.Char (isSpace)
 import Control.Applicative ((<$>))
 import Data.Either (partitionEithers)
+import Data.Text.Lazy.Builder (fromText)
 
 -- |
 --
@@ -163,3 +168,34 @@ parseTopLevels =
         whiteSpace
         (char '}' >> return (map compressBlock $ front []))
             <|> (parseBlock >>= \x -> parseBlocks (front . (:) x))
+
+luciusRT' :: TL.Text -> Either String ([(Text, Text)] -> Either String Css)
+luciusRT' tl =
+    case parse parseTopLevels (TL.unpack tl) (TL.unpack tl) of
+        Left s -> Left $ show s
+        Right tops -> Right $ \scope -> go scope tops
+  where
+    go :: [(Text, Text)] -> [TopLevel] -> Either String Css
+    go _ [] = Right []
+    go scope (TopCharset cs:rest) = do
+        rest' <- go scope rest
+        Right $ Charset cs : rest'
+    go scope (TopBlock b:rest) = do
+        b' <- goBlock scope b
+        rest' <- go scope rest
+        Right $ map Css b' ++ rest'
+    go scope (MediaBlock m bs:rest) = do
+        bs' <- mapM (goBlock scope) bs
+        rest' <- go scope rest
+        Right $ Media m (concat bs') : rest'
+    go scope (TopVar k v:rest) = go ((pack k, pack v):scope) rest
+
+    goBlock :: [(Text, Text)] -> Block -> Either String [Css']
+    goBlock scope =
+        either Left (Right . ($[])) . blockRuntime scope' (error "luciusRT has no URLs")
+      where
+        scope' = map goScope scope
+        goScope (k, v) = (DerefIdent (Ident $ unpack k), CDPlain $ fromText v)
+
+luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
+luciusRT tl scope = either Left (Right . renderCss) $ either Left ($ scope) (luciusRT' tl)

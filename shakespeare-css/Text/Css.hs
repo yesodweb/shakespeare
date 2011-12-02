@@ -15,6 +15,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Text.ParserCombinators.Parsec (Parser, parse)
 import Text.Shakespeare.Base hiding (Scope)
 import Language.Haskell.TH
+import Control.Applicative ((<$>), (<*>))
 
 class ToCss a where
     toCss :: a -> Builder
@@ -71,6 +72,46 @@ combineSelectors a b = do
     b' <- b
     return $ a' ++ ContentRaw " " : b'
 
+blockRuntime :: [(Deref, CDData url)]
+             -> (url -> [(Text, Text)] -> Text)
+             -> Block
+             -> Either String ([Css'] -> [Css'])
+-- FIXME share code with blockToCss
+blockRuntime cd render' (Block x y z) = do
+    x' <- mapM go' $ intercalate [ContentRaw ","] x
+    y' <- mapM go'' y
+    z' <- mapM (subGo x) z -- FIXME use difflists again
+    Right $ \rest -> Css' (mconcat x') y' : foldr ($) rest z'
+    {-
+    (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
+    . foldr (.) id (map (subGo x) z)
+    -}
+  where
+    go' :: Content -> Either String Builder
+    go' (ContentRaw s) = Right $ fromText $ pack s
+    go' (ContentVar d) =
+        case lookup d cd of
+            Just (CDPlain s) -> Right s
+            _ -> Left $ show d ++ ": expected CDPlain"
+    go' (ContentUrl d) =
+        case lookup d cd of
+            Just (CDUrl u) -> Right $ fromText $ render' u []
+            _ -> Left $ show d ++ ": expected CDUrl"
+    go' (ContentUrlParam d) =
+        case lookup d cd of
+            Just (CDUrlParam (u, p)) ->
+                Right $ fromText $ render' u p
+            _ -> Left $ show d ++ ": expected CDUrlParam"
+
+    go'' :: ([Content], [Content]) -> Either String (Builder, Builder)
+    go'' (k, v) = (,) <$> (mconcat <$> mapM go' k) <*> (mconcat <$> mapM go' v)
+
+    subGo :: Selector -> Block -> Either String ([Css'] -> [Css'])
+    subGo x' (Block a b c) =
+        blockRuntime cd render' (Block a' b c)
+      where
+        a' = combineSelectors x' a
+
 cssRuntime :: Parser [TopLevel]
            -> FilePath
            -> [(Deref, CDData url)]
@@ -83,35 +124,9 @@ cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
   where
     goTop :: TopLevel -> Css -> Css
     goTop (TopCharset cs) x = Charset cs : x
-    goTop (TopBlock b) x = map Css (go b []) ++ x
+    goTop (TopBlock b) x = map Css (either error ($[]) $ blockRuntime cd render' b) ++ x
     goTop TopVar{} _ = error "FIXME cssRuntime does not support TopVar"
-    goTop (MediaBlock s b) x = Media s (foldr go [] b) : x
-    go :: Block -> [Css'] -> [Css']
-    -- FIXME share code with blockToCss
-    go (Block x y z) =
-        (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
-        . foldr (.) id (map (subGo x) z)
-    subGo :: Selector -> Block -> [Css'] -> [Css']
-    subGo x (Block a b c) =
-        go (Block a' b c)
-      where
-        a' = combineSelectors x a
-    go' :: Content -> Builder
-    go' (ContentRaw s) = fromText $ pack s
-    go' (ContentVar d) =
-        case lookup d cd of
-            Just (CDPlain s) -> s
-            _ -> error $ show d ++ ": expected CDPlain"
-    go' (ContentUrl d) =
-        case lookup d cd of
-            Just (CDUrl u) -> fromText $ render' u []
-            _ -> error $ show d ++ ": expected CDUrl"
-    go' (ContentUrlParam d) =
-        case lookup d cd of
-            Just (CDUrlParam (u, p)) ->
-                fromText $ render' u p
-            _ -> error $ show d ++ ": expected CDUrlParam"
-    go'' (k, v) = (mconcat $ map go' k, mconcat $ map go' v)
+    goTop (MediaBlock s b) x = Media s (foldr (either error id . blockRuntime cd render') [] b) : x
 
 vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
