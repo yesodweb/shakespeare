@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE CPP #-}
 module Text.Css where
 
@@ -12,7 +13,7 @@ import Data.Text (Text, pack)
 import Language.Haskell.TH.Syntax
 import System.IO.Unsafe (unsafePerformIO)
 import Text.ParserCombinators.Parsec (Parser, parse)
-import Text.Shakespeare.Base
+import Text.Shakespeare.Base hiding (Scope)
 import Language.Haskell.TH
 
 class ToCss a where
@@ -61,6 +62,7 @@ cssFileDebug parseBlocks' parseBlocks fp = do
         intercalate [ContentRaw ","] x ++
         concatMap go' y ++
         concatMap (go . TopBlock) z
+    go TopVar{} = error "FIXME cssFileDebug does not support TopVar"
     go' (k, v) = k ++ v
 
 combineSelectors :: Selector -> Selector -> Selector
@@ -82,6 +84,7 @@ cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     goTop :: TopLevel -> Css -> Css
     goTop (TopCharset cs) x = Charset cs : x
     goTop (TopBlock b) x = map Css (go b []) ++ x
+    goTop TopVar{} _ = error "FIXME cssRuntime does not support TopVar"
     goTop (MediaBlock s b) x = Media s (foldr go [] b) : x
     go :: Block -> [Css'] -> [Css']
     -- FIXME share code with blockToCss
@@ -129,7 +132,7 @@ getVars (ContentUrlParam d) = [(d, VTUrlParam)]
 
 data Block = Block Selector Pairs [Block]
 
-data TopLevel = TopBlock Block | MediaBlock String [Block] | TopCharset String
+data TopLevel = TopBlock Block | MediaBlock String [Block] | TopCharset String | TopVar String String
 
 type Pairs = [Pair]
 
@@ -141,6 +144,7 @@ compressTopLevel :: TopLevel -> TopLevel
 compressTopLevel (TopBlock b) = TopBlock $ compressBlock b
 compressTopLevel (MediaBlock s b) = MediaBlock s $ map compressBlock b
 compressTopLevel x@TopCharset{} = x
+compressTopLevel x@TopVar{} = x
 
 compressBlock :: Block -> Block
 compressBlock (Block x y blocks) =
@@ -151,50 +155,66 @@ compressBlock (Block x y blocks) =
     cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
     cc (a:b) = a : cc b
 
-blockToCss :: Name -> Block -> Q Exp
-blockToCss r (Block sel props subblocks) =
-    [|(:) (Css' $(selectorToBuilder r sel) $(listE $ map go props))
+blockToCss :: Name -> Scope -> Block -> Q Exp
+blockToCss r scope (Block sel props subblocks) =
+    [|(:) (Css' $(selectorToBuilder r scope sel) $(listE $ map go props))
       . foldr (.) id $(listE $ map subGo subblocks)
     |]
   where
-    go (x, y) = tupE [contentsToBuilder r x, contentsToBuilder r y]
+    go (x, y) = tupE [contentsToBuilder r scope x, contentsToBuilder r scope y]
     subGo (Block sel' b c) =
-        blockToCss r $ Block sel'' b c
+        blockToCss r scope $ Block sel'' b c
       where
         sel'' = combineSelectors sel sel'
 
-selectorToBuilder :: Name -> Selector -> Q Exp
-selectorToBuilder r sels =
-    contentsToBuilder r $ intercalate [ContentRaw ","] sels
+selectorToBuilder :: Name -> Scope -> Selector -> Q Exp
+selectorToBuilder r scope sels =
+    contentsToBuilder r scope $ intercalate [ContentRaw ","] sels
 
-contentsToBuilder :: Name -> [Content] -> Q Exp
-contentsToBuilder r contents =
-    appE [|mconcat|] $ listE $ map (contentToBuilder r) contents
+contentsToBuilder :: Name -> Scope -> [Content] -> Q Exp
+contentsToBuilder r scope contents =
+    appE [|mconcat|] $ listE $ map (contentToBuilder r scope) contents
 
-contentToBuilder :: Name -> Content -> Q Exp
-contentToBuilder _ (ContentRaw x) =
+contentToBuilder :: Name -> Scope -> Content -> Q Exp
+contentToBuilder _ _ (ContentRaw x) =
     [|fromText . pack|] `appE` litE (StringL x)
-contentToBuilder _ (ContentVar d) =
-    [|toCss|] `appE` return (derefToExp [] d)
-contentToBuilder r (ContentUrl u) =
+contentToBuilder _ scope (ContentVar d) =
+    case d of
+        DerefIdent (Ident s)
+            | Just val <- lookup s scope -> [|fromText . pack|] `appE` litE (StringL val)
+        _ -> [|toCss|] `appE` return (derefToExp [] d)
+contentToBuilder r _ (ContentUrl u) =
     [|fromText|] `appE`
         (varE r `appE` return (derefToExp [] u) `appE` listE [])
-contentToBuilder r (ContentUrlParam u) =
+contentToBuilder r _ (ContentUrlParam u) =
     [|fromText|] `appE`
         ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
+
+type Scope = [(String, String)]
 
 topLevelsToCassius :: [TopLevel] -> Q Exp
 topLevelsToCassius a = do
     r <- newName "_render"
-    lamE [varP r] $ appE [|foldr ($) []|] $ listE $ map (go r) a
+    lamE [varP r] $ appE [|foldr ($) []|] $ fmap ListE $ go r [] a
   where
-    go r (TopBlock b) = [|(++) $ map Css ($(blockToCss r b) [])|]
-    go r (MediaBlock s b) = [|(:) $ Media $(lift s) $(blocksToCassius r b)|]
-    go r (TopCharset cs) = [|(:) $ Charset $(lift cs)|]
+    go _ _ [] = return []
+    go r scope (TopBlock b:rest) = do
+        e <- [|(++) $ map Css ($(blockToCss r scope b) [])|]
+        es <- go r scope rest
+        return $ e : es
+    go r scope (MediaBlock s b:rest) = do
+        e <- [|(:) $ Media $(lift s) $(blocksToCassius r scope b)|]
+        es <- go r scope rest
+        return $ e : es
+    go r scope (TopCharset cs:rest) = do
+        e <- [|(:) $ Charset $(lift cs)|]
+        es <- go r scope rest
+        return $ e : es
+    go r scope (TopVar k v:rest) = go r ((k, v) : scope) rest
 
-blocksToCassius :: Name -> [Block] -> Q Exp
-blocksToCassius r a = do
-    appE [|foldr ($) []|] $ listE $ map (blockToCss r) a
+blocksToCassius :: Name -> Scope -> [Block] -> Q Exp
+blocksToCassius r scope a = do
+    appE [|foldr ($) []|] $ listE $ map (blockToCss r scope) a
 
 renderCss :: Css -> TL.Text
 renderCss =

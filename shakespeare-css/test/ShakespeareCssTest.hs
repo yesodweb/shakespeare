@@ -276,6 +276,13 @@ bin {
 
   , it "lucius trailing comments" $
       celper "foo{bar:baz}" [lucius|foo{bar:baz;}/* ignored*/|]
+
+  , it "lucius variables" $ celper "foo{bar:baz}" [lucius|
+@myvar: baz;
+foo {
+    bar: #{myvar};
+}
+|]
   ]
 
 data Url = Home | Sub SubUrl
