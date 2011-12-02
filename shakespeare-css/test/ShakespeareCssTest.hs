@@ -286,6 +286,7 @@ foo {
 |]
 
   , it "lucius runtime" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "foo { bar: #{myvar}}") [(TS.pack "myvar", TS.pack "baz")]
+  , it "lucius runtime variables" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "@dummy: dummy; @myvar: baz; @dummy2: dummy; foo { bar: #{myvar}}") []
   ]
 
 data Url = Home | Sub SubUrl
