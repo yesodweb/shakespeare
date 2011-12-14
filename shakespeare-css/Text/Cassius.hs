@@ -16,6 +16,7 @@ module Text.Cassius
     , cassius
     , cassiusFile
     , cassiusFileDebug
+    , cassiusFileReload
       -- * ToCss instances
       -- ** Color
     , Color (..)
@@ -175,8 +176,9 @@ cassiusFile fp = do
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     cassiusFromString contents
 
-cassiusFileDebug :: FilePath -> Q Exp
+cassiusFileDebug, cassiusFileReload :: FilePath -> Q Exp
 cassiusFileDebug = cssFileDebug [|parseTopLevels|] parseTopLevels
+cassiusFileReload = cassiusFileDebug
 
 parseTopLevels :: Parser [TopLevel]
 parseTopLevels = do

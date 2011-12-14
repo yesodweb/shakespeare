@@ -16,6 +16,8 @@ module Text.Julius
     , jsFile
     , juliusFileDebug
     , jsFileDebug
+    , juliusFileReload
+    , jsFileReload
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -74,3 +76,7 @@ jsFileDebug fp = do
     shakespeareFileDebug rs fp
 
 juliusFileDebug = jsFileDebug
+
+jsFileReload, juliusFileReload :: FilePath -> Q Exp
+juliusFileReload = jsFileDebug
+jsFileReload = jsFileDebug

@@ -9,6 +9,7 @@ module Text.Lucius
       lucius
     , luciusFile
     , luciusFileDebug
+    , luciusFileReload
       -- ** Runtime
     , luciusRT
     , luciusRT'
@@ -16,7 +17,7 @@ module Text.Lucius
     , module Text.Cassius
     ) where
 
-import Text.Cassius hiding (cassius, cassiusFile, cassiusFileDebug)
+import Text.Cassius hiding (cassius, cassiusFile, cassiusFileDebug, cassiusFileReload)
 import Text.Shakespeare.Base
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
@@ -134,8 +135,9 @@ luciusFile fp = do
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     luciusFromString contents
 
-luciusFileDebug :: FilePath -> Q Exp
+luciusFileDebug, luciusFileReload :: FilePath -> Q Exp
 luciusFileDebug = cssFileDebug [|parseTopLevels|] parseTopLevels
+luciusFileReload = luciusFileDebug
 
 parseTopLevels :: Parser [TopLevel]
 parseTopLevels =
