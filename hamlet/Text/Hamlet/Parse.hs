@@ -70,6 +70,7 @@ parseLine set = do
     ss <- fmap sum $ many ((char ' ' >> return 1) <|>
                            (char '\t' >> fail "Tabs are not allowed in Hamlet indentation"))
     x <- doctype <|>
+         doctypeDollar <|>
          comment <|>
          htmlComment <|>
          backslash <|>
@@ -96,6 +97,14 @@ parseLine set = do
     doctype = do
         try $ string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
+    doctypeDollar = do
+        try $ string "$doctype "
+        name <- many $ noneOf "\r\n"
+        eol
+        case lookup name doctypeNames of
+            Nothing -> fail $ "Unknown doctype name: " ++ name
+            Just val -> return $ LineContent [ContentRaw $ val ++ "\n"]
+
     comment = do
         _ <- try $ string "$#"
         _ <- many $ noneOf "\r\n"
@@ -456,3 +465,11 @@ parseConds set front (Nest (LineElseIf d) inside:rest) = do
     inside' <- nestToDoc set inside
     parseConds set (front . (:) (d, inside')) rest
 parseConds _ front rest = Ok (front [], Nothing, rest)
+
+doctypeNames :: [(String, String)]
+doctypeNames =
+    [ ("5", "<!DOCTYPE html>")
+    , ("html", "<!DOCTYPE html>")
+    , ("1.1", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">")
+    , ("strict", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
+    ]

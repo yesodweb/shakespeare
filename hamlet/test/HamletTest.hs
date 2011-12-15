@@ -87,6 +87,7 @@ $#a third one|]
 
     foo
 
+
 |]
 
 
@@ -260,6 +261,10 @@ $forall x <- set
       helper "5" [hamlet|#{show $ (4 + 5) - (2 + 2)}|]
   , it "infix operators with parens" $
       helper "5" [hamlet|#{show (2 + 3)}|]
+  , it "doctypes" $ helper "<!DOCTYPE html>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" [hamlet|
+$doctype 5
+$doctype strict
+|]
   ]
 
 data Url = Home | Sub SubUrl
