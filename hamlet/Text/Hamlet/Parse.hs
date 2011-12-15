@@ -99,7 +99,7 @@ parseLine set = do
         try $ string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
     doctypeDollar = do
-        try $ string "$doctype "
+        _ <- try $ string "$doctype "
         name <- many $ noneOf "\r\n"
         eol
         case lookup name doctypeNames of
