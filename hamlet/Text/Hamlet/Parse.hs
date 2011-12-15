@@ -82,6 +82,7 @@ parseLine set = do
          controlForall <|>
          controlWith <|>
          angle <|>
+         invalidDollar <|>
          (eol' >> return (LineContent [])) <|>
          (do
             cs <- content InContent
@@ -105,6 +106,9 @@ parseLine set = do
             Nothing -> fail $ "Unknown doctype name: " ++ name
             Just val -> return $ LineContent [ContentRaw $ val ++ "\n"]
 
+    invalidDollar = do
+        _ <- char '$'
+        fail $ "Received a command I did not understand. If you wanted a literal $, start the line with a backslash."
     comment = do
         _ <- try $ string "$#"
         _ <- many $ noneOf "\r\n"

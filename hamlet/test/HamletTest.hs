@@ -114,7 +114,7 @@ $#a third one|]
 
 
   , it "single dollar at and caret" $ do
-    helper "$@^" [hamlet|$@^|]
+    helper "$@^" [hamlet|\$@^|]
 
     helper "#{@{^{" [hamlet|#\{@\{^\{|]
 
@@ -560,7 +560,7 @@ caseEscape = do
 \
 \ 
 |]
-    helper "$@^" [hamlet|$@^|]
+    helper "$@^" [hamlet|\$@^|]
 
 caseEmptyStatementList :: Assertion
 caseEmptyStatementList = do
