@@ -6,7 +6,7 @@
 module Text.Css where
 
 import Data.List (intersperse, intercalate)
-import Data.Text.Lazy.Builder (Builder, fromText, singleton, toLazyText, fromLazyText)
+import Data.Text.Lazy.Builder (Builder, fromText, singleton, toLazyText, fromLazyText, fromString)
 import qualified Data.Text.Lazy as TL
 import Data.Monoid (mconcat, mappend, mempty)
 import Data.Text (Text, pack)
@@ -16,6 +16,7 @@ import Text.ParserCombinators.Parsec (Parser, parse)
 import Text.Shakespeare.Base hiding (Scope)
 import Language.Haskell.TH
 import Control.Applicative ((<$>), (<*>))
+import Control.Arrow ((***))
 
 class ToCss a where
     toCss :: a -> Builder
@@ -42,6 +43,7 @@ type Contents = [Content]
 type ContentPair = (Contents, Contents)
 
 data VarType = VTPlain | VTUrl | VTUrlParam
+    deriving Show
 
 data CDData url = CDPlain Builder
                 | CDUrl url
@@ -51,19 +53,39 @@ cssFileDebug :: Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
 cssFileDebug parseBlocks' parseBlocks fp = do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
-    c <- mapM vtToExp $ concatMap getVars $ concatMap go a
+    let (scope, contents) = go a
+    vs <- mapM (getVars scope) contents
+    c <- mapM vtToExp $ concat vs
     cr <- [|cssRuntime|]
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
   where
-    go :: TopLevel -> [Content] -- FIXME use blockToCss
-    go (TopCharset cs) = [ContentRaw "@charset ", ContentRaw cs, ContentRaw ";"]
-    go (MediaBlock _ blocks) = concatMap (go . TopBlock) blocks
-    go (TopBlock (Block x y z)) =
-        intercalate [ContentRaw ","] x ++
-        concatMap go' y ++
-        concatMap (go . TopBlock) z
-    go TopVar{} = error "FIXME cssFileDebug does not support TopVar"
+    go :: [TopLevel] -> ([(String, String)], [Content])
+    go [] = ([], [])
+    go (TopCharset cs:rest) =
+        (scope, rest'')
+      where
+        (scope, rest') = go rest
+        rest'' =
+              ContentRaw "@charset "
+            : ContentRaw cs
+            : ContentRaw ";"
+            : rest'
+    go (MediaBlock _ blocks:rest) =
+        (scope1 ++ scope2, rest1 ++ rest2)
+      where
+        (scope1, rest1) = go (map TopBlock blocks)
+        (scope2, rest2) = go rest
+    go (TopBlock (Block x y z):rest) =
+        (scope1 ++ scope2, rest0 ++ rest1 ++ rest2)
+      where
+        rest0 = intercalate [ContentRaw ","] x ++ concatMap go' y
+        (scope1, rest1) = go (map TopBlock z)
+        (scope2, rest2) = go rest
+    go (TopVar k v:rest) =
+        ((k, v):scope, rest')
+      where
+        (scope, rest') = go rest
     go' (k, v) = k ++ v
 
 combineSelectors :: Selector -> Selector -> Selector
@@ -120,13 +142,20 @@ cssRuntime :: Parser [TopLevel]
 cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
-    return $ foldr ($) [] $ map goTop a
+    return $ goTop [] a
   where
-    goTop :: TopLevel -> Css -> Css
-    goTop (TopCharset cs) x = Charset cs : x
-    goTop (TopBlock b) x = map Css (either error ($[]) $ blockRuntime cd render' b) ++ x
-    goTop TopVar{} _ = error "FIXME cssRuntime does not support TopVar"
-    goTop (MediaBlock s b) x = Media s (foldr (either error id . blockRuntime cd render') [] b) : x
+    goTop :: [(String, String)] -> [TopLevel] -> Css
+    goTop _ [] = []
+    goTop scope (TopCharset cs:rest) = Charset cs : goTop scope rest
+    goTop scope (TopBlock b:rest) =
+        map Css (either error ($[]) $ blockRuntime (addScope scope) render' b) ++
+        goTop scope rest
+    goTop scope (MediaBlock s b:rest) =
+        Media s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
+        goTop scope rest
+    goTop scope (TopVar k v:rest) = goTop ((k, v):scope) rest
+
+    addScope scope = map (DerefIdent . Ident *** CDPlain . fromString) scope ++ cd
 
 vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
@@ -139,11 +168,26 @@ vtToExp (d, vt) = do
     c VTUrl = [|CDUrl|]
     c VTUrlParam = [|CDUrlParam|]
 
-getVars :: Content -> [(Deref, VarType)]
-getVars ContentRaw{} = []
-getVars (ContentVar d) = [(d, VTPlain)]
-getVars (ContentUrl d) = [(d, VTUrl)]
-getVars (ContentUrlParam d) = [(d, VTUrlParam)]
+getVars :: Monad m => [(String, String)] -> Content -> m [(Deref, VarType)]
+getVars _ ContentRaw{} = return []
+getVars scope (ContentVar d) =
+    case lookupD d scope of
+        Just _ -> return []
+        Nothing -> return [(d, VTPlain)]
+getVars scope (ContentUrl d) =
+    case lookupD d scope of
+        Nothing -> return [(d, VTUrl)]
+        Just s -> fail $ "Expected URL for " ++ s
+getVars scope (ContentUrlParam d) =
+    case lookupD d scope of
+        Nothing -> return [(d, VTUrlParam)]
+        Just s -> fail $ "Expected URLParam for " ++ s
+
+lookupD (DerefIdent (Ident s)) scope =
+    case lookup s scope of
+        Nothing -> Nothing
+        Just _ -> Just s
+lookupD _ _ = Nothing
 
 data Block = Block Selector Pairs [Block]
 

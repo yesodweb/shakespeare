@@ -1,5 +1,6 @@
+@topvarbin: bin;
 foo {
     bar {
-        baz: bin;
+        baz: #{topvarbin};
     }
 }
