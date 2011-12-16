@@ -183,6 +183,7 @@ getVars scope (ContentUrlParam d) =
         Nothing -> return [(d, VTUrlParam)]
         Just s -> fail $ "Expected URLParam for " ++ s
 
+lookupD :: Deref -> [(String, b)] -> Maybe String
 lookupD (DerefIdent (Ident s)) scope =
     case lookup s scope of
         Nothing -> Nothing
