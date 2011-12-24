@@ -50,8 +50,8 @@ data Line = LineForall Deref [Ident]
           | LineWith [(Deref, [Ident])]
           | LineMaybe Deref [Ident]
           | LineNothing
-          | LineSwitch Deref
-          | LineCase [Ident]
+          | LineCase Deref
+          | LineOf [Ident]
           | LineTag
             { _lineTagName :: String
             , _lineAttr :: [(Maybe Deref, String, [Content])]
@@ -83,8 +83,8 @@ parseLine set = do
          (try (string "$nothing") >> spaceTabs >> eol >> return LineNothing) <|>
          controlForall <|>
          controlWith <|>
-         controlSwitch <|>
          controlCase <|>
+         controlOf <|>
          angle <|>
          invalidDollar <|>
          (eol' >> return (LineContent [])) <|>
@@ -174,19 +174,19 @@ parseLine set = do
         spaces
         bindings <- (binding `sepBy` bindingSep) `endBy` eol
         return $ LineWith $ concat bindings -- concat because endBy returns a [[(Deref,Ident)]]
-    controlSwitch = do
-        _ <- try $ string "$switch"
+    controlCase = do
+        _ <- try $ string "$case"
         spaces
         x <- parseDeref
         _ <- spaceTabs
         eol
-        return $ LineSwitch x
-    controlCase = do
-        _   <- try $ string "$case"
+        return $ LineCase x
+    controlOf = do
+        _   <- try $ string "$of"
         pat <- many1 $ try $ spaces >> ident
         _   <- spaceTabs
         eol
-        return $ LineCase pat
+        return $ LineOf pat
     content cr = do
         x <- many $ content' cr
         case cr of
@@ -284,7 +284,7 @@ data Doc = DocForall Deref [Ident] [Doc]
          | DocWith [(Deref, [Ident])] [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
          | DocMaybe Deref [Ident] [Doc] (Maybe [Doc])
-         | DocSwitch Deref [([Ident], [Doc])]
+         | DocCase Deref [([Ident], [Doc])]
          | DocContent Content
     deriving (Show, Eq, Read, Data, Typeable)
 
@@ -313,14 +313,14 @@ nestToDoc set (Nest (LineMaybe d i) inside:rest) = do
             _ -> return (Nothing, rest)
     rest'' <- nestToDoc set rest'
     Ok $ DocMaybe d i inside' nothing : rest''
-nestToDoc set (Nest (LineSwitch d) inside:rest) = do
-    let getCase (Nest (LineCase pat) insideC) = do
+nestToDoc set (Nest (LineCase d) inside:rest) = do
+    let getOf (Nest (LineOf pat) insideC) = do
             insideC' <- nestToDoc set insideC
             Ok (pat, insideC')
-        getCase _ = Error "Inside a $switch there may only be $case.  Use '$case _' for a wildcard."
-    cases <- mapM getCase inside
+        getOf _ = Error "Inside a $case there may only be $of.  Use '$of _' for a wildcard."
+    cases <- mapM getOf inside
     rest' <- nestToDoc set rest
-    Ok $ DocSwitch d cases : rest'
+    Ok $ DocCase d cases : rest'
 nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
     let attrFix (x, y, z) = (x, y, [(Nothing, z)])
     let takeClass (a, "class", b) = Just (a, b)
@@ -365,7 +365,7 @@ nestToDoc set (Nest (LineContent content) inside:rest) = do
 nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
 nestToDoc _set (Nest LineElse _:_) = Error "Unexpected else"
 nestToDoc _set (Nest LineNothing _:_) = Error "Unexpected nothing"
-nestToDoc _set (Nest (LineCase _) _:_) = Error "Unexpected case (did you forget a $switch?)"
+nestToDoc _set (Nest (LineOf _) _:_) = Error "Unexpected 'of' (did you forget a $case?)"
 
 compressDoc :: [Doc] -> [Doc]
 compressDoc [] = []
@@ -381,8 +381,8 @@ compressDoc (DocCond [(a, x)] Nothing:DocCond [(b, y)] Nothing:rest)
 compressDoc (DocCond x y:rest) =
     DocCond (map (second compressDoc) x) (compressDoc `fmap` y)
     : compressDoc rest
-compressDoc (DocSwitch d cs:rest) =
-    DocSwitch d (map (second compressDoc) cs) : compressDoc rest
+compressDoc (DocCase d cs:rest) =
+    DocCase d (map (second compressDoc) cs) : compressDoc rest
 compressDoc (DocContent (ContentRaw ""):rest) = compressDoc rest
 compressDoc ( DocContent (ContentRaw x)
             : DocContent (ContentRaw y)

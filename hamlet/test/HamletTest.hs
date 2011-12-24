@@ -266,44 +266,44 @@ $doctype 5
 $doctype strict
 |]
 
-  , it "switch on Maybe" $
+  , it "case on Maybe" $
       let nothing  = Nothing
           justTrue = Just True
       in helper "<br><br><br><br>" [hamlet|
-$switch nothing
-    $case Just val
-    $case Nothing
+$case nothing
+    $of Just val
+    $of Nothing
         <br>
-$switch justTrue
-    $case Just val
+$case justTrue
+    $of Just val
         $if val
             <br>
-    $case Nothing
-$switch (Just $ not False)
-    $case Nothing
-    $case Just val
+    $of Nothing
+$case (Just $ not False)
+    $of Nothing
+    $of Just val
         $if val
             <br>
-$switch Nothing
-    $case Just val
-    $case _
+$case Nothing
+    $of Just val
+    $of _
         <br>
 |]
 
-  , it "switch on Url" $
+  , it "case on Url" $
       let url1 = Home
           url2 = Sub SubUrl
       in helper "<br><br>" [hamlet|
-$switch url1
-    $case Home
+$case url1
+    $of Home
         <br>
-    $case _
-$switch url2
-    $case Sub sub
-        $switch sub
-            $case SubUrl
+    $of _
+$case url2
+    $of Sub sub
+        $case sub
+            $of SubUrl
                 <br>
-    $case Home
+    $of Home
 |]
   ]
 

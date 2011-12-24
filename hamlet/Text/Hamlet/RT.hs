@@ -93,7 +93,7 @@ parseHamletRT set s =
             docs'' <- mapM convert docs'
             return (deref', docs'')
     convert DocWith{} = error "Runtime hamlet does not currently support $with"
-    convert DocSwitch{} = error "Runtime hamlet does not currently support $switch"
+    convert DocCase{} = error "Runtime hamlet does not currently support $case"
 
 renderHamletRT :: Failure HamletException m
                => HamletRT

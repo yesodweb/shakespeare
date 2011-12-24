@@ -123,7 +123,7 @@ docToExp env hr scope (DocCond conds final) = do
         let d' = derefToExp scope d
         docs' <- docsToExp env hr scope docs
         return $ TupE [d', docs']
-docToExp env hr scope (DocSwitch deref cases) = do
+docToExp env hr scope (DocCase deref cases) = do
     let exp_ = derefToExp scope deref
     matches <- mapM toMatch cases
     return $ CaseE exp_ matches
