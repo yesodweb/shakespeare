@@ -123,6 +123,18 @@ docToExp env hr scope (DocCond conds final) = do
         let d' = derefToExp scope d
         docs' <- docsToExp env hr scope docs
         return $ TupE [d', docs']
+docToExp env hr scope (DocSwitch deref cases) = do
+    let exp_ = derefToExp scope deref
+    matches <- mapM toMatch cases
+    return $ CaseE exp_ matches
+  where
+    toMatch (idents, inside) = do
+        let pat = case map unIdent idents of
+                    ["_"] -> WildP
+                    strs -> let (constr:fields) = map mkName strs
+                            in ConP constr (map VarP fields)
+        insideExp <- docsToExp env hr scope inside
+        return $ Match pat (NormalB insideExp) []
 docToExp env hr v (DocContent c) = contentToExp env hr v c
 
 contentToExp :: Env -> HamletRules -> Scope -> Content -> Q Exp

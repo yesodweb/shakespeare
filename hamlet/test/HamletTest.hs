@@ -265,6 +265,46 @@ $forall x <- set
 $doctype 5
 $doctype strict
 |]
+
+  , it "switch on Maybe" $
+      let nothing  = Nothing
+          justTrue = Just True
+      in helper "<br><br><br><br>" [hamlet|
+$switch nothing
+    $case Just val
+    $case Nothing
+        <br>
+$switch justTrue
+    $case Just val
+        $if val
+            <br>
+    $case Nothing
+$switch (Just $ not False)
+    $case Nothing
+    $case Just val
+        $if val
+            <br>
+$switch Nothing
+    $case Just val
+    $case _
+        <br>
+|]
+
+  , it "switch on Url" $
+      let url1 = Home
+          url2 = Sub SubUrl
+      in helper "<br><br>" [hamlet|
+$switch url1
+    $case Home
+        <br>
+    $case _
+$switch url2
+    $case Sub sub
+        $switch sub
+            $case SubUrl
+                <br>
+    $case Home
+|]
   ]
 
 data Url = Home | Sub SubUrl
