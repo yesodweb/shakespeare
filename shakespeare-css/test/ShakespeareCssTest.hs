@@ -290,7 +290,7 @@ foo {
 * {
   a: b;
 }
---!>
+-->
 |]
   , it "lucius @import statements" $
       celper "@import url(\"bla.css\");" [lucius|
