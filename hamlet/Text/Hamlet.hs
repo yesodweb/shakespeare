@@ -65,40 +65,42 @@ docsToExp env hr scope docs = do
 unIdent :: Ident -> String
 unIdent (Ident s) = s
 
+bindingPattern :: Binding -> Q (Pat, [(Ident, Exp)])
+bindingPattern (BindVar i@(Ident s)) = do
+    name <- newName s
+    return (VarP name, [(i, VarE name)])
+bindingPattern (BindTuple is) = do
+    names <- mapM (newName . unIdent) is
+    return (TupP $ map VarP names, zip is $ map VarE names)
+bindingPattern (BindConstr (Ident con) is) = do
+    names <- mapM (newName . unIdent) is
+    return (ConP (mkName con) (map VarP names), zip is $ map VarE names)
+
 docToExp :: Env -> HamletRules -> Scope -> Doc -> Q Exp
 docToExp env hr scope (DocForall list idents inside) = do
     let list' = derefToExp scope list
-    names <- mapM (newName . unIdent) idents
-    let pairs = zip idents (map VarE names)
-    let scope' = pairs ++ scope
+    (pat, extraScope) <- bindingPattern idents
+    let scope' = extraScope ++ scope
     mh <- [|F.mapM_|]
     inside' <- docsToExp env hr scope' inside
-    let lam = flip LamE inside' $ case names of
-            [x] -> [VarP x]
-            _ -> [TupP $ map VarP names]
+    let lam = LamE [pat] inside'
     return $ mh `AppE` lam `AppE` list'
 docToExp env hr scope (DocWith [] inside) = do
     inside' <- docsToExp env hr scope inside
     return $ inside'
 docToExp env hr scope (DocWith ((deref, idents):dis) inside) = do
     let deref' = derefToExp scope deref
-    names <- mapM (newName . unIdent) idents
-    let pairs = zip idents (map VarE names)
-    let scope' = pairs ++ scope
+    (pat, extraScope) <- bindingPattern idents
+    let scope' = extraScope ++ scope
     inside' <- docToExp env hr scope' (DocWith dis inside)
-    let lam = flip LamE inside' $ case names of
-            [x] -> [VarP x]
-            _ -> [TupP $ map VarP names]
+    let lam = LamE [pat] inside'
     return $ lam `AppE` deref'
 docToExp env hr scope (DocMaybe val idents inside mno) = do
     let val' = derefToExp scope val
-    names <- mapM (newName . unIdent) idents
-    let pairs = zip idents (map VarE names)
-    let scope' = pairs ++ scope
+    (pat, extraScope) <- bindingPattern idents
+    let scope' = extraScope ++ scope
     inside' <- docsToExp env hr scope' inside
-    let inside'' = flip LamE inside' $ case names of
-            [x] -> [VarP x]
-            _ -> [TupP $ map VarP names]
+    let inside'' = LamE [pat] inside'
     ninside' <- case mno of
                     Nothing -> [|Nothing|]
                     Just no -> do

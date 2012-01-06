@@ -254,11 +254,11 @@ parseLine set = do
         (spaces >> char ')' >> spaces)
         (BindTuple <$> sepBy1 ident (spaces >> char ',' >> spaces))
         ) <|> (do
-            is <- many1 $ try $ spaces >> ident
-            case is of
-                [] -> error "Impossible happened, identPattern"
-                [x] -> return $ BindVar x
-                (x:xs) -> return $ BindConstr x xs
+            i <- ident
+            is <- many $ try $ (many $ char ' ') >> ident
+            if null is
+                then return $ BindVar i
+                else return $ BindConstr i is
             )
     angle = do
         _ <- char '<'
