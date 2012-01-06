@@ -10,6 +10,7 @@ module Text.Hamlet.Parse
     , xhtmlHamletSettings
     , debugHamletSettings
     , CloseStyle (..)
+    , Binding (..)
     )
     where
 
@@ -43,12 +44,12 @@ data Content = ContentRaw String
              | ContentMsg Deref
     deriving (Show, Eq, Read, Data, Typeable)
 
-data Line = LineForall Deref [Ident]
+data Line = LineForall Deref Binding
           | LineIf Deref
           | LineElseIf Deref
           | LineElse
-          | LineWith [(Deref, [Ident])]
-          | LineMaybe Deref [Ident]
+          | LineWith [(Deref, Binding)]
+          | LineMaybe Deref Binding
           | LineNothing
           | LineCase Deref
           | LineOf [Ident]
@@ -247,12 +248,18 @@ parseLine set = do
     ident :: Parser Ident
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
 
-    identPattern :: Parser [Ident]
+    identPattern :: Parser Binding
     identPattern = (between
         (char '(' >> spaces)
         (spaces >> char ')' >> spaces)
-        (sepBy1 ident (spaces >> char ',' >> spaces))
-        ) <|> (return <$> ident)
+        (BindTuple <$> sepBy1 ident (spaces >> char ',' >> spaces))
+        ) <|> (do
+            is <- many1 $ try $ spaces >> ident
+            case is of
+                [] -> error "Impossible happened, identPattern"
+                [x] -> return $ BindVar x
+                (x:xs) -> return $ BindConstr x xs
+            )
     angle = do
         _ <- char '<'
         name' <- many  $ noneOf " \t.#\r\n!>"
@@ -280,10 +287,10 @@ nestLines ((i, l):rest) =
     let (deeper, rest') = span (\(i', _) -> i' > i) rest
      in Nest l (nestLines deeper) : nestLines rest'
 
-data Doc = DocForall Deref [Ident] [Doc]
-         | DocWith [(Deref, [Ident])] [Doc]
+data Doc = DocForall Deref Binding [Doc]
+         | DocWith [(Deref, Binding)] [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
-         | DocMaybe Deref [Ident] [Doc] (Maybe [Doc])
+         | DocMaybe Deref Binding [Doc] (Maybe [Doc])
          | DocCase Deref [([Ident], [Doc])]
          | DocContent Content
     deriving (Show, Eq, Read, Data, Typeable)
@@ -506,3 +513,6 @@ doctypeNames =
     , ("1.1", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">")
     , ("strict", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
     ]
+
+data Binding = BindVar Ident | BindConstr Ident [Ident] | BindTuple [Ident]
+    deriving (Eq, Show, Read, Data, Typeable)

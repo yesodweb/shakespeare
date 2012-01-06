@@ -305,7 +305,34 @@ $case url2
                 <br>
     $of Home
 |]
+
+  , it "pattern-match constructors: forall" $ do
+      let people = [Pair "Michael" 26, Pair "Miriam" 25]
+      helper "<dl><dt>Michael</dt><dd>26</dd><dt>Miriam</dt><dd>25</dd></dl>" [hamlet|
+<dl>
+    $forall Pair name age <- people
+        <dt>#{name}
+        <dd>#{show age}
+|]
+  , it "pattern-match constructors: maybe" $ do
+      let people = Just $ Pair "Michael" 26
+      helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+<dl>
+    $maybe Pair name age <- people
+        <dt>#{name}
+        <dd>#{show age}
+|]
+  , it "pattern-match constructors: with" $ do
+      let people = Pair "Michael" 26
+      helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+<dl>
+    $with Pair name age <- people
+        <dt>#{name}
+        <dd>#{show age}
+|]
   ]
+
+data Pair = Pair String Int
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
