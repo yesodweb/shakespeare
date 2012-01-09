@@ -26,6 +26,7 @@ import qualified Data.Text.Lazy as TL
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
 import Data.Char (isSpace, toLower, toUpper)
+import Numeric (readHex)
 import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Data.Either (partitionEithers)
@@ -117,7 +118,7 @@ parseContents = many1 . parseContent
 
 parseContent :: String -> Parser Content
 parseContent restricted =
-    parseHash' <|> parseAt' <|> parseComment <|> parseChar
+    parseHash' <|> parseAt' <|> parseComment <|> parseBack <|> parseChar
   where
     parseHash' = either ContentRaw ContentVar `fmap` parseHash
     parseAt' =
@@ -125,7 +126,27 @@ parseContent restricted =
       where
         go (d, False) = ContentUrl d
         go (d, True) = ContentUrlParam d
+    parseBack = try $ do
+        _ <- char '\\'
+        hex <- atMost 6 $ satisfy isHex
+        (int, _):_ <- return $ readHex $ dropWhile (== '0') hex
+        when (length hex < 6) $
+            ((string "\r\n" >> return ()) <|> (satisfy isSpace >> return ()))
+        return $ ContentRaw [toEnum int]
     parseChar = (ContentRaw . return) `fmap` noneOf restricted
+
+isHex :: Char -> Bool
+isHex c =
+    ('0' <= c && c <= '9') ||
+    ('A' <= c && c <= 'F') ||
+    ('a' <= c && c <= 'f')
+
+atMost :: Int -> Parser a -> Parser [a]
+atMost 0 _ = return []
+atMost i p = (do
+    c <- p
+    s <- atMost (i - 1) p
+    return $ c : s) <|> return []
 
 parseComment :: Parser Content
 parseComment = do

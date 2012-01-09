@@ -322,6 +322,11 @@ c:d;
 |]
   , it "lucius runtime" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "foo { bar: #{myvar}}") [(TS.pack "myvar", TS.pack "baz")]
   , it "lucius runtime variables" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "@dummy: dummy; @myvar: baz; @dummy2: dummy; foo { bar: #{myvar}}") []
+  , it "variables inside value" $
+        celper "foo{foo:XbarY}" [lucius|
+@bar: bar;
+foo { foo:X#{bar}Y; }
+|]
   ]
 
 data Url = Home | Sub SubUrl
