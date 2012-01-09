@@ -25,7 +25,7 @@ import Data.Text (Text, pack, unpack)
 import qualified Data.Text.Lazy as TL
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
-import Data.Char (isSpace)
+import Data.Char (isSpace, toLower, toUpper)
 import Control.Applicative ((<$>))
 import Data.Either (partitionEithers)
 import Data.Text.Lazy.Builder (fromText)
@@ -43,9 +43,11 @@ luciusFromString s =
   $ either (error . show) id $ parse parseTopLevels s s
 
 whiteSpace :: Parser ()
-whiteSpace = many
+whiteSpace = many whiteSpace1 >> return ()
+
+whiteSpace1 :: Parser ()
+whiteSpace1 =
     ((oneOf " \t\n\r" >> return ()) <|> (parseComment >> return ()))
-    >> return () -- FIXME comments, don't use many
 
 parseBlock :: Parser Block
 parseBlock = do
@@ -144,20 +146,36 @@ parseTopLevels =
     go id
   where
     go front = do
-        whiteSpace
-        ((charset <|> media <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
+        let string' s = string s >> return ()
+            ignore = many (whiteSpace1 <|> string' "<!--" <|> string' "-->")
+                        >> return ()
+        ignore
+        tl <- ((charset <|> page <|> media <|> impor <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
             <|> (return $ map compressTopLevel $ front [])
+        ignore
+        return tl
     charset = do
-        _ <- try $ string "@charset "
+        try $ stringCI "@charset "
         cs <- many1 $ noneOf ";"
         _ <- char ';'
-        return $ TopCharset cs
+        return $ TopAtDecl "charset" cs
     media = do
-        _ <- try $ string "@media "
+        try $ stringCI "@media "
         name <- many1 $ noneOf "{"
         _ <- char '{'
         b <- parseBlocks id
-        return $ MediaBlock name b
+        return $ TopAtBlock "media" (strip name) b
+    page = do
+        try $ stringCI "@page "
+        name <- many1 $ noneOf "{"
+        _ <- char '{'
+        b <- parseBlocks id
+        return $ TopAtBlock "page" (strip name) b
+    impor = do
+        try $ stringCI "@import ";
+        val <- many1 $ noneOf ";";
+        _ <- char ';'
+        return $ TopAtDecl "import" val
     var = try $ do
         _ <- char '@'
         k <- many1 $ noneOf ":"
@@ -171,6 +189,13 @@ parseTopLevels =
         (char '}' >> return (map compressBlock $ front []))
             <|> (parseBlock >>= \x -> parseBlocks (front . (:) x))
 
+strip :: String -> String
+strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
+stringCI :: String -> Parser ()
+stringCI [] = return ()
+stringCI (c:cs) = (char (toLower c) <|> char (toUpper c)) >> stringCI cs
+
 luciusRT' :: TL.Text -> Either String ([(Text, Text)] -> Either String Css)
 luciusRT' tl =
     case parse parseTopLevels (TL.unpack tl) (TL.unpack tl) of
@@ -179,17 +204,17 @@ luciusRT' tl =
   where
     go :: [(Text, Text)] -> [TopLevel] -> Either String Css
     go _ [] = Right []
-    go scope (TopCharset cs:rest) = do
+    go scope (TopAtDecl dec cs:rest) = do
         rest' <- go scope rest
-        Right $ Charset cs : rest'
+        Right $ AtDecl dec cs : rest'
     go scope (TopBlock b:rest) = do
         b' <- goBlock scope b
         rest' <- go scope rest
         Right $ map Css b' ++ rest'
-    go scope (MediaBlock m bs:rest) = do
+    go scope (TopAtBlock name m bs:rest) = do
         bs' <- mapM (goBlock scope) bs
         rest' <- go scope rest
-        Right $ Media m (concat bs') : rest'
+        Right $ AtBlock name m (concat bs') : rest'
     go scope (TopVar k v:rest) = go ((pack k, pack v):scope) rest
 
     goBlock :: [(Text, Text)] -> Block -> Either String [Css']

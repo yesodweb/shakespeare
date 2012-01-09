@@ -29,7 +29,7 @@ data Css' = Css'
     { _cssSelectors :: Builder
     , _cssAttributes :: [(Builder, Builder)]
     }
-data CssTop = Media String [Css'] | Css Css' | Charset String
+data CssTop = AtBlock String String [Css'] | Css Css' | AtDecl String String
 
 type Css = [CssTop]
 
@@ -62,16 +62,17 @@ cssFileDebug parseBlocks' parseBlocks fp = do
   where
     go :: [TopLevel] -> ([(String, String)], [Content])
     go [] = ([], [])
-    go (TopCharset cs:rest) =
+    go (TopAtDecl dec cs:rest) =
         (scope, rest'')
       where
         (scope, rest') = go rest
-        rest'' =
-              ContentRaw "@charset "
-            : ContentRaw cs
-            : ContentRaw ";"
-            : rest'
-    go (MediaBlock _ blocks:rest) =
+        rest'' = ContentRaw (concat
+            [ "@"
+            , dec
+            , cs
+            , ";"
+            ]) : rest'
+    go (TopAtBlock _ _ blocks:rest) =
         (scope1 ++ scope2, rest1 ++ rest2)
       where
         (scope1, rest1) = go (map TopBlock blocks)
@@ -146,12 +147,12 @@ cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
   where
     goTop :: [(String, String)] -> [TopLevel] -> Css
     goTop _ [] = []
-    goTop scope (TopCharset cs:rest) = Charset cs : goTop scope rest
+    goTop scope (TopAtDecl dec cs:rest) = AtDecl dec cs : goTop scope rest
     goTop scope (TopBlock b:rest) =
         map Css (either error ($[]) $ blockRuntime (addScope scope) render' b) ++
         goTop scope rest
-    goTop scope (MediaBlock s b:rest) =
-        Media s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
+    goTop scope (TopAtBlock name s b:rest) =
+        AtBlock name s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
         goTop scope rest
     goTop scope (TopVar k v:rest) = goTop ((k, v):scope) rest
 
@@ -192,7 +193,14 @@ lookupD _ _ = Nothing
 
 data Block = Block Selector Pairs [Block]
 
-data TopLevel = TopBlock Block | MediaBlock String [Block] | TopCharset String | TopVar String String
+data TopLevel = TopBlock Block
+              | TopAtBlock
+                    { _atBlockName :: String
+                    , _atBlockSelector :: String
+                    , _atBlockInner :: [Block]
+                    }
+              | TopAtDecl String String
+              | TopVar String String
 
 type Pairs = [Pair]
 
@@ -202,8 +210,8 @@ type Selector = [Contents]
 
 compressTopLevel :: TopLevel -> TopLevel
 compressTopLevel (TopBlock b) = TopBlock $ compressBlock b
-compressTopLevel (MediaBlock s b) = MediaBlock s $ map compressBlock b
-compressTopLevel x@TopCharset{} = x
+compressTopLevel (TopAtBlock name s b) = TopAtBlock name s $ map compressBlock b
+compressTopLevel x@TopAtDecl{} = x
 compressTopLevel x@TopVar{} = x
 
 compressBlock :: Block -> Block
@@ -262,12 +270,12 @@ topLevelsToCassius a = do
         e <- [|(++) $ map Css ($(blockToCss r scope b) [])|]
         es <- go r scope rest
         return $ e : es
-    go r scope (MediaBlock s b:rest) = do
-        e <- [|(:) $ Media $(lift s) $(blocksToCassius r scope b)|]
+    go r scope (TopAtBlock name s b:rest) = do
+        e <- [|(:) $ AtBlock $(lift name) $(lift s) $(blocksToCassius r scope b)|]
         es <- go r scope rest
         return $ e : es
-    go r scope (TopCharset cs:rest) = do
-        e <- [|(:) $ Charset $(lift cs)|]
+    go r scope (TopAtDecl dec cs:rest) = do
+        e <- [|(:) $ AtDecl $(lift dec) $(lift cs)|]
         es <- go r scope rest
         return $ e : es
     go r scope (TopVar k v:rest) = go r ((k, v) : scope) rest
@@ -281,12 +289,12 @@ renderCss =
     toLazyText . mconcat . map go -- FIXME use a foldr
   where
     go (Css x) = renderCss' x
-    go (Media s x) =
-        fromText (pack "@media ") `mappend`
+    go (AtBlock name s x) =
+        fromText (pack $ concat ["@", name, " "]) `mappend`
         fromText (pack s) `mappend`
         singleton '{' `mappend`
         foldr mappend (singleton '}') (map renderCss' x)
-    go (Charset cs) = fromText (pack "@charset ") `mappend`
+    go (AtDecl dec cs) = fromText (pack $ concat ["@", dec, " "]) `mappend`
                       fromText (pack cs) `mappend`
                       singleton ';'
 
