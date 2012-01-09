@@ -308,6 +308,30 @@ foo {
   a: t\000065ft;
 }
 |]
+  , it "lucius plain escapes" $
+       celper "test{a:b}" [lucius|
+te\st {a:b;}
+|]
+  , it "lucius extended plain escapes" $
+       celper "te\\{st{a:b}" [lucius|
+te\{st {a:b;}
+|]
+  , it "lucius extended plain escapes with significant tokens" $
+       celper ".code\\ example[data-short=helloworld\\(\\)\\{\\}]{a:b}" [lucius|
+.code\ example[data-short=helloworld\(\)\{\}]{a:b}
+|]
+-- FIXME does not compile
+{-
+  , it "lucius escaped keywords" $
+       celper "@import url(\"test.css\");" [lucius|
+@iM\70
+\4frt url("test.css");
+|]
+-}
+  , it "lucius Unicode in identifiers" $
+       celper "héìdsçhtêëmellcølånslaŝhshlaßh{a:b}" [lucius|
+héìdsçhtêëmellcølånslaŝhshlaßh{a:b}
+|]
   , it "lucius case-insensitive keywords" $
        celper "@media foo{}" [lucius|
 @MeDIa foo {
@@ -327,6 +351,52 @@ a:b;
 c:d;
 }
 |]
+  , it "lucius @namespace declaration" $
+       celper "@namespace xhtml \"http://www.w3.org/1999/xhtml\";" [lucius|
+@NaMeSpace xhtml 'http://www.w3.org/1999/xhtml';
+|]
+-- FIXME does not compile
+{-
+  , it "lucius any at-rule declaration" $
+       celper "@myrule{a{a:b}}" [lucius|
+@myrule {
+  a {
+     a:b;
+  }
+}
+|]
+-}
+  , it "lucius namespace application" $
+       celper "xhtml|a[xhtml|href=\"http://google.com/\"]:before{content:\"Google link:\"}" [lucius|
+xhtml|a[xhtml|href="http://google.com/"]:before {
+  content: "Google link:";
+}
+|]
+-- FIXME does not compile
+{-
+  , it "lucius successive semicolon elimination" $
+       celper "a{b:c;d:e}" [lucius|
+a {b:c;
+;
+;;
+  d:e;
+      ;;}
+|]
+-}
+-- TODO maybe add compression for this
+{-
+  , it "lucius spacey selectors" $
+       celper "a[rel=\"next page\"]{a:b}" [lucius|
+a [ rel = "next page" ] {a:b;}
+|]
+-}
+-- TODO maybe add compression for this
+{-
+  , it "lucius separated declaration expressions" $
+       celper "a{border-radius:1px 2px/2px}" [lucius|
+a { border-radius: 1px 2px / 2px;}
+|]
+-}
   , it "lucius runtime" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "foo { bar: #{myvar}}") [(TS.pack "myvar", TS.pack "baz")]
   , it "lucius runtime variables" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "@dummy: dummy; @myvar: baz; @dummy2: dummy; foo { bar: #{myvar}}") []
   , it "variables inside value" $
