@@ -27,6 +27,7 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
 import Data.Char (isSpace, toLower, toUpper)
 import Control.Applicative ((<$>))
+import Control.Monad (when)
 import Data.Either (partitionEithers)
 import Data.Text.Lazy.Builder (fromText)
 
@@ -150,7 +151,7 @@ parseTopLevels =
             ignore = many (whiteSpace1 <|> string' "<!--" <|> string' "-->")
                         >> return ()
         ignore
-        tl <- ((charset <|> page <|> media <|> impor <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
+        tl <- ((charset <|> media <|> impor <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
             <|> (return $ map compressTopLevel $ front [])
         ignore
         return tl
@@ -165,12 +166,6 @@ parseTopLevels =
         _ <- char '{'
         b <- parseBlocks id
         return $ TopAtBlock "media" (strip name) b
-    page = do
-        try $ stringCI "@page "
-        name <- many1 $ noneOf "{"
-        _ <- char '{'
-        b <- parseBlocks id
-        return $ TopAtBlock "page" (strip name) b
     impor = do
         try $ stringCI "@import ";
         val <- many1 $ noneOf ";";
@@ -178,6 +173,8 @@ parseTopLevels =
         return $ TopAtDecl "import" val
     var = try $ do
         _ <- char '@'
+        isPage <- (try $ string "page " >> return True) <|> return False
+        when isPage $ fail "page is not a variable"
         k <- many1 $ noneOf ":"
         _ <- char ':'
         v <- many1 $ noneOf ";"
