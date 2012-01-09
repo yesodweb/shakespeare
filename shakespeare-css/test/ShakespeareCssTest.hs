@@ -320,6 +320,13 @@ a:b;
 c:d;
 }
 |]
+  , it "lucius @font-face statements" $
+       celper "@font-face{a:b;c:d}" [lucius|
+@font-face {
+a:b;
+c:d;
+}
+|]
   , it "lucius runtime" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "foo { bar: #{myvar}}") [(TS.pack "myvar", TS.pack "baz")]
   , it "lucius runtime variables" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "@dummy: dummy; @myvar: baz; @dummy2: dummy; foo { bar: #{myvar}}") []
   , it "variables inside value" $

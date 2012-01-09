@@ -194,7 +194,9 @@ parseTopLevels =
         return $ TopAtDecl "import" val
     var = try $ do
         _ <- char '@'
-        isPage <- (try $ string "page " >> return True) <|> return False
+        isPage <- (try $ string "page " >> return True) <|>
+                  (try $ string "font-face " >> return True) <|>
+                    return False
         when isPage $ fail "page is not a variable"
         k <- many1 $ noneOf ":"
         _ <- char ':'
