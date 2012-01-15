@@ -3,6 +3,19 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
+-- | A Shakespearean module for Coffeesript, introducing type-safe, compile-time
+-- variable interpolation. It is very similar to "Text.Julius", save that
+-- the template code is first compiled to Javascript with the system tool @coffee@.
+--
+-- To use this module, @coffee@ must be installed on your system.
+--
+-- @#{...}@ is the Shakespearean standard for variable interpolation, but
+-- Coffeescript already uses that sequence for string interpolation. Therefore,
+-- Shakespearean interpolation is introduced with @%{...}@.
+--
+-- 1. Shakespearean templates: <http://www.yesodweb.com/book/templates>
+--
+-- 2. Coffeescript:<http://coffeescript.org/>
 module Text.Coffee
     ( ToCoffee (..)
     , CoffeeUrl
