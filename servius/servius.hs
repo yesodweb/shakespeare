@@ -7,12 +7,12 @@ import Network.Wai.Application.Static
     , fileName, toFilePath
     )
 import Network.Wai.Handler.Warp (run)
-import System.Console.CmdArgs
+import System.Console.CmdArgs hiding (def)
 import Text.Printf (printf)
 import System.Directory (canonicalizePath)
 import Control.Monad (unless)
 import Network.Wai.Middleware.Autohead
-import Network.Wai.Middleware.Debug
+import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Gzip
 import qualified Data.Map as Map
 import qualified Data.ByteString.Char8 as S8
@@ -53,8 +53,8 @@ main = do
     let mimeMap = Map.fromList mime' `Map.union` defaultMimeTypes
     docroot' <- canonicalizePath docroot
     unless quiet $ printf "Serving directory %s on port %d with %s index files.\n" docroot' port (if noindex then "no" else show index)
-    let middle = gzip False
-               . (if verbose then debug else id)
+    let middle = gzip def
+               . (if verbose then logStdoutDev else id)
                . autohead
                . shake docroot
     run port $ middle $ staticApp defaultFileServerSettings
