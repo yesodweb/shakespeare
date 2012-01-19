@@ -1,5 +1,5 @@
 name:            hamlet
-version:         0.10.7
+version:         0.10.7.1
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -46,7 +46,7 @@ library
                    , template-haskell
                    , blaze-html       >= 0.4     && < 0.5
                    , parsec           >= 2       && < 4
-                   , failure          >= 0.1     && < 0.2
+                   , failure          >= 0.1     && < 0.3
                    , text             >= 0.7     && < 0.12
                    , containers       >= 0.2     && < 0.5
                    , blaze-builder    >= 0.2     && < 0.4
