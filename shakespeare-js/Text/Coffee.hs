@@ -26,6 +26,7 @@ module Text.Coffee
       -- type @'CoffeeUrl' url@. See the Yesod book for details.
       coffee
     , coffeeFile
+    , coffeeFileReload
     , coffeeFileDebug
       -- ** Rendering Functions
     , renderCoffee
@@ -106,7 +107,12 @@ coffeeFile fp = do
 -- | Read in a CoffeeScript template file. This impure function uses
 -- unsafePerformIO to re-read the file on every call, allowing for rapid
 -- iteration.
-coffeeFileDebug :: FilePath -> Q Exp
-coffeeFileDebug fp = do
+coffeeFileReload :: FilePath -> Q Exp
+coffeeFileReload fp = do
     rs <- settings
     shakespeareFileDebug rs fp
+
+-- | Deprecated synonym for 'coffeeFileReload'
+coffeeFileDebug :: FilePath -> Q Exp
+coffeeFileDebug = coffeeFileReload
+{-# DEPRECATED coffeeFileDebug "Please use coffeeFileReload instead." #-}
