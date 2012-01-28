@@ -30,6 +30,7 @@ module Text.Coffee
     , coffeeFileDebug
       -- ** Rendering Functions
     , renderCoffee
+    , renderCoffeeUrl
       -- * Datatypes
     , Coffeescript
     , CoffeeUrl
@@ -46,22 +47,21 @@ import System.Process (readProcess)
 import Data.Monoid
 import Text.Shakespeare
 
--- | While variable interpolation happens upon reading a template, route
--- interpolation happens in this step. If using this module standalone, apart
+-- | render with route interpolation. If using this module standalone, apart
 -- from type-safe routes, a dummy renderer can be used:
 -- 
--- > renderCoffee (\_ _ -> undefined) coffeeUrl
+-- > renderCoffeeUrl (\_ _ -> undefined) coffeeUrl
 --
 -- When using Yesod, a renderer is generated for you, which can be accessed
 -- within the GHandler monad: 'Yesod.Handler.getUrlRenderParams'.
-renderCoffee
+renderCoffeeUrl
     :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -- ^ Url renderer
     -> CoffeeUrl url -- ^ Value returned from template reader function
-    -> IO TL.Text  -- ^ @CoffeeScript@ with variables and routes fully resolved
-renderCoffee r s = do
-  out <- readProcess "coffee" ["-epb", TL.unpack $ toLazyText $ unCoffee $ s r] []
-  return $ TL.pack out
-  where unCoffee (Coffeescript c) = c
+    -> TL.Text  -- ^ @CoffeeScript@ with variables and routes fully resolved
+renderCoffeeUrl r s = renderCoffee $ s r
+
+renderCoffee :: Coffeescript -> TL.Text
+renderCoffee (Coffeescript c) = toLazyText c
 
 -- | Newtype wrapper of 'Builder'.
 newtype Coffeescript = Coffeescript { unCoffeescript :: Builder }
@@ -79,6 +79,10 @@ instance ToCoffee [Char]  where toCoffee = fromLazyText . TL.pack
 instance ToCoffee TS.Text where toCoffee = fromText
 instance ToCoffee TL.Text where toCoffee = fromLazyText
 
+-- | backticks means the Coffeescript compiler will pass-through to javascript.
+ignore :: String -> String
+ignore s = '`':s ++ "`"
+
 settings :: Q ShakespeareSettings
 settings = do
   toExp <- [|toCoffee|]
@@ -88,6 +92,12 @@ settings = do
   , toBuilder = toExp
   , wrap = wrapExp
   , unwrap = unWrapExp
+  , preConversion = Just PreConvert {
+      preConvert = \s -> readProcess "coffee" ["-epb", s] []
+    , preVar = ignore
+    , preUrl = ignore
+    , preIn  = ignore
+    }
   }
 
 -- | Read inline, quasiquoted CoffeeScript.

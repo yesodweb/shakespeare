@@ -39,7 +39,14 @@ library
                      Text.Coffee
     ghc-options:     -Wall
 
+flag test_coffee
+    description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
 test-suite test
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
     hs-source-dirs: test
     main-is: ../test.hs
     type: exitcode-stdio-1.0

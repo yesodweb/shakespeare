@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
 module ShakespeareJsTest (specs) where
 
 import Test.HUnit hiding (Test)
@@ -7,7 +8,12 @@ import Test.Hspec
 import Test.Hspec.HUnit ()
 
 import Prelude hiding (reverse)
+#ifdef TEST_COFFEE
+import Text.Coffee
+#else
 import Text.Julius
+#endif
+import Quoter (quote, quoteFile, quoteFileReload)
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
@@ -18,43 +24,41 @@ import Data.Monoid (mappend)
 specs :: [Spec]
 specs = describe "shakespeare-js"
   [ it "julius" $ do
-    let var = "var"
+    let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [julius|שלום
-#{var}
-@{Home}
+    flip jelper [quote|שלום
+@{Home} #{var}
 @?{urlp}
 ^{jmixin}
-|] $ intercalate "\r\n"
+|] $ intercalate "\n"
         [ "שלום"
-        , var
-        , "url"
+        , "url " ++ var
         , "url?p=q"
-        , "var x;"
-        ] ++ "\r\n"
+        , "x=2;"
+        ] ++ "\n"
 
 
   , it "juliusFile" $ do
-    let var = "var"
+    let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFile "test/juliuses/external1.julius") $ unlines
+    flip jelper $(quoteFile "test/juliuses/external1.julius") $ unlines
         [ "שלום"
         , var
         , "url"
         , "url?p=q"
-        , "var x;"
+        , "x=2;"
         ]
 
 
   , it "juliusFileDebug" $ do
-    let var = "var"
+    let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFileDebug "test/juliuses/external1.julius") $ unlines
+    flip jelper $(quoteFileReload "test/juliuses/external1.julius") $ unlines
         [ "שלום"
         , var
         , "url"
         , "url?p=q"
-        , "var x;"
+        , "x=2;"
         ]
 
 {- TODO
@@ -74,18 +78,18 @@ specs = describe "shakespeare-js"
         double = 3.14 :: Double
         int = -5 :: Int in
       jelper "oof oof 3.14 -5"
-        [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
+        [quote|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
 
   , it "single dollar at and caret" $ do
-    jelper "$@^" [julius|$@^|]
-    jelper "#{@{^{" [julius|#\{@\{^\{|]
+    jelper "$@^" [quote|$@^|]
+    jelper "#{@{^{" [quote|#\{@\{^\{|]
 
 
   , it "dollar operator" $ do
     let val = (1 :: Int, (2 :: Int, 3 :: Int))
-    jelper "2" [julius|#{ show $ fst $ snd val }|]
-    jelper "2" [julius|#{ show $ fst $ snd $ val}|]
+    jelper "2" [quote|#{ show $ fst $ snd val }|]
+    jelper "2" [quote|#{ show $ fst $ snd $ val}|]
   ]
 
 
@@ -130,11 +134,22 @@ encodeUrlChar y =
 
 
 
+#ifdef TEST_COFFEE
+jmixin :: CoffeeUrl u
+#else
 jmixin :: JavascriptUrl u
-jmixin = [julius|var x;|]
+#endif
+jmixin = [quote|x=2;|]
 
+#ifdef TEST_COFFEE
+jelper :: String -> CoffeeUrl Url -> Assertion
+jelper res h = do
+  T.pack res @=? renderCoffeeUrl render h
+#else
 jelper :: String -> JavascriptUrl Url -> Assertion
-jelper res h = T.pack res @=? renderJavascriptUrl render h
+jelper res h = do
+  T.pack res @=? renderJavascriptUrl render h
+#endif
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
