@@ -263,8 +263,7 @@ parseLine set = do
             )
     angle = do
         _ <- char '<'
-        name' <- many  $ noneOf " \t.#\r\n!>"
-        let name = if null name' then "div" else name'
+        name <- Html5.tagName <|> pure "div"
         xs <- many $ try ((many $ oneOf " \t") >>
               (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrib Nothing))
         _ <- many $ oneOf " \t"

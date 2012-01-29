@@ -1,11 +1,22 @@
 -- |
 -- Elementary parsers for HTML5, that thoroughly follow the specification
 -- (http://dev.w3.org/html5/spec/syntax.html).
-module Text.Hamlet.ParseHtml5 (attributeName) where
+module Text.Hamlet.ParseHtml5 (attributeName, tagName) where
 
 import qualified Data.Char as Char
 import Text.Parsec
 import Text.Parsec.String (Parser)
+
+-- |
+-- see http://dev.w3.org/html5/spec/syntax.html#syntax-tag-name
+tagName :: Parser String
+tagName = many1 $ satisfy isValid
+  where
+    -- NOTE: This is different from `Char.isAlphaNum`!
+    isValid c =
+         ('a' <= c && c <= 'z')
+      || ('A' <= c && c <= 'Z')
+      || ('0' <= c && c <= '9')
 
 -- |
 -- see http://dev.w3.org/html5/spec/syntax.html#attributes-0
