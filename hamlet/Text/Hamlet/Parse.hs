@@ -269,7 +269,6 @@ parseLine set = do
         _ <- many $ oneOf " \t"
         c <- (eol >> return []) <|> (char '>' >> content InContent)
         let (tn, attr, classes) = tag' $ TagName name : xs
-        when ('/' `elem` tn) $ error "A tag name may not contain a slash"
         return $ LineTag tn attr c classes
 
 data TagPiece = TagName String
