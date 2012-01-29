@@ -23,6 +23,7 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (mapMaybe)
+import qualified Text.Hamlet.ParseHtml5 as Html5
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -236,7 +237,7 @@ parseLine set = do
         tagClass (Just d) <|> tagAttrib (Just d)
     tagClass x = char '.' >> (TagClass . (,) x) <$> tagAttribValue NotInQuotes
     tagAttrib cond = do
-        s <- many1 $ noneOf " \t=\r\n>"
+        s <- Html5.attributeName
         v <- (char '=' >> tagAttribValue NotInQuotesAttr) <|> return []
         return $ TagAttrib (cond, s, v)
     tag' = foldr tag'' ("div", [], [])
