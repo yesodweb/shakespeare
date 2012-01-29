@@ -54,6 +54,7 @@ library
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
     other-modules:   Text.Hamlet.Parse
+                   , Text.Hamlet.ParseHtml5
     ghc-options:     -Wall
 
 test-suite test

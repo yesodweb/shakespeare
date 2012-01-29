@@ -23,6 +23,7 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (mapMaybe)
+import qualified Text.Hamlet.ParseHtml5 as Html5
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -236,7 +237,7 @@ parseLine set = do
         tagClass (Just d) <|> tagAttrib (Just d)
     tagClass x = char '.' >> (TagClass . (,) x) <$> tagAttribValue NotInQuotes
     tagAttrib cond = do
-        s <- many1 $ noneOf " \t=\r\n>"
+        s <- Html5.attributeName
         v <- (char '=' >> tagAttribValue NotInQuotesAttr) <|> return []
         return $ TagAttrib (cond, s, v)
     tag' = foldr tag'' ("div", [], [])
@@ -262,14 +263,12 @@ parseLine set = do
             )
     angle = do
         _ <- char '<'
-        name' <- many  $ noneOf " \t.#\r\n!>"
-        let name = if null name' then "div" else name'
+        name <- Html5.tagName <|> pure "div"
         xs <- many $ try ((many $ oneOf " \t") >>
               (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrib Nothing))
         _ <- many $ oneOf " \t"
         c <- (eol >> return []) <|> (char '>' >> content InContent)
         let (tn, attr, classes) = tag' $ TagName name : xs
-        when ('/' `elem` tn) $ error "A tag name may not contain a slash"
         return $ LineTag tn attr c classes
 
 data TagPiece = TagName String
