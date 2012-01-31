@@ -41,10 +41,10 @@ library
     if flag(test_coffee)
         cpp-options: -DTEST_COFFEE
 
-    if flag(test)
-        cpp-options: -DTEST
+    if flag(test_export)
+        cpp-options: -DTEST_EXPORT
 
-flag test
+flag test_export
     default: False
 
 flag test_coffee

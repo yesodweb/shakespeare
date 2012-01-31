@@ -37,7 +37,7 @@ module Text.Coffee
       -- * Typeclass for interpolated variables
     , ToCoffee (..)
 
-#ifdef TEST
+#ifdef TEST_EXPORT
     , settings
 #endif
     ) where

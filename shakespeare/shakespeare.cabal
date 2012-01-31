@@ -34,10 +34,10 @@ library
                      Text.Shakespeare.Base
     ghc-options:     -Wall
 
-    if flag(test)
-      cpp-options: -DTEST
+    if flag(test_export)
+      cpp-options: -DTEST_EXPORT
 
-Flag test
+Flag test_export
   default: False
 
 test-suite test

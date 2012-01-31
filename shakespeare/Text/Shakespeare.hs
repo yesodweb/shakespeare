@@ -18,7 +18,7 @@ module Text.Shakespeare
     , shakespeareFromString
     , RenderUrl
 
-#ifdef TEST
+#ifdef TEST_EXPORT
     , preFilter
 #endif
     ) where
