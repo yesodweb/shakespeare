@@ -1,5 +1,5 @@
 name:            shakespeare-js
-version:         0.10.4
+version:         0.11.0
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -29,28 +29,45 @@ homepage:        http://www.yesodweb.com/book/templates
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 0.10    && < 0.11
+                   , shakespeare      >= 0.10.3  && < 0.11
                    , template-haskell
                    , text             >= 0.7     && < 0.12
-                   , process          >= 1.0     && < 1.2
 
     exposed-modules:
                      Text.Julius
                      Text.Coffee
     ghc-options:     -Wall
 
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
+
+    if flag(test)
+        cpp-options: -DTEST
+
+flag test
+    default: False
+
+flag test_coffee
+    description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
 test-suite test
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
+
     hs-source-dirs: test
     main-is: ../test.hs
     type: exitcode-stdio-1.0
 
     ghc-options:   -Wall
-    build-depends: shakespeare-js   >= 0.10    && < 0.11
-                 , shakespeare      >= 0.10    && < 0.11
+    build-depends: shakespeare-js   >= 0.11    && < 0.12
+                 , shakespeare      >= 0.10.3  && < 0.11
                  , base             >= 4       && < 5
                  , HUnit
                  , hspec            >= 0.8     && < 0.10
                  , text             >= 0.7     && < 0.12
+                 , template-haskell
 
 
 source-repository head
