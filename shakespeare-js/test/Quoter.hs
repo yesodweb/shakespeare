@@ -1,5 +1,12 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Quoter (quote, quoteFile, quoteFileReload) where
+
+import Language.Haskell.TH.Quote (QuasiQuoter)
+import Language.Haskell.TH.Syntax
+import Text.Coffee (settings)
+import Language.Haskell.TH.Quote (QuasiQuoter (..))
+import Text.Shakespeare (shakespeare)
 
 #ifdef TEST_COFFEE
 import Text.Coffee
@@ -7,10 +14,21 @@ import Text.Coffee
 import Text.Julius
 #endif
 
+quote :: QuasiQuoter
+quoteFile :: FilePath -> Q Exp
+quoteFileReload :: FilePath -> Q Exp
 #ifdef TEST_COFFEE
-quote = coffee
+translate ('#':'{':rest) = translate $ '%':'{':translate rest
+translate (c:other) = c:translate other
+translate [] = []
+
+quote = QuasiQuoter { quoteExp = \s -> do
+    rs <- settings
+    quoteExp (shakespeare rs) (translate s)
+    }
+
 quoteFile = coffeeFile
-quoteFileReload = coffeeFileDebug
+quoteFileReload = coffeeFileReload
 #else
 quote = julius
 quoteFile = juliusFile

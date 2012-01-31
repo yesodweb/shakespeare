@@ -187,19 +187,12 @@ flattenDeref _ = Nothing
 parseHash :: Parser (Either String Deref)
 parseHash = parseVar '#'
 
-parseVarString :: Char -> Parser String
-parseVarString c = do
-    _ <- char c
-    bracketed <- curlyBrackets
-    return $ c:bracketed
-
 curlyBrackets :: Parser String
 curlyBrackets = do
   _<- char '{'
   var <- many1 $ noneOf "}"
   _<- char '}'
   return $ ('{':var) ++ "}"
-
 
 parseVar :: Char -> Parser (Either String Deref)
 parseVar c = do
@@ -225,13 +218,27 @@ parseUrl c d = do
             return $ Right (deref, x))
                 <|> return (Left $ if x then [c, d] else [c]))
 
-parseUrlString :: Char -> Char -> Parser String
+parseInterpolatedString :: Char -> Parser (Either String String)
+parseInterpolatedString c = do
+    _ <- char c
+    (char '\\' >> return (Left ['\\', c])) <|> (do
+        bracketed <- curlyBrackets
+        return $ Right (c:bracketed)) <|> return (Left [c])
+
+parseVarString :: Char -> Parser (Either String String)
+parseVarString = parseInterpolatedString
+
+parseUrlString :: Char -> Char -> Parser (Either String String)
 parseUrlString c d = do
     _ <- char c
-    (char '\\' >> return [c, '\\']) <|> (do
-        x <- (char d  >> return [d]) <|> return []
-        bracketed <- curlyBrackets
-        return $ c:x ++ bracketed)
+    (char '\\' >> return (Left [c, '\\'])) <|> (do
+        ds <- (char d >> return [d]) <|> return []
+        (do bracketed <- curlyBrackets
+            return $ Right (c:ds ++ bracketed))
+                <|> return (Left (c:ds)))
+
+parseIntString :: Char -> Parser (Either String String)
+parseIntString = parseInterpolatedString
 
 parseCaret :: Parser (Either String Deref)
 parseCaret = parseInt '^'
@@ -242,13 +249,6 @@ parseInt c = do
     (char '\\' >> return (Left [c])) <|> (do
         deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left [c])
-
-parseIntString :: Char -> Parser String
-parseIntString c = do
-    _ <- char c
-    (char '\\' >> return [c, '\\']) <|> (do
-        bracketed <- curlyBrackets
-        return $ c:bracketed)
 
 parseUnder :: Parser (Either String Deref)
 parseUnder = do

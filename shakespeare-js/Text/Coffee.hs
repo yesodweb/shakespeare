@@ -36,6 +36,10 @@ module Text.Coffee
     , CoffeeUrl
       -- * Typeclass for interpolated variables
     , ToCoffee (..)
+
+#ifdef TEST
+    , settings
+#endif
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -43,7 +47,6 @@ import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import System.Process (readProcess)
 import Data.Monoid
 import Text.Shakespeare
 
@@ -79,10 +82,6 @@ instance ToCoffee [Char]  where toCoffee = fromLazyText . TL.pack
 instance ToCoffee TS.Text where toCoffee = fromText
 instance ToCoffee TL.Text where toCoffee = fromLazyText
 
--- | backticks means the Coffeescript compiler will pass-through to javascript.
-ignore :: String -> String
-ignore s = '`':s ++ "`"
-
 settings :: Q ShakespeareSettings
 settings = do
   toExp <- [|toCoffee|]
@@ -93,10 +92,12 @@ settings = do
   , wrap = wrapExp
   , unwrap = unWrapExp
   , preConversion = Just PreConvert {
-      preConvert = \s -> readProcess "coffee" ["-epb", s] []
-    , preVar = ignore
-    , preUrl = ignore
-    , preIn  = ignore
+      preConvert = ReadProcess "coffee" ["-epb"]
+    , preEscapeBegin = "`"
+    -- ^ backticks means the Coffeescript compiler will pass-through to javascript.
+    , preEscapeEnd = "`"
+    , preEscapeIgnore = "'\""
+    -- ^ backticks are ignored inside a quote
     }
   }
 

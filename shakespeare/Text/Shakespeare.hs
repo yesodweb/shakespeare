@@ -9,6 +9,7 @@
 module Text.Shakespeare
     ( ShakespeareSettings (..)
     , PreConvert (..)
+    , PreConversion (..)
     , defaultShakespeareSettings
     , shakespeare
     , shakespeareFile
@@ -16,6 +17,10 @@ module Text.Shakespeare
     -- * low-level
     , shakespeareFromString
     , RenderUrl
+
+#ifdef TEST
+    , preFilter
+#endif
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -28,6 +33,9 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
+
+-- for pre conversion
+import System.Process (readProcess)
 
 -- move to Shakespeare?
 readFileQ :: FilePath -> Q String
@@ -50,13 +58,17 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 -- we only need to perform the compilation once.
 -- During the pre-conversion we first modify all Haskell insertions
 -- so that they will be ignored by the Coffeescript compiler (backticks).
--- So %{var} is change to `%{var}` using the preVar function.
+-- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
+
+data PreConversion = ReadProcess String [String]
+                   | Id
+  
 
 data PreConvert = PreConvert
-    { preConvert :: String -> IO String
-    , preVar     :: String -> String
-    , preUrl     :: String -> String
-    , preIn      :: String -> String
+    { preConvert :: PreConversion
+    , preEscapeBegin :: String
+    , preEscapeEnd   :: String
+    , preEscapeIgnore :: [Char]
     }
 
 data ShakespeareSettings = ShakespeareSettings
@@ -80,10 +92,13 @@ defaultShakespeareSettings = ShakespeareSettings {
 }
 
 instance Lift PreConvert where
-    lift (PreConvert convert hash at caret) =
-        [|PreConvert $(liftFun convert) $(liftFun hash) $(liftFun at) $(liftFun caret)|]
-      where
-        liftFun _ = error "lifting of PreConvert not done yet"
+    lift (PreConvert convert begin end ignore) =
+        [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore)|]
+
+instance Lift PreConversion where
+    lift (ReadProcess command args) =
+        [|ReadProcess $(lift command) $(lift args)|]
+    lift Id = [|Id|]
 
 instance Lift ShakespeareSettings where
     lift (ShakespeareSettings x1 x2 x3 x4 x5 x6 x7 x8) =
@@ -144,20 +159,39 @@ parseContents = many1 . parseContent
         parseInt' = either ContentRaw ContentMix `fmap` parseInt intChar
         parseChar' = ContentRaw `fmap` many1 (noneOf [varChar, urlChar, intChar])
 
+
 preFilter :: ShakespeareSettings -> String -> IO String
 preFilter ShakespeareSettings {..} s = 
     case preConversion of
       Nothing -> return s
-      Just (PreConvert convert hash at caret) ->
-        convert $ eShowErrors $ parse (parseConvert hash at caret) s s
+      Just pre@(PreConvert convert _ _ _) ->
+        let parsed = mconcat $ eShowErrors $ parse (parseConvert pre) s s
+        in  case convert of
+              Id -> return parsed
+              ReadProcess command args ->
+                readProcess command (args ++ [parsed]) []
   where
-    parseConvert hash url int =
-      parseVar' hash <|> parseUrl' url <|> parseInt' int <|> parseChar'
+    parseConvert PreConvert {..} = many1 $ choice $
+        (map (try . escapedParse) preEscapeIgnore) ++
+        [mainParser preEscapeIgnore]
 
-    parseVar' hash = hash `fmap` parseVarString varChar
-    parseUrl' url  = url  `fmap` parseUrlString urlChar '?'
-    parseInt' int  = int  `fmap` parseIntString intChar
-    parseChar' = many1 (noneOf [varChar, urlChar, intChar])
+      where
+        escapedParse ignoreC = do
+            _<- char ignoreC
+            inside <- many $ noneOf [ignoreC]
+            _<- char ignoreC
+            return $ ignoreC:inside ++ [ignoreC]
+            -- return $ ignoreC:(eShowErrors $ parse (mainParser escapeNone) "" inside) ++ [ignoreC]
+
+        mainParser i = parseVar' <|> parseUrl' <|> parseInt' <|> parseChar' i
+        escape str = preEscapeBegin ++ str ++ preEscapeEnd
+        escapeRight = either id escape
+
+        parseVar' = escapeRight `fmap` parseVarString varChar
+        parseUrl' = escapeRight `fmap` parseUrlString urlChar '?'
+        parseInt' = escapeRight `fmap` parseIntString intChar
+        parseChar' i = many1 (noneOf ([varChar, urlChar, intChar] ++ i))
+
 
 contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do
