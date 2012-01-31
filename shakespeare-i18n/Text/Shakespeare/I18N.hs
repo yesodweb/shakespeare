@@ -8,6 +8,7 @@ module Text.Shakespeare.I18N
     , RenderMessage (..)
     , ToMessage (..)
     , SomeMessage (..)
+    , Lang
     ) where
 
 import Language.Haskell.TH.Syntax
@@ -35,7 +36,7 @@ instance ToMessage String where
 
 class RenderMessage master message where
     renderMessage :: master
-                  -> [Text] -- ^ languages
+                  -> [Lang] -- ^ languages
                   -> message
                   -> Text
 
