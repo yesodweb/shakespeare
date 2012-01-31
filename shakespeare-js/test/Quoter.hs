@@ -4,7 +4,7 @@ module Quoter (quote, quoteFile, quoteFileReload) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter)
 import Language.Haskell.TH.Syntax
-import Text.Coffee (settings)
+import Text.Coffee (coffeeSettings)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Text.Shakespeare (shakespeare)
 
@@ -23,7 +23,7 @@ translate (c:other) = c:translate other
 translate [] = []
 
 quote = QuasiQuoter { quoteExp = \s -> do
-    rs <- settings
+    rs <- coffeeSettings
     quoteExp (shakespeare rs) (translate s)
     }
 

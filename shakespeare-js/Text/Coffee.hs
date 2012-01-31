@@ -38,7 +38,7 @@ module Text.Coffee
     , ToCoffee (..)
 
 #ifdef TEST_EXPORT
-    , settings
+    , coffeeSettings
 #endif
     ) where
 
@@ -82,8 +82,8 @@ instance ToCoffee [Char]  where toCoffee = fromLazyText . TL.pack
 instance ToCoffee TS.Text where toCoffee = fromText
 instance ToCoffee TL.Text where toCoffee = fromLazyText
 
-settings :: Q ShakespeareSettings
-settings = do
+coffeeSettings :: Q ShakespeareSettings
+coffeeSettings = do
   toExp <- [|toCoffee|]
   wrapExp <- [|Coffeescript|]
   unWrapExp <- [|unCoffeescript|]
@@ -104,7 +104,7 @@ settings = do
 -- | Read inline, quasiquoted CoffeeScript.
 coffee :: QuasiQuoter
 coffee = QuasiQuoter { quoteExp = \s -> do
-    rs <- settings
+    rs <- coffeeSettings
     quoteExp (shakespeare rs) s
     }
 
@@ -112,7 +112,7 @@ coffee = QuasiQuoter { quoteExp = \s -> do
 -- compile time.
 coffeeFile :: FilePath -> Q Exp
 coffeeFile fp = do
-    rs <- settings
+    rs <- coffeeSettings
     shakespeareFile rs fp
 
 -- | Read in a CoffeeScript template file. This impure function uses
@@ -120,7 +120,7 @@ coffeeFile fp = do
 -- iteration.
 coffeeFileReload :: FilePath -> Q Exp
 coffeeFileReload fp = do
-    rs <- settings
+    rs <- coffeeSettings
     shakespeareFileDebug rs fp
 
 -- | Deprecated synonym for 'coffeeFileReload'
