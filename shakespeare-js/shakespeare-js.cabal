@@ -53,9 +53,6 @@ flag test_coffee
     default: False
 
 test-suite test
-    if flag(test_coffee)
-        cpp-options: -DTEST_COFFEE
-
     hs-source-dirs: test
     main-is: ../test.hs
     type: exitcode-stdio-1.0
@@ -68,6 +65,10 @@ test-suite test
                  , hspec            >= 0.8     && < 0.10
                  , text             >= 0.7     && < 0.12
                  , template-haskell
+
+-- cabal bug
+--    if flag(test_coffee)
+--        cpp-options: -DTEST_COFFEE
 
 
 source-repository head
