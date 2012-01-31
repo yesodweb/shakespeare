@@ -30,11 +30,16 @@ module Text.Coffee
     , coffeeFileDebug
       -- ** Rendering Functions
     , renderCoffee
+    , renderCoffeeUrl
       -- * Datatypes
     , Coffeescript
     , CoffeeUrl
       -- * Typeclass for interpolated variables
     , ToCoffee (..)
+
+#ifdef TEST
+    , settings
+#endif
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -42,26 +47,24 @@ import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
-import System.Process (readProcess)
 import Data.Monoid
 import Text.Shakespeare
 
--- | While variable interpolation happens upon reading a template, route
--- interpolation happens in this step. If using this module standalone, apart
+-- | render with route interpolation. If using this module standalone, apart
 -- from type-safe routes, a dummy renderer can be used:
 -- 
--- > renderCoffee (\_ _ -> undefined) coffeeUrl
+-- > renderCoffeeUrl (\_ _ -> undefined) coffeeUrl
 --
 -- When using Yesod, a renderer is generated for you, which can be accessed
 -- within the GHandler monad: 'Yesod.Handler.getUrlRenderParams'.
-renderCoffee
+renderCoffeeUrl
     :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -- ^ Url renderer
     -> CoffeeUrl url -- ^ Value returned from template reader function
-    -> IO TL.Text  -- ^ @CoffeeScript@ with variables and routes fully resolved
-renderCoffee r s = do
-  out <- readProcess "coffee" ["-epb", TL.unpack $ toLazyText $ unCoffee $ s r] []
-  return $ TL.pack out
-  where unCoffee (Coffeescript c) = c
+    -> TL.Text  -- ^ @CoffeeScript@ with variables and routes fully resolved
+renderCoffeeUrl r s = renderCoffee $ s r
+
+renderCoffee :: Coffeescript -> TL.Text
+renderCoffee (Coffeescript c) = toLazyText c
 
 -- | Newtype wrapper of 'Builder'.
 newtype Coffeescript = Coffeescript { unCoffeescript :: Builder }
@@ -88,6 +91,14 @@ settings = do
   , toBuilder = toExp
   , wrap = wrapExp
   , unwrap = unWrapExp
+  , preConversion = Just PreConvert {
+      preConvert = ReadProcess "coffee" ["-epb"]
+    , preEscapeBegin = "`"
+    -- ^ backticks means the Coffeescript compiler will pass-through to javascript.
+    , preEscapeEnd = "`"
+    , preEscapeIgnore = "'\""
+    -- ^ backticks are ignored inside a quote
+    }
   }
 
 -- | Read inline, quasiquoted CoffeeScript.

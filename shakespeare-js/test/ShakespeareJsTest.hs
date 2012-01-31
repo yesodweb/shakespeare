@@ -1,13 +1,19 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
 module ShakespeareJsTest (specs) where
 
 import Test.HUnit hiding (Test)
-import Test.Hspec
+import Test.Hspec.Monadic
 import Test.Hspec.HUnit ()
 
 import Prelude hiding (reverse)
+#ifdef TEST_COFFEE
+import Text.Coffee
+#else
 import Text.Julius
+#endif
+import Quoter (quote, quoteFile, quoteFileReload)
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
@@ -15,78 +21,85 @@ import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 
-specs :: [Spec]
-specs = describe "shakespeare-js"
-  [ it "julius" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [julius|שלום
-#{var}
-@{Home}
-@?{urlp}
-^{jmixin}
-|] $ intercalate "\r\n"
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ] ++ "\r\n"
+join :: [String] -> String
+#ifdef TEST_COFFEE
+join l = (intercalate ";\n" l)
+#else
+join = intercalate "\n"
+#endif
 
-
-  , it "juliusFile" $ do
-    let var = "var"
+specs :: Specs
+specs = describe "shakespeare-js" $ do
+  it "julius" $ do
+    let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFile "test/juliuses/external1.julius") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
+    flip jelper [quote|['שלום', @{Home}, #{var}, '@?{urlp}', ^{jmixin} ]|]
+      $ intercalate " "
+        [ "['שלום',"
+        , "url, " ++ var ++ ","
+        , "'url?p=q',"
+        , "f(2) ]"
         ]
 
 
-  , it "juliusFileDebug" $ do
-    let var = "var"
+  it "juliusFile" $ do
+    let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(juliusFileDebug "test/juliuses/external1.julius") $ unlines
+    flip jelper $(quoteFile "test/juliuses/external1.julius") $ join
         [ "שלום"
         , var
         , "url"
         , "url?p=q"
-        , "var x;"
-        ]
+        , "f(2)"
+        ] ++ "\n"
+
+
+  it "juliusFileReload" $ do
+    let var = "x=2"
+    let urlp = (Home, [(pack "p", pack "q")])
+    flip jelper $(quoteFileReload "test/juliuses/external1.julius") $ join
+        [ "שלום"
+        , var
+        , "url"
+        , "url?p=q"
+        , "f(2)"
+        ] ++ "\n"
 
 {- TODO
-  , it "juliusFileDebugChange" $ do
-      let var = "somevar"
-          test result = jelper result $(juliusFileDebug "test/juliuses/external2.julius")
-      writeFile "test/juliuses/external2.julius" "var #{var} = 1;"
-      test "var somevar = 1;"
-      writeFile "test/juliuses/external2.julius" "var #{var} = 2;"
-      test "var somevar = 2;"
-      writeFile "test/juliuses/external2.julius" "var #{var} = 1;"
-      -}
+  it "juliusFileDebugChange" $ do
+    let var = "somevar"
+        test result = jelper result $(juliusFileDebug "test/juliuses/external2.julius")
+    writeFile "test/juliuses/external2.julius" "var #{var} = 1;"
+    test "var somevar = 1;"
+    writeFile "test/juliuses/external2.julius" "var #{var} = 2;"
+    test "var somevar = 2;"
+    writeFile "test/juliuses/external2.julius" "var #{var} = 1;"
+    -}
 
 
-  , it "julius module names" $
+  it "julius module names" $
     let foo = "foo"
         double = 3.14 :: Double
-        int = -5 :: Int in
-      jelper "oof oof 3.14 -5"
-        [julius|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
+        int = -5 :: Int
+    in jelper "[oof, oof, 3.14, -5]"
+#ifdef TEST_COFFEE
+         [quote|[%{Data.List.reverse foo}, %{L.reverse foo}, %{show double}, %{show int}]|]
+#else
+         [quote|[#{Data.List.reverse foo}, #{L.reverse foo}, #{show double}, #{show int}]|]
+#endif
 
 
-  , it "single dollar at and caret" $ do
-    jelper "$@^" [julius|$@^|]
-    jelper "#{@{^{" [julius|#\{@\{^\{|]
+-- not valid coffeescript
+#ifndef TEST_COFFEE
+  it "single dollar at and caret" $ do
+    jelper "$@^" [quote|$@^|]
+    jelper "#{@{^{" [quote|#\{@\{^\{|]
+#endif
 
-
-  , it "dollar operator" $ do
+  it "dollar operator" $ do
     let val = (1 :: Int, (2 :: Int, 3 :: Int))
-    jelper "2" [julius|#{ show $ fst $ snd val }|]
-    jelper "2" [julius|#{ show $ fst $ snd $ val}|]
-  ]
+    jelper "2" [quote|#{ show $ fst $ snd val }|]
+    jelper "2" [quote|#{ show $ fst $ snd $ val}|]
 
 
 
@@ -130,11 +143,22 @@ encodeUrlChar y =
 
 
 
+#ifdef TEST_COFFEE
+jmixin :: CoffeeUrl u
+#else
 jmixin :: JavascriptUrl u
-jmixin = [julius|var x;|]
+#endif
+jmixin = [quote|f(2)|]
 
+#ifdef TEST_COFFEE
+jelper :: String -> CoffeeUrl Url -> Assertion
+jelper res h = do
+  T.pack (res `mappend` ";\n") @=? renderCoffeeUrl render h
+#else
 jelper :: String -> JavascriptUrl Url -> Assertion
-jelper res h = T.pack res @=? renderJavascriptUrl render h
+jelper res h = do
+  T.pack res @=? renderJavascriptUrl render h
+#endif
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"

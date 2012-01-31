@@ -1,0 +1,60 @@
+name:            shakespeare-test
+version:         0.1
+license:         BSD3
+license-file:    LICENSE
+author:          Michael Snoyman <michael@snoyman.com>
+maintainer:      Michael Snoyman <michael@snoyman.com>
+synopsis:        Tests for Shakespeare
+description:     Tests for Shakespeare
+category:        Web, Yesod
+stability:       Stable
+cabal-version:   >= 1.8
+build-type:      Simple
+homepage:        http://www.yesodweb.com/book/templates
+
+extra-source-files:
+  test/main.hs
+
+library
+    exposed-modules:
+                     Text.Shakespeare
+                     Text.Shakespeare.Base
+                     Text.Julius
+                     Text.Coffee
+
+    build-depends:   base             >= 4       && < 5
+                   , template-haskell
+                   , parsec           >= 2       && < 4
+                   , text             >= 0.7     && < 0.12
+                   , process          >= 1.0     && < 1.2
+
+    hs-source-dirs: ., shakespeare, shakespeare-js
+
+    ghc-options:   -Wall
+    cpp-options:   -DTEST
+
+flag test_coffee
+    description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
+test-suite test
+    type:          exitcode-stdio-1.0
+    main-is:       main.hs
+    hs-source-dirs: ., shakespeare-js/test, shakespeare/test
+
+    build-depends:   base >= 4 && < 5
+                   , shakespeare-test
+                   , hspec
+                   , HUnit
+                   , text             >= 0.7     && < 0.12
+                   , template-haskell
+                   , parsec           >= 2       && < 4
+
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
+
+
+source-repository head
+  type:     git
+  location: git://github.com/yesodweb/shakespeare-test.git

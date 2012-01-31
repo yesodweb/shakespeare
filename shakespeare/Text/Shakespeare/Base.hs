@@ -10,11 +10,14 @@ module Text.Shakespeare.Base
     , parseDeref
     , parseHash
     , parseVar
+    , parseVarString
     , parseAt
     , parseUrl
+    , parseUrlString
     , parseCaret
     , parseUnder
     , parseInt
+    , parseIntString
     , derefToExp
     , flattenDeref
     , readUtf8File
@@ -184,6 +187,13 @@ flattenDeref _ = Nothing
 parseHash :: Parser (Either String Deref)
 parseHash = parseVar '#'
 
+curlyBrackets :: Parser String
+curlyBrackets = do
+  _<- char '{'
+  var <- many1 $ noneOf "}"
+  _<- char '}'
+  return $ ('{':var) ++ "}"
+
 parseVar :: Char -> Parser (Either String Deref)
 parseVar c = do
     _ <- char c
@@ -207,6 +217,28 @@ parseUrl c d = do
             deref <- derefCurlyBrackets
             return $ Right (deref, x))
                 <|> return (Left $ if x then [c, d] else [c]))
+
+parseInterpolatedString :: Char -> Parser (Either String String)
+parseInterpolatedString c = do
+    _ <- char c
+    (char '\\' >> return (Left ['\\', c])) <|> (do
+        bracketed <- curlyBrackets
+        return $ Right (c:bracketed)) <|> return (Left [c])
+
+parseVarString :: Char -> Parser (Either String String)
+parseVarString = parseInterpolatedString
+
+parseUrlString :: Char -> Char -> Parser (Either String String)
+parseUrlString c d = do
+    _ <- char c
+    (char '\\' >> return (Left [c, '\\'])) <|> (do
+        ds <- (char d >> return [d]) <|> return []
+        (do bracketed <- curlyBrackets
+            return $ Right (c:ds ++ bracketed))
+                <|> return (Left (c:ds)))
+
+parseIntString :: Char -> Parser (Either String String)
+parseIntString = parseInterpolatedString
 
 parseCaret :: Parser (Either String Deref)
 parseCaret = parseInt '^'

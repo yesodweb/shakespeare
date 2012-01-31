@@ -8,6 +8,8 @@
 -- | For lack of a better name... a parameterized version of Julius.
 module Text.Shakespeare
     ( ShakespeareSettings (..)
+    , PreConvert (..)
+    , PreConversion (..)
     , defaultShakespeareSettings
     , shakespeare
     , shakespeareFile
@@ -15,6 +17,10 @@ module Text.Shakespeare
     -- * low-level
     , shakespeareFromString
     , RenderUrl
+
+#ifdef TEST
+    , preFilter
+#endif
     ) where
 
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -28,6 +34,9 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
 
+-- for pre conversion
+import System.Process (readProcess)
+
 -- move to Shakespeare?
 readFileQ :: FilePath -> Q String
 readFileQ fp =
@@ -37,6 +46,31 @@ readFileQ fp =
 readFileUtf8 :: FilePath -> IO String
 readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
+-- | The Coffeescript language compiles down to Javascript.
+-- Previously we waited until the very end, at the rendering stage to perform this compilation.
+-- Lets call is a post-conversion
+-- This had the advantage that all Haskell values were inserted first:
+-- for example a value could be inserted that Coffeescript would compile into Javascript.
+-- While that is perhaps a safer approach, the advantage is not used in practice:
+-- it was that way mainly for ease of implementation.
+-- The down-side is the template must be compiled down to Javascript during every request.
+-- If instead we do a pre-conversion to compile down to Javascript,
+-- we only need to perform the compilation once.
+-- During the pre-conversion we first modify all Haskell insertions
+-- so that they will be ignored by the Coffeescript compiler (backticks).
+-- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
+
+data PreConversion = ReadProcess String [String]
+                   | Id
+  
+
+data PreConvert = PreConvert
+    { preConvert :: PreConversion
+    , preEscapeBegin :: String
+    , preEscapeEnd   :: String
+    , preEscapeIgnore :: [Char]
+    }
+
 data ShakespeareSettings = ShakespeareSettings
     { varChar :: Char
     , urlChar :: Char
@@ -45,21 +79,32 @@ data ShakespeareSettings = ShakespeareSettings
     , wrap :: Exp
     , unwrap :: Exp
     , justVarInterpolation :: Bool
+    , preConversion :: Maybe PreConvert
     }
+
 defaultShakespeareSettings :: ShakespeareSettings
 defaultShakespeareSettings = ShakespeareSettings {
     varChar = '#'
   , urlChar = '@'
   , intChar = '^'
   , justVarInterpolation = False
+  , preConversion = Nothing
 }
 
+instance Lift PreConvert where
+    lift (PreConvert convert begin end ignore) =
+        [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore)|]
+
+instance Lift PreConversion where
+    lift (ReadProcess command args) =
+        [|ReadProcess $(lift command) $(lift args)|]
+    lift Id = [|Id|]
 
 instance Lift ShakespeareSettings where
-    lift (ShakespeareSettings x1 x2 x3 x4 x5 x6 x7) =
+    lift (ShakespeareSettings x1 x2 x3 x4 x5 x6 x7 x8) =
         [|ShakespeareSettings
             $(lift x1) $(lift x2) $(lift x3)
-            $(liftExp x4) $(liftExp x5) $(liftExp x6) $(lift x7)|]
+            $(liftExp x4) $(liftExp x5) $(liftExp x6) $(lift x7) $(lift x8)|]
       where
         liftExp (VarE n) = [|VarE $(liftName n)|]
         liftExp (ConE n) = [|ConE $(liftName n)|]
@@ -85,31 +130,68 @@ data Content = ContentRaw String
     deriving (Show, Eq)
 type Contents = [Content]
 
-contentFromString :: ShakespeareSettings -> (String -> [Content])
+eShowErrors :: Either ParseError c -> c
+eShowErrors = either (error . show) id
+
+contentFromString :: ShakespeareSettings -> String -> [Content]
 contentFromString rs s =
-    compressContents $ either (error . show) id $ parse (parseContents rs) s s
+    compressContents $ eShowErrors $ parse (parseContents rs) s s
   where
     compressContents :: Contents -> Contents
     compressContents [] = []
     compressContents (ContentRaw x:ContentRaw y:z) =
         compressContents $ ContentRaw (x ++ y) : z
     compressContents (x:y) = x : compressContents y
-
+    
 parseContents :: ShakespeareSettings -> Parser Contents
 parseContents = many1 . parseContent
   where
     parseContent :: ShakespeareSettings -> Parser Content
     parseContent ShakespeareSettings {..} =
-        parseHash' <|> parseAt' <|> parseCaret' <|> parseChar
+        parseVar' <|> parseUrl' <|> parseInt' <|> parseChar'
       where
-        parseHash' = either ContentRaw ContentVar `fmap` parseVar varChar
-        parseAt' =
-            either ContentRaw go `fmap` parseUrl urlChar '?'
+        parseVar' = either ContentRaw ContentVar `fmap` parseVar varChar
+        parseUrl' = either ContentRaw contentUrl `fmap` parseUrl urlChar '?'
           where
-            go (d, False) = ContentUrl d
-            go (d, True) = ContentUrlParam d
-        parseCaret' = either ContentRaw ContentMix `fmap` parseInt intChar
-        parseChar = ContentRaw `fmap` many1 (noneOf [varChar, urlChar, intChar])
+            contentUrl (d, False) = ContentUrl d
+            contentUrl (d, True) = ContentUrlParam d
+
+        parseInt' = either ContentRaw ContentMix `fmap` parseInt intChar
+        parseChar' = ContentRaw `fmap` many1 (noneOf [varChar, urlChar, intChar])
+
+
+preFilter :: ShakespeareSettings -> String -> IO String
+preFilter ShakespeareSettings {..} s = 
+    case preConversion of
+      Nothing -> return s
+      Just pre@(PreConvert convert _ _ _) ->
+        let parsed = mconcat $ eShowErrors $ parse (parseConvert pre) s s
+        in  case convert of
+              Id -> return parsed
+              ReadProcess command args ->
+                readProcess command (args ++ [parsed]) []
+  where
+    parseConvert PreConvert {..} = many1 $ choice $
+        (map (try . escapedParse) preEscapeIgnore) ++
+        [mainParser preEscapeIgnore]
+
+      where
+        escapedParse ignoreC = do
+            _<- char ignoreC
+            inside <- many $ noneOf [ignoreC]
+            _<- char ignoreC
+            return $ ignoreC:inside ++ [ignoreC]
+            -- return $ ignoreC:(eShowErrors $ parse (mainParser escapeNone) "" inside) ++ [ignoreC]
+
+        mainParser i = parseVar' <|> parseUrl' <|> parseInt' <|> parseChar' i
+        escape str = preEscapeBegin ++ str ++ preEscapeEnd
+        escapeRight = either id escape
+
+        parseVar' = escapeRight `fmap` parseVarString varChar
+        parseUrl' = escapeRight `fmap` parseUrlString urlChar '?'
+        parseInt' = escapeRight `fmap` parseIntString intChar
+        parseChar' i = many1 (noneOf ([varChar, urlChar, intChar] ++ i))
+
 
 contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do
@@ -145,8 +227,9 @@ shakespeare :: ShakespeareSettings -> QuasiQuoter
 shakespeare r = QuasiQuoter { quoteExp = shakespeareFromString r }
 
 shakespeareFromString :: ShakespeareSettings -> String -> Q Exp
-shakespeareFromString r s = do
-    contentsToShakespeare r $ contentFromString r s
+shakespeareFromString r str = do
+    s <- qRunIO $ preFilter r str
+    contentsToShakespeare r $ contentFromString r $ s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
 shakespeareFile r fp = readFileQ fp >>= shakespeareFromString r
@@ -167,7 +250,8 @@ data VarExp url = EPlain Builder
 
 shakespeareFileDebug :: ShakespeareSettings -> FilePath -> Q Exp
 shakespeareFileDebug rs fp = do
-    s <- readFileQ fp
+    str <- readFileQ fp
+    s <- qRunIO $ preFilter rs str
     let b = concatMap getVars $ contentFromString rs s
     c <- mapM vtToExp b
     rt <- [|shakespeareRuntime|]
@@ -190,7 +274,8 @@ shakespeareFileDebug rs fp = do
 
 shakespeareRuntime :: ShakespeareSettings -> FilePath -> [(Deref, VarExp url)] -> Shakespeare url
 shakespeareRuntime rs fp cd render' = unsafePerformIO $ do
-    s <- readFileUtf8 fp
+    str <- readFileUtf8 fp
+    s <- preFilter rs str
     return $ mconcat $ map go $ contentFromString rs s
   where
     go :: Content -> Builder

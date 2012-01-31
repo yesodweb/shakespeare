@@ -1,5 +1,5 @@
-import Test.Hspec
+import Test.Hspec.Monadic
 import ShakespeareJsTest (specs)
 
 main :: IO ()
-main = hspecX $ descriptions [specs]
+main = hspecX specs
