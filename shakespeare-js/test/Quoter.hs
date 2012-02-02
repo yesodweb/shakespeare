@@ -2,14 +2,13 @@
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Quoter (quote, quoteFile, quoteFileReload) where
 
-import Language.Haskell.TH.Quote (QuasiQuoter)
 import Language.Haskell.TH.Syntax
-import Text.Coffee (coffeeSettings)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
-import Text.Shakespeare (shakespeare)
 
 #ifdef TEST_COFFEE
 import Text.Coffee
+import Text.Coffee (coffeeSettings)
+import Text.Shakespeare (shakespeare)
 #else
 import Text.Julius
 #endif

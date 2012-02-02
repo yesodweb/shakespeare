@@ -4,8 +4,8 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 -- | A Shakespearean module for CoffeeScript, introducing type-safe,
--- compile-time variable and url interpolation. It is very similar to
--- "Text.Julius", save that the template is first compiled to Javascript with
+-- compile-time variable and url interpolation. It is exactly the same as
+-- "Text.Julius", except that the template is first compiled to Javascript with
 -- the system tool @coffee@.
 --
 -- To use this module, @coffee@ must be installed on your system.
@@ -23,19 +23,11 @@ module Text.Coffee
     ( -- * Functions
       -- ** Template-Reading Functions
       -- | These QuasiQuoter and Template Haskell methods return values of
-      -- type @'CoffeeUrl' url@. See the Yesod book for details.
+      -- type @'JavascriptUrl' url@. See the Yesod book for details.
       coffee
     , coffeeFile
     , coffeeFileReload
     , coffeeFileDebug
-      -- ** Rendering Functions
-    , renderCoffee
-    , renderCoffeeUrl
-      -- * Datatypes
-    , Coffeescript
-    , CoffeeUrl
-      -- * Typeclass for interpolated variables
-    , ToCoffee (..)
 
 #ifdef TEST_EXPORT
     , coffeeSettings
@@ -44,53 +36,13 @@ module Text.Coffee
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
-import qualified Data.Text as TS
-import qualified Data.Text.Lazy as TL
-import Data.Monoid
 import Text.Shakespeare
-
--- | render with route interpolation. If using this module standalone, apart
--- from type-safe routes, a dummy renderer can be used:
--- 
--- > renderCoffeeUrl (\_ _ -> undefined) coffeeUrl
---
--- When using Yesod, a renderer is generated for you, which can be accessed
--- within the GHandler monad: 'Yesod.Handler.getUrlRenderParams'.
-renderCoffeeUrl
-    :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -- ^ Url renderer
-    -> CoffeeUrl url -- ^ Value returned from template reader function
-    -> TL.Text  -- ^ @CoffeeScript@ with variables and routes fully resolved
-renderCoffeeUrl r s = renderCoffee $ s r
-
-renderCoffee :: Coffeescript -> TL.Text
-renderCoffee (Coffeescript c) = toLazyText c
-
--- | Newtype wrapper of 'Builder'.
-newtype Coffeescript = Coffeescript { unCoffeescript :: Builder }
-    deriving Monoid
-
--- | Return type of template-reading functions.
-type CoffeeUrl url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Coffeescript
-
--- | A typeclass for types that can be interpolated in CoffeeScript templates.
-class ToCoffee c where
-    toCoffee :: c -> Builder
-
-instance ToCoffee [Char]  where toCoffee = fromLazyText . TL.pack
-
-instance ToCoffee TS.Text where toCoffee = fromText
-instance ToCoffee TL.Text where toCoffee = fromLazyText
+import Text.Julius
 
 coffeeSettings :: Q ShakespeareSettings
 coffeeSettings = do
-  toExp <- [|toCoffee|]
-  wrapExp <- [|Coffeescript|]
-  unWrapExp <- [|unCoffeescript|]
-  return $ defaultShakespeareSettings { varChar = '%'
-  , toBuilder = toExp
-  , wrap = wrapExp
-  , unwrap = unWrapExp
+  jsettings <- javascriptSettings
+  return $ jsettings { varChar = '%'
   , preConversion = Just PreConvert {
       preConvert = ReadProcess "coffee" ["-epb"]
     , preEscapeBegin = "`"
