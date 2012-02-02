@@ -37,12 +37,11 @@ import Text.Shakespeare.Base
 -- for pre conversion
 import System.Process (readProcess)
 
--- move to Shakespeare?
+-- move to Shakespeare.Base?
 readFileQ :: FilePath -> Q String
-readFileQ fp =
-    qRunIO $ readFileUtf8 fp
+readFileQ fp = qRunIO $ readFileUtf8 fp
 
--- move to Shakespeare?
+-- move to Shakespeare.Base?
 readFileUtf8 :: FilePath -> IO String
 readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
@@ -59,10 +58,7 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 -- During the pre-conversion we first modify all Haskell insertions
 -- so that they will be ignored by the Coffeescript compiler (backticks).
 -- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
-
-data PreConversion = ReadProcess String [String]
-                   | Id
-  
+-- preEscapeIgnore is used to not insert backtacks for variable already inside strings - coffeescript will happily ignore them, and won't treat backticks as escaping
 
 data PreConvert = PreConvert
     { preConvert :: PreConversion
@@ -70,6 +66,11 @@ data PreConvert = PreConvert
     , preEscapeEnd   :: String
     , preEscapeIgnore :: [Char]
     }
+
+data PreConversion = ReadProcess String [String]
+                   | Id
+  
+
 
 data ShakespeareSettings = ShakespeareSettings
     { varChar :: Char
