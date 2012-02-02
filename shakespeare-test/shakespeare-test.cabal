@@ -31,7 +31,7 @@ library
     hs-source-dirs: ., shakespeare, shakespeare-js
 
     ghc-options:   -Wall
-    cpp-options:   -DTEST
+    cpp-options:   -DTEST -DTEST_EXPORT
 
 flag test_coffee
     description: render tests through coffeescript render function

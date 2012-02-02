@@ -10,9 +10,8 @@ import Test.Hspec.HUnit ()
 import Prelude hiding (reverse)
 #ifdef TEST_COFFEE
 import Text.Coffee
-#else
-import Text.Julius
 #endif
+import Text.Julius
 import Quoter (quote, quoteFile, quoteFileReload)
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
@@ -143,22 +142,12 @@ encodeUrlChar y =
 
 
 
-#ifdef TEST_COFFEE
-jmixin :: CoffeeUrl u
-#else
 jmixin :: JavascriptUrl u
-#endif
 jmixin = [quote|f(2)|]
 
-#ifdef TEST_COFFEE
-jelper :: String -> CoffeeUrl Url -> Assertion
-jelper res h = do
-  T.pack (res `mappend` ";\n") @=? renderCoffeeUrl render h
-#else
 jelper :: String -> JavascriptUrl Url -> Assertion
 jelper res h = do
   T.pack res @=? renderJavascriptUrl render h
-#endif
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
