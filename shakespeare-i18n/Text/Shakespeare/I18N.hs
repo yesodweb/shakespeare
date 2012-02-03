@@ -5,6 +5,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Text.Shakespeare.I18N
     ( mkMessage
+    , mkMessage'
     , RenderMessage (..)
     , ToMessage (..)
     , SomeMessage (..)
@@ -35,13 +36,15 @@ instance ToMessage String where
     toMessage = Data.Text.pack
 
 class RenderMessage master message where
+    availableLanguages :: master -> [Text]
     renderMessage :: master
                   -> [Lang] -- ^ languages
                   -> message
                   -> Text
 
 instance RenderMessage master Text where
-    renderMessage _ _ = id
+    availableLanguages _ = []
+    renderMessage _ _    = id
 
 type Lang = Text
 
@@ -52,6 +55,8 @@ mkMessage :: String
 mkMessage dt folder lang = do
     files <- qRunIO $ getDirectoryContents folder
     contents <- qRunIO $ fmap catMaybes $ mapM (loadLang folder) files
+    let langs = map (T.unpack . fst) contents
+    langE <- [| map pack $( lift langs ) |]
     sdef <-
         case lookup lang contents of
             Nothing -> error $ "Did not find main language file: " ++ unpack lang
@@ -67,9 +72,41 @@ mkMessage dt folder lang = do
         , InstanceD
             []
             (ConT ''RenderMessage `AppT` dt' `AppT` ConT mname)
-            [ FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
+            [ FunD (mkName "availableLanguages") 
+                        [Clause [WildP] (NormalB langE) []]
+            , FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
             ]
         ]
+
+mkMessage' :: String
+           -> String
+           -> FilePath
+           -> Lang
+           -> Q [Dec]
+mkMessage' master dt folder lang = do
+    files <- qRunIO $ getDirectoryContents folder
+    contents <- qRunIO $ fmap catMaybes $ mapM (loadLang folder) files
+    let langs = map (T.unpack . fst) contents
+    langE <- [| map pack $( lift langs ) |]
+    sdef <-
+        case lookup lang contents of
+            Nothing -> error $ "Did not find main language file: " ++ unpack lang
+            Just def -> toSDefs def
+    mapM_ (checkDef sdef) $ map snd contents
+    let mname = mkName $ dt ++ "Message"
+    c1 <- fmap concat $ mapM (toClauses dt) contents
+    c2 <- mapM (sToClause dt) sdef
+    c3 <- defClause
+    return
+        [ InstanceD
+            []
+            (ConT ''RenderMessage `AppT` (ConT $ mkName master) `AppT` ConT mname)
+            [ FunD (mkName "availableLanguages") 
+                        [Clause [WildP] (NormalB langE) []]
+            , FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
+            ]
+        ]
+
 
 toClauses :: String -> (Lang, [Def]) -> Q [Clause]
 toClauses dt (lang, defs) =
