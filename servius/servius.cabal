@@ -1,5 +1,5 @@
 Name:                servius
-Version:             0.0.1
+Version:             0.0.2
 Synopsis:            Serve Shakespearean templates via Warp
 Homepage:            http://github.com/yesodweb/hamlet
 License:             BSD3
@@ -15,9 +15,9 @@ Description:         Does not support any variable interpolation. Supports Hamle
 Executable servius
   Main-is:       servius.hs
   Build-depends: base            >= 4                  && < 5
-               , warp            >= 1.0                && < 1.1
-               , wai-app-static  >= 1.0                && < 1.1
-               , wai-extra       >= 1.0                && < 1.1
+               , warp            >= 1.1                && < 1.2
+               , wai-app-static  >= 1.1                && < 1.2
+               , wai-extra       >= 1.1                && < 1.2
                , cmdargs         >= 0.6.7
                , directory       >= 1.0
                , containers      >= 0.2                && < 0.5
