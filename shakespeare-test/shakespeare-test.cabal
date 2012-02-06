@@ -53,8 +53,8 @@ test-suite test
                    , template-haskell
                    , parsec           >= 2       && < 4
 
-    if impl(ghc >= 7.4)
-       cpp-options: -DGHC_7_4
+    -- if impl(ghc >= 7.4)
+    --   cpp-options: -DGHC_7_4
 
     --if flag(test_coffee)
     --    cpp-options: -DTEST_COFFEE
