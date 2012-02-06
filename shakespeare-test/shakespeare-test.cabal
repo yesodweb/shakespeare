@@ -13,7 +13,7 @@ build-type:      Simple
 homepage:        http://www.yesodweb.com/book/templates
 
 extra-source-files:
-  test/main.hs
+  main.hs
 
 library
     exposed-modules:
@@ -51,8 +51,8 @@ test-suite test
                    , template-haskell
                    , parsec           >= 2       && < 4
 
-    if flag(test_coffee)
-        cpp-options: -DTEST_COFFEE
+    --if flag(test_coffee)
+    --    cpp-options: -DTEST_COFFEE
 
 
 source-repository head
