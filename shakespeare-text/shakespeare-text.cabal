@@ -53,8 +53,6 @@ test-suite test
                  , HUnit
                  , hspec            >= 0.8     && < 0.10
                  , text             >= 0.7     && < 0.12
-    if impl(ghc >= 7.4)
-       cpp-options: -DGHC_7_4
 
 
 source-repository head
