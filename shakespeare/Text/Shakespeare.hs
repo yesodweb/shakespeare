@@ -233,7 +233,11 @@ shakespeareFromString r str = do
     contentsToShakespeare r $ contentFromString r $ s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
-shakespeareFile r fp = readFileQ fp >>= shakespeareFromString r
+shakespeareFile r fp = do
+#ifdef GHC_7_4
+    qAddDependentFile fp
+#endif
+    readFileQ fp >>= shakespeareFromString r
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
 

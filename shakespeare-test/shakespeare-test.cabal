@@ -32,6 +32,8 @@ library
 
     ghc-options:   -Wall
     cpp-options:   -DTEST -DTEST_EXPORT
+    if impl(ghc >= 7.4)
+       cpp-options: -DGHC_7_4
 
 flag test_coffee
     description: render tests through coffeescript render function
@@ -50,6 +52,9 @@ test-suite test
                    , text             >= 0.7     && < 0.12
                    , template-haskell
                    , parsec           >= 2       && < 4
+
+    if impl(ghc >= 7.4)
+       cpp-options: -DGHC_7_4
 
     --if flag(test_coffee)
     --    cpp-options: -DTEST_COFFEE

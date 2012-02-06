@@ -52,6 +52,9 @@ data CDData url = CDPlain Builder
 cssFileDebug :: Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
 cssFileDebug parseBlocks' parseBlocks fp = do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+#ifdef GHC_7_4
+    qAddDependentFile fp
+#endif
     let a = either (error . show) id $ parse parseBlocks s s
     let (scope, contents) = go a
     vs <- mapM (getVars scope) contents
