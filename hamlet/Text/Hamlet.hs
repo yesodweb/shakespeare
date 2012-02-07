@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -246,6 +247,9 @@ hamletFromString qhr set s = do
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
+#ifdef GHC_7_4
+    qAddDependentFile fp
+#endif
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     hamletFromString qhr set contents
 

@@ -55,6 +55,8 @@ library
                      Text.Hamlet.RT
     other-modules:   Text.Hamlet.Parse
     ghc-options:     -Wall
+    if impl(ghc >= 7.4)
+       cpp-options: -DGHC_7_4
 
 test-suite test
     hs-source-dirs: test
