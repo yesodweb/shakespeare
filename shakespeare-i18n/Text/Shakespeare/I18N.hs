@@ -37,14 +37,12 @@ instance ToMessage String where
     toMessage = Data.Text.pack
 
 class RenderMessage master message where
-    availableLanguages :: master -> [Text]
     renderMessage :: master
                   -> [Lang] -- ^ languages
                   -> message
                   -> Text
 
 instance RenderMessage master Text where
-    availableLanguages _ = []
     renderMessage _ _    = id
 
 type Lang = Text
@@ -85,8 +83,6 @@ mkMessageCommon :: Bool      -- ^ generate a new datatype from the constructors 
 mkMessageCommon genType prefix postfix master dt folder lang = do
     files <- qRunIO $ getDirectoryContents folder
     contents <- qRunIO $ fmap catMaybes $ mapM (loadLang folder) files
-    let langs = map (T.unpack . fst) contents
-    langE <- [| map pack $( lift langs ) |]
     sdef <-
         case lookup lang contents of
             Nothing -> error $ "Did not find main language file: " ++ unpack lang
@@ -103,9 +99,7 @@ mkMessageCommon genType prefix postfix master dt folder lang = do
         [ InstanceD
             []
             (ConT ''RenderMessage `AppT` (ConT $ mkName master) `AppT` ConT mname)
-            [ FunD (mkName "availableLanguages") 
-                        [Clause [WildP] (NormalB langE) []]
-            , FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
+            [ FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
             ]
         ]
 
