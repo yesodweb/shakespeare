@@ -21,6 +21,7 @@ import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
+import Data.Int (Int32, Int64)
 
 renderText :: Builder -> TL.Text
 renderText = toLazyText
@@ -35,6 +36,9 @@ class ToText a where
 instance ToText [Char ] where toText = fromLazyText . TL.pack
 instance ToText TS.Text where toText = fromText
 instance ToText TL.Text where toText = fromLazyText
+
+instance ToText Int32 where toText = toText . show
+instance ToText Int64 where toText = toText . show
 
 settings :: Q ShakespeareSettings
 settings = do
