@@ -48,7 +48,7 @@ coffeeSettings = do
     , preEscapeBegin = "`"
     -- ^ backticks means the Coffeescript compiler will pass-through to javascript.
     , preEscapeEnd = "`"
-    , preEscapeIgnore = "'\""
+    , preEscapeIgnore = "'\"`"
     -- ^ backticks are ignored inside a quote
     }
   }
