@@ -43,7 +43,7 @@ class RenderMessage master message where
                   -> Text
 
 instance RenderMessage master Text where
-    renderMessage _ _    = id
+    renderMessage _ _ = id
 
 type Lang = Text
 
