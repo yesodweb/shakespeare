@@ -58,7 +58,8 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 -- During the pre-conversion we first modify all Haskell insertions
 -- so that they will be ignored by the Coffeescript compiler (backticks).
 -- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
--- preEscapeIgnore is used to not insert backtacks for variable already inside strings - coffeescript will happily ignore them, and won't treat backticks as escaping
+-- preEscapeIgnore is used to not insert backtacks for variable already inside strings or backticks.
+-- coffeescript will happily ignore the interpolations, and backticks would not be treated as escaping in that context.
 
 data PreConvert = PreConvert
     { preConvert :: PreConversion
