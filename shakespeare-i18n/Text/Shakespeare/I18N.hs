@@ -5,6 +5,8 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Text.Shakespeare.I18N
     ( mkMessage
+    , mkMessageFor
+    , mkMessageVariant
     , RenderMessage (..)
     , ToMessage (..)
     , SomeMessage (..)
@@ -49,7 +51,36 @@ mkMessage :: String
           -> FilePath
           -> Lang
           -> Q [Dec]
-mkMessage dt folder lang = do
+mkMessage dt folder lang =
+    mkMessageCommon True "Msg" "Message" dt dt folder lang
+
+
+-- | create 'RenderMessage' instance for an existing data-type
+mkMessageFor :: String     -- ^ master translation data type
+             -> String     -- ^ existing type to add translations for
+             -> FilePath   -- ^ path to translation folder
+             -> Lang       -- ^ default language
+             -> Q [Dec]
+mkMessageFor master dt folder lang = mkMessageCommon False "" "" master dt folder lang
+
+-- | create an additional set of translations for a type created by `mkMessage`
+mkMessageVariant :: String     -- ^ master translation data type
+                 -> String     -- ^ existing type to add translations for
+                 -> FilePath   -- ^ path to translation folder
+                 -> Lang       -- ^ default language
+                 -> Q [Dec]
+mkMessageVariant master dt folder lang = mkMessageCommon False "Msg" "Message" master dt folder lang
+
+-- |used by 'mkMessage' and 'mkMessageFor' to generate a 'RenderMessage' and possibly a message data type
+mkMessageCommon :: Bool      -- ^ generate a new datatype from the constructors found in the .msg files
+                -> String    -- ^ string to append to constructor names
+                -> String    -- ^ string to append to datatype name
+                -> String    -- ^ base name of master datatype
+                -> String    -- ^ base name of translation datatype
+                -> FilePath  -- ^ path to translation folder
+                -> Lang      -- ^ default lang
+                -> Q [Dec]
+mkMessageCommon genType prefix postfix master dt folder lang = do
     files <- qRunIO $ getDirectoryContents folder
     contents <- qRunIO $ fmap catMaybes $ mapM (loadLang folder) files
     sdef <-
@@ -57,27 +88,28 @@ mkMessage dt folder lang = do
             Nothing -> error $ "Did not find main language file: " ++ unpack lang
             Just def -> toSDefs def
     mapM_ (checkDef sdef) $ map snd contents
-    let dt' = ConT $ mkName dt
-    let mname = mkName $ dt ++ "Message"
-    c1 <- fmap concat $ mapM (toClauses dt) contents
-    c2 <- mapM (sToClause dt) sdef
+    let mname = mkName $ dt ++ postfix
+    c1 <- fmap concat $ mapM (toClauses prefix dt) contents
+    c2 <- mapM (sToClause prefix dt) sdef
     c3 <- defClause
-    return
-        [ DataD [] mname [] (map (toCon dt) sdef) []
-        , InstanceD
+    return $
+     ( if genType 
+       then ((DataD [] mname [] (map (toCon dt) sdef) []) :)
+       else id)
+        [ InstanceD
             []
-            (ConT ''RenderMessage `AppT` dt' `AppT` ConT mname)
+            (ConT ''RenderMessage `AppT` (ConT $ mkName master) `AppT` ConT mname)
             [ FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
             ]
         ]
 
-toClauses :: String -> (Lang, [Def]) -> Q [Clause]
-toClauses dt (lang, defs) =
+toClauses :: String -> String -> (Lang, [Def]) -> Q [Clause]
+toClauses prefix dt (lang, defs) =
     mapM go defs
   where
     go def = do
         a <- newName "lang"
-        (pat, bod) <- mkBody dt (constr def) (map fst $ vars def) (content def)
+        (pat, bod) <- mkBody dt (prefix ++ constr def) (map fst $ vars def) (content def)
         guard <- fmap NormalG [|$(return $ VarE a) == pack $(lift $ unpack lang)|]
         return $ Clause
             [WildP, ConP (mkName ":") [VarP a, WildP], pat]
@@ -91,7 +123,7 @@ mkBody :: String -- ^ datatype
        -> Q (Pat, Exp)
 mkBody dt cs vs ct = do
     vp <- mapM go vs
-    let pat = RecP (mkName $ "Msg" ++ cs) (map (varName dt *** VarP) vp)
+    let pat = RecP (mkName cs) (map (varName dt *** VarP) vp)
     let ct' = map (fixVars vp) ct
     pack' <- [|Data.Text.pack|]
     tomsg <- [|toMessage|]
@@ -120,9 +152,9 @@ mkBody dt cs vs ct = do
             Nothing -> i
             Just y -> nameBase y
 
-sToClause :: String -> SDef -> Q Clause
-sToClause dt sdef = do
-    (pat, bod) <- mkBody dt (sconstr sdef) (map fst $ svars sdef) (scontent sdef)
+sToClause :: String -> String -> SDef -> Q Clause
+sToClause prefix dt sdef = do
+    (pat, bod) <- mkBody dt (prefix ++ sconstr sdef) (map fst $ svars sdef) (scontent sdef)
     return $ Clause
         [WildP, ConP (mkName "[]") [], pat]
         (NormalB bod)
