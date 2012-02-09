@@ -11,6 +11,7 @@ module Text.Shakespeare.Text
     , text
     , textFile
     , textFileDebug
+    , textFileReload
     , st -- | strict text
     , lt -- | lazy text, same as stext :)
     ) where
@@ -80,6 +81,10 @@ textFile fp = do
 
 
 textFileDebug :: FilePath -> Q Exp
-textFileDebug fp = do
+textFileDebug = textFileReload
+{-# DEPRECATED textFileDebug "Please use textFileReload instead" #-}
+
+textFileReload :: FilePath -> Q Exp
+textFileReload fp = do
     rs <- settings
     shakespeareFileDebug rs fp
