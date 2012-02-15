@@ -3,6 +3,52 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
+
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Text.Shakespeare.I18N
+-- Copyright   :  2012 Michael Snoyman <michael@snoyman.com>, Jeremy Shaw
+-- License     :  BSD-style (see the LICENSE file in the distribution)
+--
+-- Maintainer  :  Michael Snoyman <michael@snoyman.com>
+-- Stability   :  experimental
+-- Portability :  portable
+--
+-- This module provides a type-based system for providing translations
+-- for text strings.
+--
+-- It is similar in purpose to gettext or Java message bundles.
+--
+-- The core idea is to create simple data type where each constructor
+-- represents a phrase, sentence, paragraph, etc. For example:
+--
+-- > data AppMessages = Hello | Goodbye
+--
+-- The 'RenderMessage' class is used to retrieve the appropriate
+-- translation for a message value:
+--
+-- > class RenderMessage master message where
+-- >   renderMessage :: master  -- ^ type that specifies which set of translations to use
+-- >                 -> [Lang]  -- ^ acceptable languages in descending order of preference
+-- >                 -> message -- ^ message to translate
+-- >                 -> Text
+--
+-- Defining the translation type and providing the 'RenderMessage'
+-- instance in Haskell is not very translator friendly. Instead,
+-- translations are generally provided in external translations
+-- files. Then the 'mkMessage' Template Haskell function is used to
+-- read the external translation files and automatically create the
+-- translation type and the @RenderMessage@ instance.
+--
+-- A full description of using this module to create translations for @Hamlet@ can be found here:
+--
+--  <http://www.yesodweb.com/book/internationalization>
+--
+-- A full description of using the module to create translations for @HSP@ can be found here:
+--
+--  <http://happstack.com/docs/crashcourse/Templates.html#hsp-i18n>
+--
+-- You can also adapt those instructions for use with other systems.
 module Text.Shakespeare.I18N
     ( mkMessage
     , mkMessageFor
@@ -29,6 +75,10 @@ import Data.Monoid (mempty, mappend)
 import qualified Data.Text as T
 import Data.String (IsString (fromString))
 
+-- | 'ToMessage' is used to convert the value inside #{ } to 'Text'
+--
+-- The primary purpose of this class is to allow the value in #{ } to
+-- be a 'String' or 'Text' rather than forcing it to always be 'Text'.
 class ToMessage a where
     toMessage :: a -> Text
 instance ToMessage Text where
@@ -36,20 +86,37 @@ instance ToMessage Text where
 instance ToMessage String where
     toMessage = Data.Text.pack
 
+-- | the 'RenderMessage' is used to provide translations for a message types
+--
+-- The 'master' argument exists so that it is possible to provide more
+-- than one set of translations for a 'message' type. This is useful
+-- if a library provides a default set of translations, but the user
+-- of the library wants to provide a different set of translations.
 class RenderMessage master message where
-    renderMessage :: master
-                  -> [Lang] -- ^ languages
-                  -> message
+    renderMessage :: master  -- ^ type that specifies which set of translations to use
+                  -> [Lang]  -- ^ acceptable languages in descending order of preference
+                  -> message -- ^ message to translate
                   -> Text
 
 instance RenderMessage master Text where
     renderMessage _ _ = id
 
+-- | an RFC1766 / ISO 639-1 language code (eg, @fr@, @en-GB@, etc).
 type Lang = Text
 
-mkMessage :: String
-          -> FilePath
-          -> Lang
+-- |generate translations from translation files
+--
+-- This function will:
+--
+--  1. look in the supplied subdirectory for files ending in @.msg@
+--
+--  2. generate a type based on the constructors found
+--
+--  3. create a 'RenderMessage' instance
+--
+mkMessage :: String   -- ^ base name to use for translation type
+          -> FilePath -- ^ subdirectory which contains the translation files
+          -> Lang     -- ^ default translation language
           -> Q [Dec]
 mkMessage dt folder lang =
     mkMessageCommon True "Msg" "Message" dt dt folder lang
