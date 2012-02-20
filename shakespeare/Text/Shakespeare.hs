@@ -171,7 +171,7 @@ preFilter ShakespeareSettings {..} s =
         in  case convert of
               Id -> return parsed
               ReadProcess command args ->
-                readProcess command (args ++ [parsed]) []
+                readProcess command args parsed
   where
     parseConvert PreConvert {..} = many1 $ choice $
         (map (try . escapedParse) preEscapeIgnore) ++
