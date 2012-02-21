@@ -36,6 +36,7 @@ library
     exposed-modules:
                      Text.Julius
                      Text.Coffee
+                     Text.Roy
     ghc-options:     -Wall
     if impl(ghc >= 7.4)
        cpp-options: -DGHC_7_4

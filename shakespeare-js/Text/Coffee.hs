@@ -39,16 +39,9 @@ import Language.Haskell.TH.Syntax
 import Text.Shakespeare
 import Text.Julius
 
--- | The Coffeescript language compiles down to Javascript.
--- Previously we waited until the very end, at the rendering stage to perform this compilation.
--- Lets call is a post-conversion
--- This had the advantage that all Haskell values were inserted first:
--- for example a value could be inserted that Coffeescript would compile into Javascript.
--- While that is perhaps a safer approach, the advantage is not used in practice:
--- it was that way mainly for ease of implementation.
--- The down-side is the template must be compiled down to Javascript during every request.
--- If instead we do a pre-conversion to compile down to Javascript,
--- we only need to perform the compilation once.
+-- | The Roy language compiles down to Javascript.
+-- We do this once at compile time to avoid needing to do it during the request.
+-- We call this a preConversion because other shakespeare modules like Lucius use Haskell to compile during the request rather than a system call.
 -- During the pre-conversion we first modify all Haskell insertions
 -- so that they will be ignored by the Coffeescript compiler (backticks).
 -- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
