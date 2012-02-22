@@ -31,6 +31,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Data.Either (partitionEithers)
 import Data.Text.Lazy.Builder (fromText)
+import Data.Monoid (mconcat)
 
 -- |
 --
@@ -183,10 +184,10 @@ parseTopLevels =
         return $ TopAtDecl "charset" cs
     media = do
         try $ stringCI "@media "
-        name <- many1 $ noneOf "{"
+        selector <- parseContents "{"
         _ <- char '{'
         b <- parseBlocks id
-        return $ TopAtBlock "media" (strip name) b
+        return $ TopAtBlock "media" selector b
     impor = do
         try $ stringCI "@import ";
         val <- many1 $ noneOf ";";
@@ -209,9 +210,6 @@ parseTopLevels =
         (char '}' >> return (map compressBlock $ front []))
             <|> (parseBlock >>= \x -> parseBlocks (front . (:) x))
 
-strip :: String -> String
-strip = reverse . dropWhile isSpace . reverse . dropWhile isSpace
-
 stringCI :: String -> Parser ()
 stringCI [] = return ()
 stringCI (c:cs) = (char (toLower c) <|> char (toUpper c)) >> stringCI cs
@@ -231,10 +229,13 @@ luciusRT' tl =
         b' <- goBlock scope b
         rest' <- go scope rest
         Right $ map Css b' ++ rest'
-    go scope (TopAtBlock name m bs:rest) = do
+    go scope (TopAtBlock name m' bs:rest) = do
+        let scope' = map goScope scope
+            render = error "luciusRT has no URLs"
+        m <- mapM (contentToBuilderRT scope' render) m'
         bs' <- mapM (goBlock scope) bs
         rest' <- go scope rest
-        Right $ AtBlock name m (concat bs') : rest'
+        Right $ AtBlock name (mconcat m) (concat bs') : rest'
     go scope (TopVar k v:rest) = go ((pack k, pack v):scope) rest
 
     goBlock :: [(Text, Text)] -> Block -> Either String [Css']
@@ -242,7 +243,8 @@ luciusRT' tl =
         either Left (Right . ($[])) . blockRuntime scope' (error "luciusRT has no URLs")
       where
         scope' = map goScope scope
-        goScope (k, v) = (DerefIdent (Ident $ unpack k), CDPlain $ fromText v)
+
+    goScope (k, v) = (DerefIdent (Ident $ unpack k), CDPlain $ fromText v)
 
 luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
 luciusRT tl scope = either Left (Right . renderCss) $ either Left ($ scope) (luciusRT' tl)

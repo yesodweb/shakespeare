@@ -309,7 +309,7 @@ foo {
 }
 |]
   , it "lucius case-insensitive keywords" $
-       celper "@media foo{}" [lucius|
+       celper "@media foo {}" [lucius|
 @MeDIa foo {
 }
 |]
@@ -333,6 +333,11 @@ c:d;
         celper "foo{foo:XbarY}" [lucius|
 @bar: bar;
 foo { foo:X#{bar}Y; }
+|]
+  , it "variables in media selector" $
+        celper "@media (max-width: 400px){foo{color:red}}" [lucius|
+@mobileWidth: 400px;
+@media (max-width: #{mobileWidth}){ foo { color: red; } }
 |]
   ]
 

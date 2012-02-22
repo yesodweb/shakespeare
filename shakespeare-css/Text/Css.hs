@@ -29,7 +29,7 @@ data Css' = Css'
     { _cssSelectors :: Builder
     , _cssAttributes :: [(Builder, Builder)]
     }
-data CssTop = AtBlock String String [Css'] | Css Css' | AtDecl String String
+data CssTop = AtBlock String Builder [Css'] | Css Css' | AtDecl String String
 
 type Css = [CssTop]
 
@@ -113,21 +113,7 @@ blockRuntime cd render' (Block x y z) = do
     . foldr (.) id (map (subGo x) z)
     -}
   where
-    go' :: Content -> Either String Builder
-    go' (ContentRaw s) = Right $ fromText $ pack s
-    go' (ContentVar d) =
-        case lookup d cd of
-            Just (CDPlain s) -> Right s
-            _ -> Left $ show d ++ ": expected CDPlain"
-    go' (ContentUrl d) =
-        case lookup d cd of
-            Just (CDUrl u) -> Right $ fromText $ render' u []
-            _ -> Left $ show d ++ ": expected CDUrl"
-    go' (ContentUrlParam d) =
-        case lookup d cd of
-            Just (CDUrlParam (u, p)) ->
-                Right $ fromText $ render' u p
-            _ -> Left $ show d ++ ": expected CDUrlParam"
+    go' = contentToBuilderRT cd render'
 
     go'' :: ([Content], [Content]) -> Either String (Builder, Builder)
     go'' (k, v) = (,) <$> (mconcat <$> mapM go' k) <*> (mconcat <$> mapM go' v)
@@ -137,6 +123,25 @@ blockRuntime cd render' (Block x y z) = do
         blockRuntime cd render' (Block a' b c)
       where
         a' = combineSelectors x' a
+
+contentToBuilderRT :: [(Deref, CDData url)]
+                   -> (url -> [(Text, Text)] -> Text)
+                   -> Content
+                   -> Either String Builder
+contentToBuilderRT _ _ (ContentRaw s) = Right $ fromText $ pack s
+contentToBuilderRT cd _ (ContentVar d) =
+    case lookup d cd of
+        Just (CDPlain s) -> Right s
+        _ -> Left $ show d ++ ": expected CDPlain"
+contentToBuilderRT cd render' (ContentUrl d) =
+    case lookup d cd of
+        Just (CDUrl u) -> Right $ fromText $ render' u []
+        _ -> Left $ show d ++ ": expected CDUrl"
+contentToBuilderRT cd render' (ContentUrlParam d) =
+    case lookup d cd of
+        Just (CDUrlParam (u, p)) ->
+            Right $ fromText $ render' u p
+        _ -> Left $ show d ++ ": expected CDUrlParam"
 
 cssRuntime :: Parser [TopLevel]
            -> FilePath
@@ -154,9 +159,11 @@ cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     goTop scope (TopBlock b:rest) =
         map Css (either error ($[]) $ blockRuntime (addScope scope) render' b) ++
         goTop scope rest
-    goTop scope (TopAtBlock name s b:rest) =
+    goTop scope (TopAtBlock name s' b:rest) =
         AtBlock name s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
         goTop scope rest
+      where
+        s = either error mconcat $ mapM (contentToBuilderRT cd render') s'
     goTop scope (TopVar k v:rest) = goTop ((k, v):scope) rest
 
     addScope scope = map (DerefIdent . Ident *** CDPlain . fromString) scope ++ cd
@@ -195,11 +202,12 @@ lookupD (DerefIdent (Ident s)) scope =
 lookupD _ _ = Nothing
 
 data Block = Block Selector Pairs [Block]
+    deriving Show
 
 data TopLevel = TopBlock Block
               | TopAtBlock
                     { _atBlockName :: String
-                    , _atBlockSelector :: String
+                    , _atBlockSelector :: Contents
                     , _atBlockInner :: [Block]
                     }
               | TopAtDecl String String
@@ -274,7 +282,8 @@ topLevelsToCassius a = do
         es <- go r scope rest
         return $ e : es
     go r scope (TopAtBlock name s b:rest) = do
-        e <- [|(:) $ AtBlock $(lift name) $(lift s) $(blocksToCassius r scope b)|]
+        let s' = contentsToBuilder r scope s
+        e <- [|(:) $ AtBlock $(lift name) $(s') $(blocksToCassius r scope b)|]
         es <- go r scope rest
         return $ e : es
     go r scope (TopAtDecl dec cs:rest) = do
@@ -294,7 +303,7 @@ renderCss =
     go (Css x) = renderCss' x
     go (AtBlock name s x) =
         fromText (pack $ concat ["@", name, " "]) `mappend`
-        fromText (pack s) `mappend`
+        s `mappend`
         singleton '{' `mappend`
         foldr mappend (singleton '}') (map renderCss' x)
     go (AtDecl dec cs) = fromText (pack $ concat ["@", dec, " "]) `mappend`
