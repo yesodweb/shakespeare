@@ -52,7 +52,7 @@ coffeeSettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '%'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "coffee" ["-spb"]
+      preConvert = ReadProcess "coffee" ["-sp"]
     , preEscapeBegin = "`"
     , preEscapeEnd = "`"
     , preEscapeIgnore = "'\"`"
