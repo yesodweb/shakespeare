@@ -30,6 +30,10 @@ specs = describe "shakespeare-js" $ do
     str <- preFilter preConversionSettings templateQuote
     "unchanged '#{var}' `@{url}` '^{int}'" @=? str
 
+  it "preFilter ignore comments" $ do
+    str <- preFilter preConversionSettings templateCommented
+    "unchanged & '#{var}' @{url} '^{int}'" @=? str
+
   where
     varString = parseVarString '%'
     urlString = parseUrlString '@' '?'
@@ -40,11 +44,13 @@ specs = describe "shakespeare-js" $ do
           preConvert = Id
         , preEscapeBegin = "`"
         , preEscapeEnd = "`"
-        , preEscapeIgnore = "'\""
+        , preEscapeIgnoreBalanced = "'\""
+        , preEscapeIgnoreLine = "&"
         }
     }
     template  = "unchanged #{var} @{url} ^{int}"
     templateQuote = "unchanged '#{var}' @{url} '^{int}'"
+    templateCommented = "unchanged & '#{var}' @{url} '^{int}'"
 
     run parser str = eShowErrors $ parse parser str str
 

@@ -55,7 +55,8 @@ coffeeSettings = do
       preConvert = ReadProcess "coffee" ["-sp"]
     , preEscapeBegin = "`"
     , preEscapeEnd = "`"
-    , preEscapeIgnore = "'\"`"
+    , preEscapeIgnoreBalanced = "'\"`"
+    , preEscapeIgnoreLine = "#"
     }
   }
 

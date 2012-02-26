@@ -55,7 +55,7 @@ roySettings = do
       preConvert = ReadProcess "roy" ["--stdio"]
     , preEscapeBegin = "`"
     , preEscapeEnd = "`"
-    , preEscapeIgnore = "'\"`"
+    , preEscapeIgnoreBalanced = "'\"`"
     }
   }
 
