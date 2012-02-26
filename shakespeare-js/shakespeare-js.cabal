@@ -1,5 +1,5 @@
 name:            shakespeare-js
-version:         0.11.1
+version:         0.11.1.1
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -29,7 +29,7 @@ homepage:        http://www.yesodweb.com/book/templates
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 0.10.3  && < 0.11
+                   , shakespeare      >= 0.10.4  && < 0.11
                    , template-haskell
                    , text             >= 0.7     && < 0.12
 
