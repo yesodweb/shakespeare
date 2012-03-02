@@ -1,5 +1,6 @@
 shakespeare
-shakespeare-js
 shakespeare-css
+shakespeare-js
 shakespeare-text
+shakespeare-i18n
 hamlet
