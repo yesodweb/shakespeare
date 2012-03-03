@@ -113,7 +113,7 @@ parseLine set = do
 
     invalidDollar = do
         _ <- char '$'
-        fail $ "Received a command I did not understand. If you wanted a literal $, start the line with a backslash."
+        fail "Received a command I did not understand. If you wanted a literal $, start the line with a backslash."
     comment = do
         _ <- try $ string "$#"
         _ <- many $ noneOf "\r\n"
@@ -269,8 +269,9 @@ parseLine set = do
         _ <- many $ oneOf " \t"
         c <- (eol >> return []) <|> (char '>' >> content InContent)
         let (tn, attr, classes) = tag' $ TagName name : xs
-        when ('/' `elem` tn) $ error "A tag name may not contain a slash"
-        return $ LineTag tn attr c classes
+        if '/' `elem` tn
+          then fail "A tag name may not contain a slash. Perhaps you have a closing tag in your HTML."
+          else return $ LineTag tn attr c classes
 
 data TagPiece = TagName String
               | TagIdent [Content]

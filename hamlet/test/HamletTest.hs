@@ -132,6 +132,14 @@ $#a third one|]
   , it "embedded slash" $ do
     helper "///" [hamlet|///|]
 
+{- compile-time error
+  , it "tag with slash" $ do
+    helper "" [hamlet|
+<p>
+  Text
+</p>
+|]
+-}
 
   , it "string literals" $ do
     helper "string" [hamlet|#{"string"}|]
