@@ -1,16 +1,11 @@
-Please see the documentation site:
+Awesome template languages for Haskell.
 
-http://docs.yesodweb.com/hamlet/
+Please see the documentation site: http://docs.yesodweb.com/templates/
 
 # Install
 
-This repo contains several templating packages.
-
-You are recommended to install them from hackage using `cabal install`
-
-## From this Repo
-
-Only do this if you need the latest version
+Note, use `cabal install` for normal usage.
+Here is how to install this repo:
 
   cabal update
   git submodule update --init
