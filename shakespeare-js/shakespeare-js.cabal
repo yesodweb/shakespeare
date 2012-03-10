@@ -62,7 +62,7 @@ test-suite test
 
     ghc-options:   -Wall
     build-depends: shakespeare-js   >= 0.11    && < 0.12
-                 , shakespeare      >= 0.10.3  && < 0.11
+                 , shakespeare      >= 0.10.3  && < 0.12
                  , base             >= 4       && < 5
                  , HUnit
                  , hspec            >= 0.8     && < 0.10

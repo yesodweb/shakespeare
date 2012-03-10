@@ -18,7 +18,7 @@ homepage:        http://www.yesodweb.com/book/i18n
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 0.10    && < 0.11
+                   , shakespeare      >= 0.10    && < 0.12
                    , template-haskell
                    , text             >= 0.7     && < 0.12
                    , parsec

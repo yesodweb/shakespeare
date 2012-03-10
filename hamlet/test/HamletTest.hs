@@ -801,7 +801,7 @@ instance Show Url where
 caseDiffBindNames :: Assertion
 caseDiffBindNames = do
     let list = words "1 2 3"
-    -- FIXME helper "123123" $(hamletFileDebug "test/hamlets/external-debug3.hamlet")
+    -- FIXME helper "123123" $(hamletFileReload "test/hamlets/external-debug3.hamlet")
     error "test has been disabled"
 
 
