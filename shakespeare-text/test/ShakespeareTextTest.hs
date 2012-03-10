@@ -46,10 +46,10 @@ specs = describe "shakespeare-text"
         ]
 
 
-  , it "textFileDebug" $ do
+  , it "textFileReload" $ do
     let var = "var"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip telper $(textFileDebug "test/texts/external1.text") $ unlines
+    flip telper $(textFileReload "test/texts/external1.text") $ unlines
         [ "שלום"
         , var
         , "url"
@@ -58,9 +58,9 @@ specs = describe "shakespeare-text"
         ]
 
 {- TODO
-  , it "textFileDebugChange" $ do
+  , it "textFileReload" $ do
       let var = "somevar"
-          test result = telper result $(textFileDebug "test/texts/external2.text")
+          test result = telper result $(textFileReload "test/texts/external2.text")
       writeFile "test/texts/external2.text" "var #{var} = 1;"
       test "var somevar = 1;"
       writeFile "test/texts/external2.text" "var #{var} = 2;"

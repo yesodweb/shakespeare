@@ -14,6 +14,11 @@ module Text.Shakespeare.Text
     , textFileReload
     , st -- | strict text
     , lt -- | lazy text, same as stext :)
+    -- * Yesod code generation
+    , codegen
+    , codegenSt
+    , codegenFile
+    , codegenFileReload
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -51,6 +56,7 @@ settings = do
   , unwrap = unWrapExp
   }
 
+
 stext, lt, st, text :: QuasiQuoter
 stext = 
   QuasiQuoter { quoteExp = \s -> do
@@ -74,6 +80,7 @@ text = QuasiQuoter { quoteExp = \s -> do
     quoteExp (shakespeare rs) s
     }
 
+
 textFile :: FilePath -> Q Exp
 textFile fp = do
     rs <- settings
@@ -88,3 +95,52 @@ textFileReload :: FilePath -> Q Exp
 textFileReload fp = do
     rs <- settings
     shakespeareFileDebug rs fp
+
+-- | codegen is designed for generating Yesod code, including templates
+-- So it uses different interpolation characters that won't clash with templates.
+codegenSettings :: Q ShakespeareSettings
+codegenSettings = do
+  toTExp <- [|toText|]
+  wrapExp <- [|id|]
+  unWrapExp <- [|id|]
+  return $ defaultShakespeareSettings { toBuilder = toTExp
+  , wrap = wrapExp
+  , unwrap = unWrapExp
+  , varChar = '~'
+  , urlChar = '*'
+  , intChar = '&'
+  }
+
+-- | codegen is designed for generating Yesod code, including templates
+-- So it uses different interpolation characters that won't clash with templates.
+-- You can use the normal text quasiquoters to generate code
+codegen :: QuasiQuoter
+codegen =
+  QuasiQuoter { quoteExp = \s -> do
+    rs <- codegenSettings
+    render <- [|renderText|]
+    rendered <- shakespeareFromString rs { justVarInterpolation = True } s
+    return (render `AppE` rendered)
+    }
+
+-- | Generates strict Text
+-- codegen is designed for generating Yesod code, including templates
+-- So it uses different interpolation characters that won't clash with templates.
+codegenSt :: QuasiQuoter
+codegenSt =
+  QuasiQuoter { quoteExp = \s -> do
+    rs <- codegenSettings
+    render <- [|TL.toStrict . renderText|]
+    rendered <- shakespeareFromString rs { justVarInterpolation = True } s
+    return (render `AppE` rendered)
+    }
+
+codegenFileReload :: FilePath -> Q Exp
+codegenFileReload fp = do
+    rs <- codegenSettings
+    shakespeareFileDebug rs fp
+
+codegenFile :: FilePath -> Q Exp
+codegenFile fp = do
+    rs <- codegenSettings
+    shakespeareFile rs fp
