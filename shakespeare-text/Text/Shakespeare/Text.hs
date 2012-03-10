@@ -109,6 +109,7 @@ codegenSettings = do
   , varChar = '~'
   , urlChar = '*'
   , intChar = '&'
+  , justVarInterpolation = True -- always!
   }
 
 -- | codegen is designed for generating Yesod code, including templates
@@ -139,12 +140,12 @@ codegenFileReload :: FilePath -> Q Exp
 codegenFileReload fp = do
     rs <- codegenSettings
     render <- [|TL.toStrict . renderText|]
-    rendered <- shakespeareFileReload rs fp
+    rendered <- shakespeareFileReload rs{ justVarInterpolation = True } fp
     return (render `AppE` rendered)
 
 codegenFile :: FilePath -> Q Exp
 codegenFile fp = do
     rs <- codegenSettings
     render <- [|TL.toStrict . renderText|]
-    rendered <- shakespeareFile rs fp
+    rendered <- shakespeareFile rs{ justVarInterpolation = True } fp
     return (render `AppE` rendered)

@@ -13,7 +13,7 @@ module Text.Shakespeare
     , defaultShakespeareSettings
     , shakespeare
     , shakespeareFile
-    , shakespeareFileDebug
+    , shakespeareFileReload
     -- * low-level
     , shakespeareFromString
     , RenderUrl
@@ -176,7 +176,7 @@ preFilter ShakespeareSettings {..} s =
                 readProcess command args parsed
   where
     parseConvert PreConvert {..} = many1 $ choice $
-        (map (try . escapedParse) preEscapeIgnoreBalanced) ++
+        map (try . escapedParse) preEscapeIgnoreBalanced ++
         [mainParser]
 
       where
@@ -227,7 +227,7 @@ contentsToShakespeare rs a = do
         contentToBuilder _ (ContentRaw s') = do
             ts <- [|fromText . TS.pack|]
             return $ wrap rs `AppE` (ts `AppE` LitE (StringL s'))
-        contentToBuilder _ (ContentVar d) = do
+        contentToBuilder _ (ContentVar d) =
             return $ wrap rs `AppE` (toBuilder rs `AppE` derefToExp [] d)
         contentToBuilder r (ContentUrl d) = do
             ts <- [|fromText|]
@@ -236,7 +236,7 @@ contentsToShakespeare rs a = do
             ts <- [|fromText|]
             up <- [|\r' (u, p) -> r' u p|]
             return $ wrap rs `AppE` (ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d))
-        contentToBuilder r (ContentMix d) = do
+        contentToBuilder r (ContentMix d) =
             return $ derefToExp [] d `AppE` VarE r
 
 shakespeare :: ShakespeareSettings -> QuasiQuoter
@@ -245,7 +245,7 @@ shakespeare r = QuasiQuoter { quoteExp = shakespeareFromString r }
 shakespeareFromString :: ShakespeareSettings -> String -> Q Exp
 shakespeareFromString r str = do
     s <- qRunIO $ preFilter r str
-    contentsToShakespeare r $ contentFromString r $ s
+    contentsToShakespeare r $ contentFromString r s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
 shakespeareFile r fp = do
@@ -268,8 +268,8 @@ data VarExp url = EPlain Builder
                 | EUrlParam (url, [(TS.Text, TS.Text)])
                 | EMixin (Shakespeare url)
 
-shakespeareFileDebug :: ShakespeareSettings -> FilePath -> Q Exp
-shakespeareFileDebug rs fp = do
+shakespeareFileReload :: ShakespeareSettings -> FilePath -> Q Exp
+shakespeareFileReload rs fp = do
     str <- readFileQ fp
     s <- qRunIO $ preFilter rs str
     let b = concatMap getVars $ contentFromString rs s

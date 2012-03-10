@@ -105,7 +105,7 @@ juliusFile = jsFile
 jsFileReload, juliusFileReload :: FilePath -> Q Exp
 jsFileReload fp = do
     rs <- javascriptSettings
-    shakespeareFileDebug rs fp
+    shakespeareFileReload rs fp
 
 juliusFileReload = jsFileReload
 

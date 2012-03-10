@@ -80,7 +80,7 @@ coffeeFile fp = do
 coffeeFileReload :: FilePath -> Q Exp
 coffeeFileReload fp = do
     rs <- coffeeSettings
-    shakespeareFileDebug rs fp
+    shakespeareFileReload rs fp
 
 -- | Deprecated synonym for 'coffeeFileReload'
 coffeeFileDebug :: FilePath -> Q Exp

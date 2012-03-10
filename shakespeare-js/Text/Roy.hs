@@ -79,4 +79,4 @@ royFile fp = do
 royFileReload :: FilePath -> Q Exp
 royFileReload fp = do
     rs <- roySettings
-    shakespeareFileDebug rs fp
+    shakespeareFileReload rs fp
