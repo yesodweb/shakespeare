@@ -94,7 +94,7 @@ textFileDebug = textFileReload
 textFileReload :: FilePath -> Q Exp
 textFileReload fp = do
     rs <- settings
-    shakespeareFileDebug rs fp
+    shakespeareFileReload rs fp
 
 -- | codegen is designed for generating Yesod code, including templates
 -- So it uses different interpolation characters that won't clash with templates.
@@ -138,9 +138,13 @@ codegenSt =
 codegenFileReload :: FilePath -> Q Exp
 codegenFileReload fp = do
     rs <- codegenSettings
-    shakespeareFileDebug rs fp
+    render <- [|TL.toStrict . renderText|]
+    rendered <- shakespeareFileReload rs fp
+    return (render `AppE` rendered)
 
 codegenFile :: FilePath -> Q Exp
 codegenFile fp = do
     rs <- codegenSettings
-    shakespeareFile rs fp
+    render <- [|TL.toStrict . renderText|]
+    rendered <- shakespeareFile rs fp
+    return (render `AppE` rendered)
