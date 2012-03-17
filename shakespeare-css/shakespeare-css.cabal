@@ -29,12 +29,12 @@ extra-source-files:
   test.hs
 
 library
-    build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 0.10    && < 0.12
+    build-depends:   base             >= 4        && < 5
+                   , shakespeare      >= 0.10     && < 0.12
                    , template-haskell
-                   , text             >= 0.7     && < 0.12
-                   , process          >= 1.0     && < 1.2
-                   , parsec           >= 2       && < 4
+                   , text             >= 0.11.1.1 && < 0.12
+                   , process          >= 1.0      && < 1.2
+                   , parsec           >= 2        && < 4
 
     exposed-modules: Text.Cassius
                      Text.Lucius
