@@ -17,13 +17,13 @@ description:
     Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation . Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
     In this case, the variable type needs a ToText instance.
     .
-    Please see http://docs.yesodweb.com/book/templates for a more thorough description and examples of the shakespeare family of template languages.
+    Please see http://www.yesodweb.com/book/shakespearean-templates for a more thorough description and examples of the shakespeare family of template languages.
 
 category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.8
 build-type:      Simple
-homepage:        http://www.yesodweb.com/book/templates
+homepage:        http://www.yesodweb.com/book/shakespearean-templates
 extra-source-files:
   test/texts/external1.text
   test/texts/external2.text

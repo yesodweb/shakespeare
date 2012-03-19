@@ -10,7 +10,7 @@ category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.8
 build-type:      Simple
-homepage:        http://www.yesodweb.com/book/templates
+homepage:        http://www.yesodweb.com/book/shakespearean-templates
 
 extra-source-files:
   main.hs
