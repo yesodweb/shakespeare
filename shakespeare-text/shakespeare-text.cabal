@@ -1,5 +1,5 @@
 name:            shakespeare-text
-version:         0.11
+version:         1.0
 license:         BSD3
 license-file:    LICENSE
 author:          Greg Weber <greg@gregweber.info>
@@ -32,7 +32,7 @@ extra-source-files:
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 0.11    && < 0.12
+                   , shakespeare      >= 1.0     && < 1.1
                    , template-haskell
                    , text             >= 0.7     && < 0.12
 
@@ -48,7 +48,7 @@ test-suite test
 
     ghc-options:   -Wall
     build-depends:
-                   shakespeare-text >= 0.10 && < 0.11
+                   shakespeare-text
                  , base             >= 4       && < 5
                  , HUnit
                  , hspec            >= 0.8     && < 0.10

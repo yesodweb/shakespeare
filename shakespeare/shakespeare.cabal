@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         0.11
+version:         1.0
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>

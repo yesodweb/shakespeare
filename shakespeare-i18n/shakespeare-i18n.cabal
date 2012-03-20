@@ -1,5 +1,5 @@
 name:            shakespeare-i18n
-version:         0.0.2.1
+version:         1.0.0
 license:         BSD3
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -18,7 +18,7 @@ homepage:        http://www.yesodweb.com/book/shakespearean-templates
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 0.10    && < 0.12
+                   , shakespeare      >= 1.0     && < 1.1
                    , template-haskell
                    , text             >= 0.7     && < 0.12
                    , parsec
