@@ -236,7 +236,7 @@ parseLine set = do
         tagClass (Just d) <|> tagAttrib (Just d)
     tagClass x = char '.' >> (TagClass . (,) x) <$> tagAttribValue NotInQuotes
     tagAttrib cond = do
-        s <- many1 $ noneOf " \t=\r\n>"
+        s <- many1 $ noneOf " \t=\r\n><"
         v <- (char '=' >> tagAttribValue NotInQuotesAttr) <|> return []
         return $ TagAttrib (cond, s, v)
     tag' = foldr tag'' ("div", [], [])
@@ -264,10 +264,11 @@ parseLine set = do
         _ <- char '<'
         name' <- many  $ noneOf " \t.#\r\n!>"
         let name = if null name' then "div" else name'
-        xs <- many $ try ((many $ oneOf " \t") >>
+        xs <- many $ try ((many $ oneOf " \t\r\n") >>
               (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrib Nothing))
-        _ <- many $ oneOf " \t"
-        c <- (eol >> return []) <|> (char '>' >> content InContent)
+        _ <- many $ oneOf " \t\r\n"
+        _ <- char '>'
+        c <- content InContent
         let (tn, attr, classes) = tag' $ TagName name : xs
         if '/' `elem` tn
           then fail "A tag name may not contain a slash. Perhaps you have a closing tag in your HTML."

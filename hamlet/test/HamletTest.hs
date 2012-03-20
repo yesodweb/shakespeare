@@ -83,7 +83,7 @@ $#a third one|]
 
   , it "ignores a blank line" $ do
     helper "<p>foo</p>" [hamlet|
-<p
+<p>
 
     foo
 
@@ -96,7 +96,7 @@ $#a third one|]
   , it "hamlet angle bracket syntax" $
       helper "<p class=\"foo\" height=\"100\"><span id=\"bar\" width=\"50\">HELLO</span></p>"
         [hamlet|
-<p.foo height="100"
+<p.foo height="100">
     <span #bar width=50>HELLO
 |]
 
@@ -158,7 +158,7 @@ $#a third one|]
     helper "<p>1</p><p>2 not ignored</p>" [hamlet|
 <p>1
 <!-- ignored comment -->
-<p
+<p>
     2
     <!-- ignored --> not ignored<!-- ignored -->
 |]
@@ -192,13 +192,13 @@ $nothing
 
   , it "conditional class" $ do
       helper "<p class=\"current\"></p>" 
-        [hamlet|<p :False:.ignored :True:.current|]
+        [hamlet|<p :False:.ignored :True:.current>|]
 
       helper "<p class=\"1 3 2 4\"></p>"
-        [hamlet|<p :True:.1 :True:class=2 :False:.a :False:class=b .3 class=4|]
+        [hamlet|<p :True:.1 :True:class=2 :False:.a :False:class=b .3 class=4>|]
 
       helper "<p class=\"foo bar baz\"></p>"
-        [hamlet|<p class=foo class=bar class=baz|]
+        [hamlet|<p class=foo class=bar class=baz>|]
 
 
 
@@ -338,6 +338,12 @@ $case url2
         <dt>#{name}
         <dd>#{show age}
 |]
+
+  , it "multiline tags" $ helper
+      "<foo bar=\"baz\" bin=\"bin\">content</foo>" [hamlet|
+<foo bar=baz
+     bin=bin>content
+|]
   ]
 
 data Pair = Pair String Int
@@ -425,11 +431,11 @@ caseStatic = helper "some static content" [hamlet|some static content|]
 caseTag :: Assertion
 caseTag = do
     helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [hamlet|
-<p .foo
+<p .foo>
   <#bar>baz
 |]
     helper "<p class=\"foo.bar\"><div id=\"bar\">baz</div></p>" [hamlet|
-<p class=foo.bar
+<p class=foo.bar>
   <#bar>baz
 |]
 
@@ -560,30 +566,23 @@ $with n <- " , something", y <- n
 |]
 
 caseScriptNotEmpty :: Assertion
-caseScriptNotEmpty = helper "<script></script>" [hamlet|<script|]
+caseScriptNotEmpty = helper "<script></script>" [hamlet|<script>|]
 
 caseMetaEmpty :: Assertion
 caseMetaEmpty = do
-    helper "<meta>" [hamlet|<meta|]
-    helper "<meta/>" [xhamlet|<meta|]
     helper "<meta>" [hamlet|<meta>|]
     helper "<meta/>" [xhamlet|<meta>|]
 
 caseInputEmpty :: Assertion
 caseInputEmpty = do
-    helper "<input>" [hamlet|<input|]
-    helper "<input/>" [xhamlet|<input|]
     helper "<input>" [hamlet|<input>|]
     helper "<input/>" [xhamlet|<input>|]
 
 caseMultiClass :: Assertion
-caseMultiClass = do
-    helper "<div class=\"foo bar\"></div>" [hamlet|<.foo.bar|]
-    helper "<div class=\"foo bar\"></div>" [hamlet|<.foo.bar>|]
+caseMultiClass = helper "<div class=\"foo bar\"></div>" [hamlet|<.foo.bar>|]
 
 caseAttribOrder :: Assertion
-caseAttribOrder = do
-    helper "<meta 1 2 3>" [hamlet|<meta 1 2 3|]
+caseAttribOrder =
     helper "<meta 1 2 3>" [hamlet|<meta 1 2 3>|]
 
 caseNothing :: Assertion
@@ -646,11 +645,11 @@ caseEmptyStatementList = do
 
 caseAttribCond :: Assertion
 caseAttribCond = do
-    helper "<select></select>" [hamlet|<select :False:selected|]
-    helper "<select selected></select>" [hamlet|<select :True:selected|]
-    helper "<meta var=\"foo:bar\">" [hamlet|<meta var=foo:bar|]
+    helper "<select></select>" [hamlet|<select :False:selected>|]
+    helper "<select selected></select>" [hamlet|<select :True:selected>|]
+    helper "<meta var=\"foo:bar\">" [hamlet|<meta var=foo:bar>|]
     helper "<select selected></select>"
-        [hamlet|<select :true theArg:selected|]
+        [hamlet|<select :true theArg:selected>|]
 
     helper "<select></select>" [hamlet|<select :False:selected>|]
     helper "<select selected></select>" [hamlet|<select :True:selected>|]
@@ -685,19 +684,19 @@ caseNonLeadingPercent =
 caseQuotedAttribs :: Assertion
 caseQuotedAttribs =
     helper "<input type=\"submit\" value=\"Submit response\">" [hamlet|
-<input type=submit value="Submit response"
+<input type=submit value="Submit response">
 |]
 
 caseSpacedDerefs :: Assertion
 caseSpacedDerefs = do
     helper "&lt;var&gt;" [hamlet|#{var theArg}|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}>|]
 
 caseAttribVars :: Assertion
 caseAttribVars = do
-    helper "<div id=\"&lt;var&gt;\"></div>" [hamlet|<##{var theArg}|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [hamlet|< f=#{var theArg}|]
+    helper "<div id=\"&lt;var&gt;\"></div>" [hamlet|<##{var theArg}>|]
+    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}>|]
+    helper "<div f=\"&lt;var&gt;\"></div>" [hamlet|< f=#{var theArg}>|]
 
     helper "<div id=\"&lt;var&gt;\"></div>" [hamlet|<##{var theArg}>|]
     helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}>|]
@@ -714,10 +713,10 @@ caseNesting = do
     helper
       "<table><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table>"
       [hamlet|
-<table
-  <tbody
+<table>
+  <tbody>
     $forall user <- users
-        <tr
+        <tr>
          <td>#{user}
 |]
     helper
@@ -728,8 +727,8 @@ caseNesting = do
           , "</select>"
           ])
         [hamlet|
-<select #"#{name}" name=#{name}
-    <option :isBoolBlank val:selected
+<select #"#{name}" name=#{name}>
+    <option :isBoolBlank val:selected>
     <option value=true :isBoolTrue val:selected>Yes
     <option value=false :isBoolFalse val:selected>No
 |]
@@ -785,14 +784,14 @@ caseHamlet' :: Assertion
 caseHamlet' = do
     helper' "foo" [shamlet|foo|]
     helper' "foo" [xshamlet|foo|]
-    helper "<br>" $ const $ [shamlet|<br|]
-    helper "<br/>" $ const $ [xshamlet|<br|]
+    helper "<br>" $ const $ [shamlet|<br>|]
+    helper "<br/>" $ const $ [xshamlet|<br>|]
 
     -- new with generalized stuff
     helper' "foo" [shamlet|foo|]
     helper' "foo" [xshamlet|foo|]
-    helper "<br>" $ const $ [shamlet|<br|]
-    helper "<br/>" $ const $ [xshamlet|<br|]
+    helper "<br>" $ const $ [shamlet|<br>|]
+    helper "<br/>" $ const $ [xshamlet|<br>|]
 
 
 instance Show Url where
