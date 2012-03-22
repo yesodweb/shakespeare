@@ -208,6 +208,9 @@ preFilter ShakespeareSettings {..} s =
         parseChar' comments ignores =
             many1 (noneOf ([varChar, urlChar, intChar] ++ comments ++ ignores))
 
+pack' :: String -> TS.Text
+pack' = TS.pack
+{-# NOINLINE pack' #-}
 
 contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do
@@ -225,7 +228,7 @@ contentsToShakespeare rs a = do
       where
         contentToBuilder :: Name -> Content -> Q Exp
         contentToBuilder _ (ContentRaw s') = do
-            ts <- [|fromText . TS.pack|]
+            ts <- [|fromText . pack'|]
             return $ wrap rs `AppE` (ts `AppE` LitE (StringL s'))
         contentToBuilder _ (ContentVar d) =
             return $ wrap rs `AppE` (toBuilder rs `AppE` derefToExp [] d)
