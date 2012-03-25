@@ -35,7 +35,7 @@ import Data.Monoid (mconcat)
 
 -- |
 --
--- >>> renderLucius undefined [lucius|foo{bar:baz}|]
+-- >>> renderCss ([lucius|foo{bar:baz}|] undefined)
 -- "foo{bar:baz}"
 lucius :: QuasiQuoter
 lucius = QuasiQuoter { quoteExp = luciusFromString }
