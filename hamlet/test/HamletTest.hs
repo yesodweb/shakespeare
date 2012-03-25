@@ -344,6 +344,11 @@ $case url2
 <foo bar=baz
      bin=bin>content
 |]
+  , let attrs = [("bar", "baz"), ("bin", "<>\"&")]
+     in it "*{...} attributes" $ helper
+      "<foo bar=\"baz\" bin=\"&lt;&gt;&quot;&amp;\">content</foo>" [hamlet|
+<foo *{attrs}>content
+|]
   ]
 
 data Pair = Pair String Int

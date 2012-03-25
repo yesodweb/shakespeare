@@ -42,6 +42,7 @@ data Content = ContentRaw String
              | ContentUrl Bool Deref -- ^ bool: does it include params?
              | ContentEmbed Deref
              | ContentMsg Deref
+             | ContentAttrs Deref
     deriving (Show, Eq, Read, Data, Typeable)
 
 data Line = LineForall Deref Binding
@@ -58,6 +59,7 @@ data Line = LineForall Deref Binding
             , _lineAttr :: [(Maybe Deref, String, [Content])]
             , _lineContent :: [Content]
             , _lineClasses :: [(Maybe Deref, [Content])]
+            , _lineAttrs :: [Deref]
             }
           | LineContent [Content]
     deriving (Eq, Show, Read)
@@ -239,11 +241,18 @@ parseLine set = do
         s <- many1 $ noneOf " \t=\r\n><"
         v <- (char '=' >> tagAttribValue NotInQuotesAttr) <|> return []
         return $ TagAttrib (cond, s, v)
-    tag' = foldr tag'' ("div", [], [])
-    tag'' (TagName s) (_, y, z) = (s, y, z)
-    tag'' (TagIdent s) (x, y, z) = (x, (Nothing, "id", s) : y, z)
-    tag'' (TagClass s) (x, y, z) = (x, y, s : z)
-    tag'' (TagAttrib s) (x, y, z) = (x, s : y, z)
+
+    tagAttrs = do
+        _ <- char '*'
+        d <- between (char '{') (char '}') parseDeref
+        return $ TagAttribs d
+
+    tag' = foldr tag'' ("div", [], [], [])
+    tag'' (TagName s) (_, y, z, as) = (s, y, z, as)
+    tag'' (TagIdent s) (x, y, z, as) = (x, (Nothing, "id", s) : y, z, as)
+    tag'' (TagClass s) (x, y, z, as) = (x, y, s : z, as)
+    tag'' (TagAttrib s) (x, y, z, as) = (x, s : y, z, as)
+    tag'' (TagAttribs s) (x, y, z, as) = (x, y, z, s : as)
 
     ident :: Parser Ident
     ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
@@ -265,19 +274,20 @@ parseLine set = do
         name' <- many  $ noneOf " \t.#\r\n!>"
         let name = if null name' then "div" else name'
         xs <- many $ try ((many $ oneOf " \t\r\n") >>
-              (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrib Nothing))
+              (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrs <|> tagAttrib Nothing))
         _ <- many $ oneOf " \t\r\n"
         _ <- char '>'
         c <- content InContent
-        let (tn, attr, classes) = tag' $ TagName name : xs
+        let (tn, attr, classes, attrsd) = tag' $ TagName name : xs
         if '/' `elem` tn
           then fail "A tag name may not contain a slash. Perhaps you have a closing tag in your HTML."
-          else return $ LineTag tn attr c classes
+          else return $ LineTag tn attr c classes attrsd
 
 data TagPiece = TagName String
               | TagIdent [Content]
               | TagClass (Maybe Deref, [Content])
               | TagAttrib (Maybe Deref, String, [Content])
+              | TagAttribs Deref
     deriving Show
 
 data ContentRule = InQuotes | NotInQuotes | NotInQuotesAttr | InContent
@@ -331,7 +341,7 @@ nestToDoc set (Nest (LineCase d) inside:rest) = do
     cases <- mapM getOf inside
     rest' <- nestToDoc set rest
     Ok $ DocCase d cases : rest'
-nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
+nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
     let attrFix (x, y, z) = (x, y, [(Nothing, z)])
     let takeClass (a, "class", b) = Just (a, b)
         takeClass _ = Nothing
@@ -362,6 +372,7 @@ nestToDoc set (Nest (LineTag tn attrs content classes) inside:rest) = do
     rest' <- nestToDoc set rest
     Ok $ start
        : attrs''
+      ++ map (DocContent . ContentAttrs) attrsD
       ++ seal
        : map DocContent content
       ++ inside'

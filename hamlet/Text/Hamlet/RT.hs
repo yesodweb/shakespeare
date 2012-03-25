@@ -83,6 +83,9 @@ parseHamletRT set s =
         return $ SDTemplate y
     convert (DocContent ContentMsg{}) =
         error "Runtime hamlet does not currently support message interpolation"
+    convert (DocContent ContentAttrs{}) =
+        error "Runtime hamlet does not currently support attrs interpolation"
+
     convert x@(DocCond conds els) = do
         conds' <- mapM go conds
         els' <- maybe (return []) (mapM convert) els

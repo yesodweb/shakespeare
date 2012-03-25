@@ -24,6 +24,8 @@ module Text.Hamlet
     , HtmlUrlI18n
     , ihamlet
     , ihamletFile
+      -- * Type classes
+    , ToAttributes (..)
       -- * Internal, for making more
     , HamletSettings
     , hamletWithSettings
@@ -45,6 +47,32 @@ import qualified Data.Text.Lazy as TL
 import Text.Blaze (Html, preEscapedText, toHtml)
 import qualified Data.Foldable as F
 import Control.Monad (mplus)
+import Data.Monoid (mempty, mappend)
+import Control.Arrow ((***))
+
+-- | Convert some value to a list of attribute pairs.
+class ToAttributes a where
+    toAttributes :: a -> [(Text, Text)]
+instance ToAttributes (Text, Text) where
+    toAttributes = return
+instance ToAttributes (String, String) where
+    toAttributes (k, v) = [(pack k, pack v)]
+instance ToAttributes [(Text, Text)] where
+    toAttributes = id
+instance ToAttributes [(String, String)] where
+    toAttributes = map (pack *** pack)
+
+attrsToHtml :: [(Text, Text)] -> Html
+attrsToHtml =
+    foldr go mempty
+  where
+    go (k, v) rest =
+        toHtml " "
+        `mappend` preEscapedText k
+        `mappend` preEscapedText (pack "=\"")
+        `mappend` toHtml v
+        `mappend` preEscapedText (pack "\"")
+        `mappend` rest
 
 type Render url = url -> [(Text, Text)] -> Text
 type Translate msg = msg -> Html
@@ -165,6 +193,9 @@ contentToExp env hr scope (ContentMsg d) =
         Nothing -> error "Message interpolation used, but no message renderer provided"
         Just wrender -> wrender $ \render ->
             return $ hrFromHtml hr `AppE` (render `AppE` derefToExp scope d)
+contentToExp _ hr scope (ContentAttrs d) = do
+    html <- [|attrsToHtml . toAttributes|]
+    return $ hrFromHtml hr `AppE` (html `AppE` derefToExp scope d)
 
 shamlet :: QuasiQuoter
 shamlet = hamletWithSettings htmlRules defaultHamletSettings
