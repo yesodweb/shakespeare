@@ -349,6 +349,9 @@ $case url2
       "<foo bar=\"baz\" bin=\"&lt;&gt;&quot;&amp;\">content</foo>" [hamlet|
 <foo *{attrs}>content
 |]
+  , it "blank attr values" $ helper
+      "<foo bar=\"\" baz bin=\"\"></foo>"
+      [hamlet|<foo bar="" baz bin=>|]
   ]
 
 data Pair = Pair String Int

@@ -22,7 +22,7 @@ import Data.Data
 import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, fromMaybe)
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -56,7 +56,7 @@ data Line = LineForall Deref Binding
           | LineOf [Ident]
           | LineTag
             { _lineTagName :: String
-            , _lineAttr :: [(Maybe Deref, String, [Content])]
+            , _lineAttr :: [(Maybe Deref, String, Maybe [Content])]
             , _lineContent :: [Content]
             , _lineClasses :: [(Maybe Deref, [Content])]
             , _lineAttrs :: [Deref]
@@ -239,7 +239,7 @@ parseLine set = do
     tagClass x = char '.' >> (TagClass . (,) x) <$> tagAttribValue NotInQuotes
     tagAttrib cond = do
         s <- many1 $ noneOf " \t=\r\n><"
-        v <- (char '=' >> tagAttribValue NotInQuotesAttr) <|> return []
+        v <- (char '=' >> Just <$> tagAttribValue NotInQuotesAttr) <|> return Nothing
         return $ TagAttrib (cond, s, v)
 
     tagAttrs = do
@@ -249,7 +249,7 @@ parseLine set = do
 
     tag' = foldr tag'' ("div", [], [], [])
     tag'' (TagName s) (_, y, z, as) = (s, y, z, as)
-    tag'' (TagIdent s) (x, y, z, as) = (x, (Nothing, "id", s) : y, z, as)
+    tag'' (TagIdent s) (x, y, z, as) = (x, (Nothing, "id", Just s) : y, z, as)
     tag'' (TagClass s) (x, y, z, as) = (x, y, s : z, as)
     tag'' (TagAttrib s) (x, y, z, as) = (x, s : y, z, as)
     tag'' (TagAttribs s) (x, y, z, as) = (x, y, z, s : as)
@@ -286,7 +286,7 @@ parseLine set = do
 data TagPiece = TagName String
               | TagIdent [Content]
               | TagClass (Maybe Deref, [Content])
-              | TagAttrib (Maybe Deref, String, [Content])
+              | TagAttrib (Maybe Deref, String, Maybe [Content])
               | TagAttribs Deref
     deriving Show
 
@@ -343,7 +343,7 @@ nestToDoc set (Nest (LineCase d) inside:rest) = do
     Ok $ DocCase d cases : rest'
 nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
     let attrFix (x, y, z) = (x, y, [(Nothing, z)])
-    let takeClass (a, "class", b) = Just (a, b)
+    let takeClass (a, "class", b) = Just (a, fromMaybe [] b)
         takeClass _ = Nothing
     let clazzes = classes ++ mapMaybe takeClass attrs
     let notClass (_, x, _) = x /= "class"
@@ -351,7 +351,7 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
     let attrs' =
             case clazzes of
               [] -> map attrFix noclass
-              _ -> (Nothing, "class", clazzes)
+              _ -> (Nothing, "class", map (second Just) clazzes)
                        : map attrFix noclass
     let closeStyle =
             if not (null content) || not (null inside)
@@ -420,12 +420,12 @@ parseDoc set s = do
     ds <- nestToDoc set ns
     return $ compressDoc ds
 
-attrToContent :: (Maybe Deref, String, [(Maybe Deref, [Content])]) -> [Doc]
+attrToContent :: (Maybe Deref, String, [(Maybe Deref, Maybe [Content])]) -> [Doc]
 attrToContent (Just cond, k, v) =
     [DocCond [(cond, attrToContent (Nothing, k, v))] Nothing]
 attrToContent (Nothing, k, []) = [DocContent $ ContentRaw $ ' ' : k]
-attrToContent (Nothing, k, [(Nothing, [])]) = [DocContent $ ContentRaw $ ' ' : k]
-attrToContent (Nothing, k, [(Nothing, v)]) =
+attrToContent (Nothing, k, [(Nothing, Nothing)]) = [DocContent $ ContentRaw $ ' ' : k]
+attrToContent (Nothing, k, [(Nothing, Just v)]) =
     DocContent (ContentRaw (' ' : k ++ "=\""))
   : map DocContent v
   ++ [DocContent $ ContentRaw "\""]
@@ -435,16 +435,16 @@ attrToContent (Nothing, k, v) = -- only for class
     ++ go' (last v)
     ++ [DocContent $ ContentRaw "\""]
   where
-    go (Nothing, x) = map DocContent x ++ [DocContent $ ContentRaw " "]
+    go (Nothing, x) = map DocContent (fromMaybe [] x) ++ [DocContent $ ContentRaw " "]
     go (Just b, x) =
         [ DocCond
-            [(b, map DocContent x ++ [DocContent $ ContentRaw " "])]
+            [(b, map DocContent (fromMaybe [] x) ++ [DocContent $ ContentRaw " "])]
             Nothing
         ]
-    go' (Nothing, x) = map DocContent x
+    go' (Nothing, x) = maybe [] (map DocContent) x
     go' (Just b, x) =
         [ DocCond
-            [(b, map DocContent x)]
+            [(b, maybe [] (map DocContent) x)]
             Nothing
         ]
 
