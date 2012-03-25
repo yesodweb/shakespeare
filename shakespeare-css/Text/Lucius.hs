@@ -179,7 +179,7 @@ parseTopLevels =
         return tl
     charset = do
         try $ stringCI "@charset "
-        cs <- many1 $ noneOf ";"
+        cs <- parseContents ";"
         _ <- char ';'
         return $ TopAtDecl "charset" cs
     media = do
@@ -190,7 +190,7 @@ parseTopLevels =
         return $ TopAtBlock "media" selector b
     impor = do
         try $ stringCI "@import ";
-        val <- many1 $ noneOf ";";
+        val <- parseContents ";"
         _ <- char ';'
         return $ TopAtDecl "import" val
     var = try $ do
@@ -222,9 +222,12 @@ luciusRT' tl =
   where
     go :: [(Text, Text)] -> [TopLevel] -> Either String Css
     go _ [] = Right []
-    go scope (TopAtDecl dec cs:rest) = do
+    go scope (TopAtDecl dec cs':rest) = do
+        let scope' = map goScope scope
+            render = error "luciusRT has no URLs"
+        cs <- mapM (contentToBuilderRT scope' render) cs'
         rest' <- go scope rest
-        Right $ AtDecl dec cs : rest'
+        Right $ AtDecl dec (mconcat cs) : rest'
     go scope (TopBlock b:rest) = do
         b' <- goBlock scope b
         rest' <- go scope rest

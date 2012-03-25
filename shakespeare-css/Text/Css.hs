@@ -29,7 +29,7 @@ data Css' = Css'
     { _cssSelectors :: Builder
     , _cssAttributes :: [(Builder, Builder)]
     }
-data CssTop = AtBlock String Builder [Css'] | Css Css' | AtDecl String String
+data CssTop = AtBlock String Builder [Css'] | Css Css' | AtDecl String Builder
 
 type Css = [CssTop]
 
@@ -65,14 +65,14 @@ cssFileDebug parseBlocks' parseBlocks fp = do
   where
     go :: [TopLevel] -> ([(String, String)], [Content])
     go [] = ([], [])
-    go (TopAtDecl dec cs:rest) =
+    go (TopAtDecl dec _FIXMEcs:rest) =
         (scope, rest'')
       where
         (scope, rest') = go rest
         rest'' = ContentRaw (concat
             [ "@"
             , dec
-            , cs
+            -- FIXME, cs
             , ";"
             ]) : rest'
     go (TopAtBlock _ _ blocks:rest) =
@@ -155,7 +155,10 @@ cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
   where
     goTop :: [(String, String)] -> [TopLevel] -> Css
     goTop _ [] = []
-    goTop scope (TopAtDecl dec cs:rest) = AtDecl dec cs : goTop scope rest
+    goTop scope (TopAtDecl dec cs':rest) =
+        AtDecl dec cs : goTop scope rest
+      where
+        cs = either error mconcat $ mapM (contentToBuilderRT cd render') cs'
     goTop scope (TopBlock b:rest) =
         map Css (either error ($[]) $ blockRuntime (addScope scope) render' b) ++
         goTop scope rest
@@ -210,7 +213,7 @@ data TopLevel = TopBlock Block
                     , _atBlockSelector :: Contents
                     , _atBlockInner :: [Block]
                     }
-              | TopAtDecl String String
+              | TopAtDecl String Contents
               | TopVar String String
 
 type Pairs = [Pair]
@@ -287,7 +290,7 @@ topLevelsToCassius a = do
         es <- go r scope rest
         return $ e : es
     go r scope (TopAtDecl dec cs:rest) = do
-        e <- [|(:) $ AtDecl $(lift dec) $(lift cs)|]
+        e <- [|(:) $ AtDecl $(lift dec) $(contentsToBuilder r scope cs)|]
         es <- go r scope rest
         return $ e : es
     go r scope (TopVar k v:rest) = go r ((k, v) : scope) rest
@@ -307,7 +310,7 @@ renderCss =
         singleton '{' `mappend`
         foldr mappend (singleton '}') (map renderCss' x)
     go (AtDecl dec cs) = fromText (pack $ concat ["@", dec, " "]) `mappend`
-                      fromText (pack cs) `mappend`
+                      cs `mappend`
                       singleton ';'
 
 renderCss' :: Css' -> Builder

@@ -339,6 +339,15 @@ foo { foo:X#{bar}Y; }
 @mobileWidth: 400px;
 @media (max-width: #{mobileWidth}){ foo { color: red; } }
 |]
+  , it "URLs in import" $ celper
+        "@import url(\"suburl\");" [lucius|
+@import url("@{Sub SubUrl}");
+|]
+  , let charset = "mycharset"
+     in it "vars in charset" $ celper
+        "@charset mycharset;" [lucius|
+@charset #{charset};
+|]
   ]
 
 data Url = Home | Sub SubUrl
