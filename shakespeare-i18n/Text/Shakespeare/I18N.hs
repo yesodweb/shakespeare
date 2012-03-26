@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE CPP #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -149,7 +150,10 @@ mkMessageCommon :: Bool      -- ^ generate a new datatype from the constructors 
                 -> Q [Dec]
 mkMessageCommon genType prefix postfix master dt folder lang = do
     files <- qRunIO $ getDirectoryContents folder
-    contents <- qRunIO $ fmap catMaybes $ mapM (loadLang folder) files
+    (files', contents) <- qRunIO $ fmap (unzip . catMaybes) $ mapM (loadLang folder) files
+#ifdef GHC_7_4
+    mapM_ qAddDependentFile files'
+#endif
     sdef <-
         case lookup lang contents of
             Nothing -> error $ "Did not find main language file: " ++ unpack lang
@@ -299,7 +303,7 @@ data Def = Def
     , content :: [Content]
     }
 
-loadLang :: FilePath -> FilePath -> IO (Maybe (Lang, [Def]))
+loadLang :: FilePath -> FilePath -> IO (Maybe (FilePath, (Lang, [Def])))
 loadLang folder file = do
     let file' = folder ++ '/' : file
     e <- doesFileExist file'
@@ -309,7 +313,7 @@ loadLang folder file = do
             bs <- S.readFile file'
             let s = unpack $ decodeUtf8 bs
             defs <- fmap catMaybes $ mapM parseDef $ lines s
-            return $ Just (lang, defs)
+            return $ Just (file', (lang, defs))
         else return Nothing
 
 parseDef :: String -> IO (Maybe Def)
