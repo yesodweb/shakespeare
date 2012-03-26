@@ -27,6 +27,8 @@ library
 
     exposed-modules: Text.Shakespeare.I18N
     ghc-options:     -Wall
+    if impl(ghc >= 7.4)
+       cpp-options: -DGHC_7_4
 
 source-repository head
   type:     git
