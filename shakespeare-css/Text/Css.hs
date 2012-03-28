@@ -6,10 +6,12 @@
 module Text.Css where
 
 import Data.List (intersperse, intercalate)
-import Data.Text.Lazy.Builder (Builder, fromText, singleton, toLazyText, fromLazyText, fromString)
+import Data.Text.Lazy.Builder (Builder, singleton, toLazyText, fromLazyText, fromString)
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TLB
 import Data.Monoid (mconcat, mappend, mempty)
-import Data.Text (Text, pack)
+import Data.Text (Text)
+import qualified Data.Text as T
 import Language.Haskell.TH.Syntax
 import System.IO.Unsafe (unsafePerformIO)
 import Text.ParserCombinators.Parsec (Parser, parse)
@@ -17,6 +19,14 @@ import Text.Shakespeare.Base hiding (Scope)
 import Language.Haskell.TH
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***))
+
+pack :: String -> Text
+pack = T.pack
+{-# NOINLINE pack #-}
+
+fromText :: Text -> Builder
+fromText = TLB.fromText
+{-# NOINLINE fromText #-}
 
 class ToCss a where
     toCss :: a -> Builder

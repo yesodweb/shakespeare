@@ -42,7 +42,7 @@ import Text.Printf (printf)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH
-import Data.Text.Lazy.Builder (fromText, fromLazyText)
+import Data.Text.Lazy.Builder (fromLazyText)
 import Data.Maybe (catMaybes)
 import Data.Word (Word8)
 import Data.Bits

@@ -21,7 +21,7 @@ import Text.Cassius hiding (cassius, cassiusFile, cassiusFileDebug, cassiusFileR
 import Text.Shakespeare.Base
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
-import Data.Text (Text, pack, unpack)
+import Data.Text (Text, unpack)
 import qualified Data.Text.Lazy as TL
 import Text.ParserCombinators.Parsec hiding (Line)
 import Text.Css
@@ -30,7 +30,6 @@ import Numeric (readHex)
 import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Data.Either (partitionEithers)
-import Data.Text.Lazy.Builder (fromText)
 import Data.Monoid (mconcat)
 
 -- |
