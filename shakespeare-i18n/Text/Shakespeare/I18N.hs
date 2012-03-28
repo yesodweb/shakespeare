@@ -150,9 +150,9 @@ mkMessageCommon :: Bool      -- ^ generate a new datatype from the constructors 
                 -> Q [Dec]
 mkMessageCommon genType prefix postfix master dt folder lang = do
     files <- qRunIO $ getDirectoryContents folder
-    (files', contents) <- qRunIO $ fmap (unzip . catMaybes) $ mapM (loadLang folder) files
+    (_files', contents) <- qRunIO $ fmap (unzip . catMaybes) $ mapM (loadLang folder) files
 #ifdef GHC_7_4
-    mapM_ qAddDependentFile files'
+    mapM_ qAddDependentFile _files'
 #endif
     sdef <-
         case lookup lang contents of
