@@ -100,6 +100,7 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
         _ <- char ')'
         return $ DerefIdent $ Ident x
     derefInfix x = try $ do
+        () <- fail "Infix operator handling is currently disabled"
         _ <- many1 $ oneOf " \t"
         op <- many1 (satisfy $ \c -> isSymbol c || c `elem` "-") <?> "operator"
         -- special handling for $, which we don't deal with
