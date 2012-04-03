@@ -367,13 +367,14 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
         start = DocContent $ ContentRaw $ "<" ++ tn
         attrs'' = concatMap attrToContent attrs'
         newline' = DocContent $ ContentRaw
-                 $ if hamletCloseNewline set then "\n" else ""
+                 $ if hamletNewlines set then "\n" else ""
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ start
        : attrs''
       ++ map (DocContent . ContentAttrs) attrsD
       ++ seal
+       : newline'
        : map DocContent content
       ++ inside'
       ++ end
@@ -382,7 +383,9 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
 nestToDoc set (Nest (LineContent content) inside:rest) = do
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
-    Ok $ map DocContent content ++ inside' ++ rest'
+    let newline' = DocContent $ ContentRaw
+                   $ if hamletNewlines set then "\n" else ""
+    Ok $ map DocContent content ++ newline':inside' ++ rest'
 nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
 nestToDoc _set (Nest LineElse _:_) = Error "Unexpected else"
 nestToDoc _set (Nest LineNothing _:_) = Error "Unexpected nothing"
@@ -454,9 +457,9 @@ data HamletSettings = HamletSettings
       -- | The value to replace a \"!!!\" with. Do not include the trailing
       -- newline.
       hamletDoctype :: String
-      -- | Should we put a newline after closing a tag? Mostly useful for debug
-      -- output.
-    , hamletCloseNewline :: Bool
+      -- | Should we add newlines to the output, making it more human-readable?
+      --  Useful for client-side debugging but may alter browser page layout.
+    , hamletNewlines :: Bool
       -- | How a tag should be closed. Use this to switch between HTML, XHTML
       -- or even XML output.
     , hamletCloseStyle :: String -> CloseStyle

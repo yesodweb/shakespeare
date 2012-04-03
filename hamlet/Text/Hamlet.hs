@@ -27,13 +27,15 @@ module Text.Hamlet
       -- * Type classes
     , ToAttributes (..)
       -- * Internal, for making more
-    , HamletSettings
+    , HamletSettings (..)
     , hamletWithSettings
     , hamletFileWithSettings
     , defaultHamletSettings
     , xhtmlHamletSettings
     , Env (..)
     , HamletRules (..)
+    , hamletRules
+    , htmlRules
     ) where
 
 import Text.Shakespeare.Base
@@ -211,6 +213,11 @@ htmlRules = do
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings hamletRules defaultHamletSettings
 
+-- | A variant which adds newlines to the output. Useful for debugging
+-- but may alter browser page layout.
+hamlet' :: QuasiQuoter
+hamlet' = hamletWithSettings hamletRules defaultHamletSettings{hamletNewlines=True}
+         
 xhamlet :: QuasiQuoter
 xhamlet = hamletWithSettings hamletRules xhtmlHamletSettings
 
