@@ -1,6 +1,6 @@
 name:            shakespeare-test
 version:         0.1
-license:         BSD3
+license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
 maintainer:      Michael Snoyman <michael@snoyman.com>
