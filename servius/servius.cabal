@@ -8,7 +8,7 @@ Author:              Michael Snoyman
 Maintainer:          michael@snoyman.com
 Category:            Web
 Build-type:          Simple
-Cabal-version:       >=1.2
+Cabal-version:       >=1.6
 Description:         Does not support any variable interpolation. Supports Hamlet and Lucius files (must have .hamlet and .lucius file extensions, respectively).
 
 
@@ -30,3 +30,7 @@ Executable servius
                , shakespeare-css >= 1.0                && < 1.1
                , transformers
                , wai             >= 1.2                && < 1.3
+
+source-repository head
+  type:     git
+  location: git://github.com/yesodweb/shakespeare.git
