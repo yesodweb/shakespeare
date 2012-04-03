@@ -4,3 +4,4 @@
 ./shakespeare-text
 ./shakespeare-i18n
 ./hamlet
+./servius

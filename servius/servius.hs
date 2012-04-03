@@ -20,7 +20,6 @@ import Control.Arrow ((***))
 import Data.Text (Text, pack)
 import qualified Data.Text as T
 import Network.Wai
-import Data.ByteString (ByteString)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)

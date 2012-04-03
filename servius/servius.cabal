@@ -29,4 +29,4 @@ Executable servius
                , hamlet          >= 1.0                && < 1.1
                , shakespeare-css >= 1.0                && < 1.1
                , transformers
-               , wai
+               , wai             >= 1.2                && < 1.3
