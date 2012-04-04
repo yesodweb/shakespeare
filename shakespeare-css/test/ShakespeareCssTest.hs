@@ -27,11 +27,11 @@ specs = describe "shakespeare-css"
     let selector = "foo"
     let urlp = (Home, [(pack "p", pack "q")])
     flip celper $(cassiusFileDebug "test/cassiuses/external1.cassius") $ concat
-        [ "foo{background:#000;bar:baz;color:#F00}"
-        , "bin{"
-        , "background-image:url(url);"
-        , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
-        , "urlp:url(url?p=q)}"
+        [ "foo {\n    background: #000;\n    bar: baz;\n    color: #F00;\n}\n"
+        , "bin {\n"
+        , "    background-image: url(url);\n"
+        , "    bar: bar;\n    color: #7F6405;\n    fvarx: someval;\n    unicode-test: שלום;\n"
+        , "    urlp: url(url?p=q);\n}\n"
         ]
 
 {- TODO
@@ -199,16 +199,14 @@ bin {
           , "urlp:url(url?p=q)}"
           ]
 
-{-
   , it "lucius file debug" caseLuciusFileDebug
-  -}
 
 
 
 
   , it "lucius nested" $ do
       celper "foo bar{baz:bin}" $(luciusFile "test/cassiuses/external-nested.lucius")
-      celper "foo bar{baz:bin}" $(luciusFileDebug "test/cassiuses/external-nested.lucius")
+      celper "foo bar {\n    baz: bin;\n}\n" $(luciusFileDebug "test/cassiuses/external-nested.lucius")
       celper "foo bar{baz:bin}" [lucius|
         foo {
             bar {
@@ -253,7 +251,7 @@ bin {
 
   , it "lucius media" $ do
       celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/cassiuses/external-media.lucius")
-      celper "@media only screen{foo bar{baz:bin}}" $(luciusFileDebug "test/cassiuses/external-media.lucius")
+      celper "@media only screen {\n    foo bar {\n        baz: bin;\n    }\n}\n" $(luciusFileDebug "test/cassiuses/external-media.lucius")
       celper "@media only screen{foo bar{baz:bin}}" [lucius|
         @media only screen{
             foo {
@@ -327,8 +325,10 @@ a:b;
 c:d;
 }
 |]
-  , it "lucius runtime" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "foo { bar: #{myvar}}") [(TS.pack "myvar", TS.pack "baz")]
-  , it "lucius runtime variables" $ Right (T.pack "foo{bar:baz}") @=? luciusRT (T.pack "@dummy: dummy; @myvar: baz; @dummy2: dummy; foo { bar: #{myvar}}") []
+  , it "lucius runtime" $ Right (T.pack "foo {\n    bar: baz;\n}\n") @=? luciusRT (T.pack "foo { bar: #{myvar}}") [(TS.pack "myvar", TS.pack "baz")]
+  , it "lucius runtime variables" $ Right (T.pack "foo {\n    bar: baz;\n}\n") @=? luciusRT (T.pack "@dummy: dummy; @myvar: baz; @dummy2: dummy; foo { bar: #{myvar}}") []
+  , it "lucius whtiespace" $ Right (T.pack "@media foo {\n    bar {\n        baz: bin;\n        baz2: bin2;\n    }\n}\n")
+    @=? luciusRT (T.pack "@media foo{bar{baz:bin;baz2:bin2}}") []
   , it "variables inside value" $
         celper "foo{foo:XbarY}" [lucius|
 @bar: bar;
@@ -439,7 +439,7 @@ caseLuciusFileDebug :: Assertion
 caseLuciusFileDebug = do
     let var = "var"
     writeFile "test/cassiuses/external2.lucius" "foo{#{var}: 1}"
-    celper "foo{var:1}" $(luciusFileDebug "test/cassiuses/external2.lucius")
+    celper "foo {\n    var: 1;\n}\n" $(luciusFileDebug "test/cassiuses/external2.lucius")
     writeFile "test/cassiuses/external2.lucius" "foo{#{var}: 2}"
-    celper "foo{var:2}" $(luciusFileDebug "test/cassiuses/external2.lucius")
+    celper "foo {\n    var: 2;\n}\n" $(luciusFileDebug "test/cassiuses/external2.lucius")
     writeFile "test/cassiuses/external2.lucius" "foo{#{var}: 1}"

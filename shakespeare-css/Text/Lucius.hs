@@ -213,13 +213,13 @@ stringCI :: String -> Parser ()
 stringCI [] = return ()
 stringCI (c:cs) = (char (toLower c) <|> char (toUpper c)) >> stringCI cs
 
-luciusRT' :: TL.Text -> Either String ([(Text, Text)] -> Either String Css)
+luciusRT' :: TL.Text -> Either String ([(Text, Text)] -> Either String [CssTop])
 luciusRT' tl =
     case parse parseTopLevels (TL.unpack tl) (TL.unpack tl) of
         Left s -> Left $ show s
         Right tops -> Right $ \scope -> go scope tops
   where
-    go :: [(Text, Text)] -> [TopLevel] -> Either String Css
+    go :: [(Text, Text)] -> [TopLevel] -> Either String [CssTop]
     go _ [] = Right []
     go scope (TopAtDecl dec cs':rest) = do
         let scope' = map goScope scope
@@ -249,4 +249,4 @@ luciusRT' tl =
     goScope (k, v) = (DerefIdent (Ident $ unpack k), CDPlain $ fromText v)
 
 luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
-luciusRT tl scope = either Left (Right . renderCss) $ either Left ($ scope) (luciusRT' tl)
+luciusRT tl scope = either Left (Right . renderCss . CssWhitespace) $ either Left ($ scope) (luciusRT' tl)

@@ -41,7 +41,8 @@ data Css' = Css'
     }
 data CssTop = AtBlock String Builder [Css'] | Css Css' | AtDecl String Builder
 
-type Css = [CssTop]
+data Css = CssWhitespace [CssTop]
+         | CssNoWhitespace [CssTop]
 
 data Content = ContentRaw String
              | ContentVar Deref
@@ -161,9 +162,9 @@ cssRuntime :: Parser [TopLevel]
 cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let a = either (error . show) id $ parse parseBlocks s s
-    return $ goTop [] a
+    return $ CssWhitespace $ goTop [] a
   where
-    goTop :: [(String, String)] -> [TopLevel] -> Css
+    goTop :: [(String, String)] -> [TopLevel] -> [CssTop]
     goTop _ [] = []
     goTop scope (TopAtDecl dec cs':rest) =
         AtDecl dec cs : goTop scope rest
@@ -287,7 +288,7 @@ type Scope = [(String, String)]
 topLevelsToCassius :: [TopLevel] -> Q Exp
 topLevelsToCassius a = do
     r <- newName "_render"
-    lamE [varP r] $ appE [|foldr ($) []|] $ fmap ListE $ go r [] a
+    lamE [varP r] $ appE [|CssNoWhitespace . foldr ($) []|] $ fmap ListE $ go r [] a
   where
     go _ _ [] = return []
     go r scope (TopBlock b:rest) = do
@@ -310,25 +311,66 @@ blocksToCassius r scope a = do
     appE [|foldr ($) []|] $ listE $ map (blockToCss r scope) a
 
 renderCss :: Css -> TL.Text
-renderCss =
-    toLazyText . mconcat . map go -- FIXME use a foldr
+renderCss css =
+    toLazyText $ mconcat $ map go tops-- FIXME use a foldr
   where
-    go (Css x) = renderCss' x
+    (haveWhiteSpace, tops) =
+        case css of
+            CssWhitespace x -> (True, x)
+            CssNoWhitespace x -> (False, x)
+    go (Css x) = renderCss' haveWhiteSpace mempty x
     go (AtBlock name s x) =
         fromText (pack $ concat ["@", name, " "]) `mappend`
         s `mappend`
-        singleton '{' `mappend`
-        foldr mappend (singleton '}') (map renderCss' x)
+        startBlock `mappend`
+        foldr mappend endBlock (map (renderCss' haveWhiteSpace (fromString "    ")) x)
     go (AtDecl dec cs) = fromText (pack $ concat ["@", dec, " "]) `mappend`
                       cs `mappend`
-                      singleton ';'
+                      endDecl
 
-renderCss' :: Css' -> Builder
-renderCss' (Css' _x []) = mempty
-renderCss' (Css' x y) =
-    x
-    `mappend` singleton '{'
-    `mappend` mconcat (intersperse (singleton ';') $ map go' y)
-    `mappend` singleton '}'
+    startBlock
+        | haveWhiteSpace = fromString " {\n"
+        | otherwise = singleton '{'
+
+    endBlock
+        | haveWhiteSpace = fromString "}\n"
+        | otherwise = singleton '}'
+
+    endDecl
+        | haveWhiteSpace = fromString ";\n"
+        | otherwise = singleton ';'
+
+renderCss' :: Bool -> Builder -> Css' -> Builder
+renderCss' _ _ (Css' _x []) = mempty
+renderCss' haveWhiteSpace indent (Css' x y) =
+    startSelect
+    `mappend` x
+    `mappend` startBlock
+    `mappend` mconcat (intersperse endDecl $ map go' y)
+    `mappend` endBlock
   where
-    go' (k, v) = k `mappend` singleton ':' `mappend` v
+    go' (k, v) = startDecl `mappend` k `mappend` colon `mappend` v
+
+    colon
+        | haveWhiteSpace = fromString ": "
+        | otherwise = singleton ':'
+
+    startSelect
+        | haveWhiteSpace = indent
+        | otherwise = mempty
+
+    startBlock
+        | haveWhiteSpace = fromString " {\n"
+        | otherwise = singleton '{'
+
+    endBlock
+        | haveWhiteSpace = fromString ";\n" `mappend` indent `mappend` fromString "}\n"
+        | otherwise = singleton '}'
+
+    startDecl
+        | haveWhiteSpace = indent `mappend` fromString "    "
+        | otherwise = mempty
+
+    endDecl
+        | haveWhiteSpace = fromString ";\n"
+        | otherwise = singleton ';'
