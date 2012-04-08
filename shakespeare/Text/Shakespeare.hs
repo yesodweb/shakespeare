@@ -210,7 +210,9 @@ preFilter ShakespeareSettings {..} s =
 
 pack' :: String -> TS.Text
 pack' = TS.pack
+#if !MIN_VERSION_text(0, 11, 2)
 {-# NOINLINE pack' #-}
+#endif
 
 contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do

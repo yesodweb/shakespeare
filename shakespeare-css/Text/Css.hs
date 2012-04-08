@@ -22,7 +22,9 @@ import Control.Arrow ((***))
 
 pack :: String -> Text
 pack = T.pack
+#if !MIN_VERSION_text(0, 11, 2)
 {-# NOINLINE pack #-}
+#endif
 
 fromText :: Text -> Builder
 fromText = TLB.fromText
