@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 -- | Most everything exported here is exported also by "Text.Hamlet". The
@@ -22,7 +23,12 @@ import Data.Typeable (Typeable)
 import Control.Failure
 import Text.Hamlet.Parse
 import Data.List (intercalate)
+#if MIN_VERSION_blaze_html(0,5,0)
+import Text.Blaze.Html (Html)
+import Text.Blaze.Internal (preEscapedString, preEscapedText)
+#else
 import Text.Blaze (preEscapedString, preEscapedText, Html)
+#endif
 import Data.Text (Text)
 
 type HamletMap url = [([String], HamletData url)]
