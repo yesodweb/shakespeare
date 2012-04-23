@@ -16,8 +16,9 @@ import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 import qualified Data.Set as Set
-import qualified Text.Blaze.Renderer.Text
-import Text.Blaze (toHtml, preEscapedString)
+import qualified Text.Blaze.Html.Renderer.Text
+import Text.Blaze.Html (toHtml)
+import Text.Blaze.Internal (preEscapedString)
 
 specs = describe "hamlet"
   [ it "empty" caseEmpty
@@ -424,12 +425,12 @@ theArg = Arg
 
 helperHtml :: String -> Html -> Assertion
 helperHtml res h = do
-    let x = Text.Blaze.Renderer.Text.renderHtml h
+    let x = Text.Blaze.Html.Renderer.Text.renderHtml h
     T.pack res @=? x
 
 helper :: String -> HtmlUrl Url -> Assertion
 helper res h = do
-    let x = Text.Blaze.Renderer.Text.renderHtml $ h render
+    let x = Text.Blaze.Html.Renderer.Text.renderHtml $ h render
     T.pack res @=? x
 
 caseEmpty :: Assertion
@@ -788,7 +789,7 @@ caseHamletLiterals = do
     helper "-123.456" [hamlet|#{show -123.456}|]
 
 helper' :: String -> Html -> Assertion
-helper' res h = T.pack res @=? Text.Blaze.Renderer.Text.renderHtml h
+helper' res h = T.pack res @=? Text.Blaze.Html.Renderer.Text.renderHtml h
 
 caseHamlet' :: Assertion
 caseHamlet' = do
@@ -833,7 +834,7 @@ data Msg = Hello | Goodbye
 
 ihelper :: String -> HtmlUrlI18n Msg Url -> Assertion
 ihelper res h = do
-    let x = Text.Blaze.Renderer.Text.renderHtml $ h showMsg render
+    let x = Text.Blaze.Html.Renderer.Text.renderHtml $ h showMsg render
     T.pack res @=? x
   where
     showMsg Hello = preEscapedString "Hola"
