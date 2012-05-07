@@ -82,7 +82,7 @@ test-suite test
                  , containers       >= 0.2     && < 0.5
                  , text             >= 0.7     && < 1
                  , HUnit
-                 , hspec            >= 0.8     && < 0.10
+                 , hspec            >= 1.0     && < 1.2
                  , blaze-html       >= 0.5     && < 0.6
                  , blaze-markup     >= 0.5.1   && < 0.6
 
