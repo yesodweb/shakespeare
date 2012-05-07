@@ -17,7 +17,7 @@ import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 
-specs :: [Spec]
+specs :: Spec
 specs = describe "shakespeare-css"
   [ it "cassius" caseCassius
   , it "cassiusFile" caseCassiusFile
