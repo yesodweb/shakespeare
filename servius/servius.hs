@@ -27,7 +27,7 @@ import Text.Lucius (luciusRT)
 import Text.Hamlet (defaultHamletSettings)
 import Text.Hamlet.RT (parseHamletRT, renderHamletRT)
 import Network.HTTP.Types (status200)
-import Text.Blaze.Renderer.Utf8 (renderHtmlBuilder)
+import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import qualified Data.Text.Lazy as TL
 import Blaze.ByteString.Builder.Char.Utf8 (fromLazyText)
 
