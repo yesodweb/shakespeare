@@ -45,8 +45,8 @@ import Text.Shakespeare
 import Text.Julius
 
 -- | The Roy language compiles down to Javascript.
--- We do this once at compile time to avoid needing to do it during the request.
--- We call this a preConversion because other shakespeare modules like Lucius use Haskell to compile during the request rather than a system call.
+-- We do this compilation once at compile time to avoid needing to do it during the request.
+-- We call this a preConversion because other shakespeare modules like Lucius use Haskell to compile during the request instead rather than a system call.
 roySettings :: Q ShakespeareSettings
 roySettings = do
   jsettings <- javascriptSettings
@@ -56,6 +56,7 @@ roySettings = do
     , preEscapeBegin = "`"
     , preEscapeEnd = "`"
     , preEscapeIgnoreBalanced = "'\"`"
+    , preEscapeIgnoreLine = "//"
     }
   }
 

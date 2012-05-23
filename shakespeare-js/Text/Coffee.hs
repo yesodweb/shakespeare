@@ -39,8 +39,8 @@ import Language.Haskell.TH.Syntax
 import Text.Shakespeare
 import Text.Julius
 
--- | The Roy language compiles down to Javascript.
--- We do this once at compile time to avoid needing to do it during the request.
+-- | The Coffeescript language compiles down to Javascript.
+-- We do this compilation once at compile time to avoid needing to do it during the request.
 -- We call this a preConversion because other shakespeare modules like Lucius use Haskell to compile during the request rather than a system call.
 -- During the pre-conversion we first modify all Haskell insertions
 -- so that they will be ignored by the Coffeescript compiler (backticks).
