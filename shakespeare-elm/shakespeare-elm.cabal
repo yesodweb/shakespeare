@@ -1,0 +1,57 @@
+name:            shakespeare-elm
+version:         1.0.0.3
+license:         MIT
+license-file:    LICENSE
+author:          Greg Weber <greg@gregweber.info>
+maintainer:      Greg Weber <greg@gregweber.info>
+synopsis:        Stick your haskell variables into the Elm language at compile time.
+description:
+    Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation . Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
+    In this case, the variable type needs a ToElm instance.
+    .
+    Please see http://www.yesodweb.com/book/shakespearean-templates for a more thorough description and examples
+    .
+extra-source-files:
+  test/ShakespeareElmTest.hs
+  test.hs
+
+category:        Web, Yesod
+stability:       Stable
+cabal-version:   >= 1.8
+build-type:      Simple
+homepage:        http://www.yesodweb.com/book/shakespearean-templates
+
+library
+    build-depends:   base             >= 4       && < 5
+                   , shakespeare      >= 1.0     && < 1.1
+                   , template-haskell
+                   , text             >= 0.7     && < 0.12
+                   , Elm
+
+    exposed-modules:
+                     Text.Elm
+    ghc-options:     -Wall
+    if impl(ghc >= 7.4)
+       cpp-options: -DGHC_7_4
+
+flag test_export
+    default: False
+
+test-suite test
+    hs-source-dirs: test
+    main-is: ../test.hs
+    type: exitcode-stdio-1.0
+
+    ghc-options:   -Wall
+    build-depends: shakespeare-elm
+                 , shakespeare
+                 , base             >= 4       && < 5
+                 , HUnit
+                 , hspec            >= 0.8     && < 1.2
+                 , text             >= 0.7     && < 0.12
+                 , template-haskell
+
+
+source-repository head
+  type:     git
+  location: git://github.com/yesodweb/shakespeare.git
