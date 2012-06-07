@@ -28,9 +28,10 @@ import Text.Css
 import Data.Char (isSpace, toLower, toUpper)
 import Numeric (readHex)
 import Control.Applicative ((<$>))
-import Control.Monad (when)
+import Control.Monad (when, unless)
 import Data.Either (partitionEithers)
 import Data.Monoid (mconcat)
+import Data.List (isSuffixOf)
 
 -- |
 --
@@ -172,7 +173,7 @@ parseTopLevels =
             ignore = many (whiteSpace1 <|> string' "<!--" <|> string' "-->")
                         >> return ()
         ignore
-        tl <- ((charset <|> media <|> impor <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
+        tl <- ((charset <|> media <|> impor <|> topAtBlock <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
             <|> (return $ map compressTopLevel $ front [])
         ignore
         return tl
@@ -204,6 +205,17 @@ parseTopLevels =
         _ <- char ';'
         let trimS = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         return $ TopVar (trimS k) (trimS v)
+    topAtBlock = do
+        (name, selector) <- try $ do
+            _ <- char '@'
+            name <- many1 $ noneOf " \t"
+            _ <- many1 $ oneOf " \t"
+            unless ("keyframes" `isSuffixOf` name) $ fail "only accepting keyframes"
+            selector <- parseContents "{"
+            _ <- char '{'
+            return (name, selector)
+        b <- parseBlocks id
+        return $ TopAtBlock name selector b
     parseBlocks front = do
         whiteSpace
         (char '}' >> return (map compressBlock $ front []))

@@ -348,6 +348,28 @@ foo { foo:X#{bar}Y; }
         "@charset mycharset;" [lucius|
 @charset #{charset};
 |]
+  , it "keyframes" $ celper
+        "@keyframes mymove {from{top:0px}to{top:200px}}" [lucius|
+@keyframes mymove {
+    from {
+        top: 0px;
+    }
+    to {
+        top: 200px;
+    }
+}
+|]
+  , it "prefixed keyframes" $ celper
+        "@-webkit-keyframes mymove {from{top:0px}to{top:200px}}" [lucius|
+@-webkit-keyframes mymove {
+    from {
+        top: 0px;
+    }
+    to {
+        top: 200px;
+    }
+}
+|]
   ]
 
 data Url = Home | Sub SubUrl
