@@ -355,6 +355,9 @@ $case url2
   , it "blank attr values" $ helper
       "<foo bar=\"\" baz bin=\"\"></foo>"
       [hamlet|<foo bar="" baz bin=>|]
+  , it "greater than in attr" $ helper
+      "<button data-bind=\"enable: someFunction() > 5\">hello</button>"
+      [hamlet|<button data-bind="enable: someFunction() > 5">hello|]
   ]
 
 data Pair = Pair String Int
