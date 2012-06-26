@@ -78,6 +78,7 @@ parseLine set = do
          doctypeDollar <|>
          comment <|>
          htmlComment <|>
+         doctypeRaw <|>
          backslash <|>
          controlIf <|>
          controlElseIf <|>
@@ -112,6 +113,12 @@ parseLine set = do
         case lookup name doctypeNames of
             Nothing -> fail $ "Unknown doctype name: " ++ name
             Just val -> return $ LineContent [ContentRaw $ val ++ "\n"]
+
+    doctypeRaw = do
+        x <- try $ string "<!"
+        y <- many $ noneOf "\r\n"
+        eol
+        return $ LineContent [ContentRaw $ concat [x, y, "\n"]]
 
     invalidDollar = do
         _ <- char '$'

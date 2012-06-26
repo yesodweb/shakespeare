@@ -358,6 +358,9 @@ $case url2
   , it "greater than in attr" $ helper
       "<button data-bind=\"enable: someFunction() > 5\">hello</button>"
       [hamlet|<button data-bind="enable: someFunction() > 5">hello|]
+  , it "normal doctype" $ helper
+      "<!DOCTYPE html>\n"
+      [hamlet|<!DOCTYPE html>|]
   ]
 
 data Pair = Pair String Int
