@@ -10,6 +10,7 @@ module Text.Hamlet.Parse
     , xhtmlHamletSettings
     , CloseStyle (..)
     , Binding (..)
+    , NewlineStyle (..)
     )
     where
 
@@ -63,7 +64,7 @@ data Line = LineForall Deref Binding
           | LineContent [Content]
     deriving (Eq, Show, Read)
 
-parseLines :: HamletSettings -> String -> Result (Maybe String, HamletSettings, [(Int, Line)])
+parseLines :: HamletSettings -> String -> Result (Maybe NewlineStyle, HamletSettings, [(Int, Line)])
 parseLines set s =
     case parse parser s s of
         Left e -> Error $ show e
@@ -73,17 +74,16 @@ parseLines set s =
         mnewline <- parseNewline
         let set' =
                 case mnewline of
-                    Nothing -> set
+                    Nothing ->
+                        case hamletNewlines set of
+                            DefaultNewlineStyle -> set { hamletNewlines = AlwaysNewlines }
+                            _ -> set
                     Just n -> set { hamletNewlines = n }
         res <- many (parseLine set')
-        let msg =
-                case mnewline of
-                    Nothing -> Just "No $newline given explicitly"
-                    Just _ -> Nothing
-        return (msg, set', res)
+        return (mnewline, set', res)
 
     parseNewline =
-        (try (many eol' >> string "$newline ") >> parseNewline') <|>
+        (try (many eol' >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
         return Nothing
     parseNewline' =
         (try (string "always") >> return (Just AlwaysNewlines)) <|>
@@ -446,14 +446,14 @@ compressDoc ( DocContent (ContentRaw x)
             ) = compressDoc $ (DocContent $ ContentRaw $ x ++ y) : rest
 compressDoc (DocContent x:rest) = DocContent x : compressDoc rest
 
-parseDoc :: HamletSettings -> String -> Result (Maybe String, [Doc])
+parseDoc :: HamletSettings -> String -> Result (Maybe NewlineStyle, [Doc])
 parseDoc set s = do
-    (msg, set', ls) <- parseLines set s
+    (mnl, set', ls) <- parseLines set s
     let notEmpty (_, LineContent []) = False
         notEmpty _ = True
     let ns = nestLines $ filter notEmpty ls
     ds <- nestToDoc set' ns
-    return (msg, compressDoc ds)
+    return (mnl, compressDoc ds)
 
 attrToContent :: (Maybe Deref, String, [(Maybe Deref, Maybe [Content])]) -> [Doc]
 attrToContent (Just cond, k, v) =
@@ -502,6 +502,7 @@ data HamletSettings = HamletSettings
 data NewlineStyle = NoNewlines -- ^ never add newlines
                   | NewlinesText -- ^ add newlines between consecutive text lines
                   | AlwaysNewlines -- ^ add newlines everywhere
+                  | DefaultNewlineStyle
     deriving Show
 
 htmlEmptyTags :: Set String
@@ -523,11 +524,11 @@ htmlEmptyTags = Set.fromAscList
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
-defaultHamletSettings = HamletSettings "<!DOCTYPE html>" NoNewlines htmlCloseStyle doctypeNames
+defaultHamletSettings = HamletSettings "<!DOCTYPE html>" DefaultNewlineStyle htmlCloseStyle doctypeNames
 
 xhtmlHamletSettings :: HamletSettings
 xhtmlHamletSettings =
-    HamletSettings doctype NoNewlines xhtmlCloseStyle doctypeNames
+    HamletSettings doctype DefaultNewlineStyle xhtmlCloseStyle doctypeNames
   where
     doctype =
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
