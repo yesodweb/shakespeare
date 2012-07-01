@@ -138,6 +138,7 @@ eShowErrors :: Either ParseError c -> c
 eShowErrors = either (error . show) id
 
 contentFromString :: ShakespeareSettings -> String -> [Content]
+contentFromString _ "" = []
 contentFromString rs s =
     compressContents $ eShowErrors $ parse (parseContents rs) s s
   where

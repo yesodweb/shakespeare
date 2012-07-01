@@ -100,6 +100,8 @@ specs = describe "shakespeare-js" $ do
     jelper "2" [quote|#{ show $ fst $ snd val }|]
     jelper "2" [quote|#{ show $ fst $ snd $ val}|]
 
+  it "empty file" $ jelper "" [quote||]
+
 
 
 data Url = Home | Sub SubUrl
