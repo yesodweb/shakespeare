@@ -39,10 +39,6 @@ extra-source-files:
   test/tmp.hs
   test.hs
 
-flag blaze_html_0_5
-    description: Use blaze-html 0.5 and blaze-markup 0.5
-    default: True
-
 library
     build-depends:   base             >= 4       && < 5
                    , shakespeare      >= 1.0     && < 1.1
@@ -54,14 +50,8 @@ library
                    , containers       >= 0.2
                    , blaze-builder    >= 0.2     && < 0.4
                    , process          >= 1.0     && < 1.2
-
-    if flag(blaze_html_0_5)
-        build-depends:
-                     blaze-html       >= 0.5     && < 0.6
+                   , blaze-html       >= 0.5     && < 0.6
                    , blaze-markup     >= 0.5.1   && < 0.6
-    else
-        build-depends:
-                     blaze-html       >= 0.4     && < 0.5
 
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
