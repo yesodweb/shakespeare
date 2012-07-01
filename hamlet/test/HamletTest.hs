@@ -395,6 +395,18 @@ $newline always
     baz#
     bin#
 |]
+  , it "manual linebreaks" $ helper
+      "<p>foo</p><pre>bar\nbaz\nbin</pre>"
+      [hamlet|
+$newline never
+<p>foo
+<pre>
+    bar
+    \
+    baz
+    \
+    bin
+|]
   ]
 
 data Pair = Pair String Int
