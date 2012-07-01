@@ -385,6 +385,16 @@ $newline always
     baz
     bin
 |]
+  , it "avoid newlines" $ helper
+      "<p>foo</p><pre>barbazbin</pre>"
+      [hamlet|
+$newline always
+<p>foo#
+<pre>#
+    bar#
+    baz#
+    bin#
+|]
   ]
 
 data Pair = Pair String Int
