@@ -214,11 +214,6 @@ htmlRules = do
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings hamletRules defaultHamletSettings
 
--- | A variant which adds newlines to the output. Useful for debugging
--- but may alter browser page layout.
-hamlet' :: QuasiQuoter
-hamlet' = hamletWithSettings hamletRules defaultHamletSettings{hamletNewlines=True}
-         
 xhamlet :: QuasiQuoter
 xhamlet = hamletWithSettings hamletRules xhtmlHamletSettings
 
@@ -282,7 +277,9 @@ hamletFromString qhr set s = do
     hr <- qhr
     case parseDoc set s of
         Error s' -> error s'
-        Ok d -> hrWithEnv hr $ \env -> docsToExp env hr [] d
+        Ok (mmsg, d) -> do
+            maybe (return ()) (qReport False) mmsg
+            hrWithEnv hr $ \env -> docsToExp env hr [] d
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do

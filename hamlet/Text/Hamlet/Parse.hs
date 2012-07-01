@@ -8,7 +8,6 @@ module Text.Hamlet.Parse
     , HamletSettings (..)
     , defaultHamletSettings
     , xhtmlHamletSettings
-    , debugHamletSettings
     , CloseStyle (..)
     , Binding (..)
     )
@@ -64,11 +63,34 @@ data Line = LineForall Deref Binding
           | LineContent [Content]
     deriving (Eq, Show, Read)
 
-parseLines :: HamletSettings -> String -> Result [(Int, Line)]
+parseLines :: HamletSettings -> String -> Result (Maybe String, HamletSettings, [(Int, Line)])
 parseLines set s =
-    case parse (many $ parseLine set) s s of
+    case parse parser s s of
         Left e -> Error $ show e
         Right x -> Ok x
+  where
+    parser = do
+        mnewline <- parseNewline
+        let set' =
+                case mnewline of
+                    Nothing -> set
+                    Just n -> set { hamletNewlines = n }
+        res <- many (parseLine set')
+        let msg =
+                case mnewline of
+                    Nothing -> Just "No $newline given explicitly"
+                    Just _ -> Nothing
+        return (msg, set', res)
+
+    parseNewline =
+        (try (many eol' >> string "$newline ") >> parseNewline') <|>
+        return Nothing
+    parseNewline' =
+        (try (string "always") >> return (Just AlwaysNewlines)) <|>
+        (try (string "never") >> return (Just NoNewlines)) <|>
+        (try (string "text") >> return (Just NewlinesText))
+
+    eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
 parseLine :: HamletSettings -> Parser (Int, Line)
 parseLine set = do
@@ -374,14 +396,13 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
         start = DocContent $ ContentRaw $ "<" ++ tn
         attrs'' = concatMap attrToContent attrs'
         newline' = DocContent $ ContentRaw
-                 $ if hamletNewlines set then "\n" else ""
+                 $ case hamletNewlines set of { AlwaysNewlines -> "\n"; _ -> "" }
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ start
        : attrs''
       ++ map (DocContent . ContentAttrs) attrsD
       ++ seal
-       : newline'
        : map DocContent content
       ++ inside'
       ++ end
@@ -391,7 +412,11 @@ nestToDoc set (Nest (LineContent content) inside:rest) = do
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     let newline' = DocContent $ ContentRaw
-                   $ if hamletNewlines set then "\n" else ""
+                   $ case hamletNewlines set of { NoNewlines -> ""; _ -> if nextIsContent then "\n" else "" }
+        nextIsContent =
+            case (inside, rest) of
+                ([], Nest LineContent{} _:_) -> True
+                _ -> False
     Ok $ map DocContent content ++ newline':inside' ++ rest'
 nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
 nestToDoc _set (Nest LineElse _:_) = Error "Unexpected else"
@@ -421,14 +446,14 @@ compressDoc ( DocContent (ContentRaw x)
             ) = compressDoc $ (DocContent $ ContentRaw $ x ++ y) : rest
 compressDoc (DocContent x:rest) = DocContent x : compressDoc rest
 
-parseDoc :: HamletSettings -> String -> Result [Doc]
+parseDoc :: HamletSettings -> String -> Result (Maybe String, [Doc])
 parseDoc set s = do
-    ls <- parseLines set s
+    (msg, set', ls) <- parseLines set s
     let notEmpty (_, LineContent []) = False
         notEmpty _ = True
     let ns = nestLines $ filter notEmpty ls
-    ds <- nestToDoc set ns
-    return $ compressDoc ds
+    ds <- nestToDoc set' ns
+    return (msg, compressDoc ds)
 
 attrToContent :: (Maybe Deref, String, [(Maybe Deref, Maybe [Content])]) -> [Doc]
 attrToContent (Just cond, k, v) =
@@ -466,13 +491,18 @@ data HamletSettings = HamletSettings
       hamletDoctype :: String
       -- | Should we add newlines to the output, making it more human-readable?
       --  Useful for client-side debugging but may alter browser page layout.
-    , hamletNewlines :: Bool
+    , hamletNewlines :: NewlineStyle
       -- | How a tag should be closed. Use this to switch between HTML, XHTML
       -- or even XML output.
     , hamletCloseStyle :: String -> CloseStyle
       -- | Mapping from short names in \"$doctype\" statements to full doctype.
     , hamletDoctypeNames :: [(String, String)]
     }
+
+data NewlineStyle = NoNewlines -- ^ never add newlines
+                  | NewlinesText -- ^ add newlines between consecutive text lines
+                  | AlwaysNewlines -- ^ add newlines everywhere
+    deriving Show
 
 htmlEmptyTags :: Set String
 htmlEmptyTags = Set.fromAscList
@@ -493,18 +523,15 @@ htmlEmptyTags = Set.fromAscList
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
-defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False htmlCloseStyle doctypeNames
+defaultHamletSettings = HamletSettings "<!DOCTYPE html>" NoNewlines htmlCloseStyle doctypeNames
 
 xhtmlHamletSettings :: HamletSettings
 xhtmlHamletSettings =
-    HamletSettings doctype False xhtmlCloseStyle doctypeNames
+    HamletSettings doctype NoNewlines xhtmlCloseStyle doctypeNames
   where
     doctype =
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
       "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
-
-debugHamletSettings :: HamletSettings
-debugHamletSettings = HamletSettings "<!DOCTYPE html>" True htmlCloseStyle doctypeNames
 
 htmlCloseStyle :: String -> CloseStyle
 htmlCloseStyle s =

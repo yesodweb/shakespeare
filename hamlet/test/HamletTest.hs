@@ -361,6 +361,16 @@ $case url2
   , it "normal doctype" $ helper
       "<!DOCTYPE html>\n"
       [hamlet|<!DOCTYPE html>|]
+  , it "newline style" $ helper
+      "<p>foo</p>\n<pre>bar\nbaz\nbin</pre>\n"
+      [hamlet|
+$newline always
+<p>foo
+<pre>
+    bar
+    baz
+    bin
+|]
   ]
 
 data Pair = Pair String Int
