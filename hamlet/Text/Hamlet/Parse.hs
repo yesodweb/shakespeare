@@ -110,7 +110,7 @@ parseLine set = do
         _ <- try $ string "$doctype "
         name <- many $ noneOf "\r\n"
         eol
-        case lookup name doctypeNames of
+        case lookup name $ hamletDoctypeNames set of
             Nothing -> fail $ "Unknown doctype name: " ++ name
             Just val -> return $ LineContent [ContentRaw $ val ++ "\n"]
 
@@ -470,6 +470,8 @@ data HamletSettings = HamletSettings
       -- | How a tag should be closed. Use this to switch between HTML, XHTML
       -- or even XML output.
     , hamletCloseStyle :: String -> CloseStyle
+      -- | Mapping from short names in \"$doctype\" statements to full doctype.
+    , hamletDoctypeNames :: [(String, String)]
     }
 
 htmlEmptyTags :: Set String
@@ -491,18 +493,18 @@ htmlEmptyTags = Set.fromAscList
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
-defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False htmlCloseStyle
+defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False htmlCloseStyle doctypeNames
 
 xhtmlHamletSettings :: HamletSettings
 xhtmlHamletSettings =
-    HamletSettings doctype False xhtmlCloseStyle
+    HamletSettings doctype False xhtmlCloseStyle doctypeNames
   where
     doctype =
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
       "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
 
 debugHamletSettings :: HamletSettings
-debugHamletSettings = HamletSettings "<!DOCTYPE html>" True htmlCloseStyle
+debugHamletSettings = HamletSettings "<!DOCTYPE html>" True htmlCloseStyle doctypeNames
 
 htmlCloseStyle :: String -> CloseStyle
 htmlCloseStyle s =
