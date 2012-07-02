@@ -28,6 +28,7 @@ module Text.Hamlet
     , ToAttributes (..)
       -- * Internal, for making more
     , HamletSettings (..)
+    , NewlineStyle (..)
     , hamletWithSettings
     , hamletFileWithSettings
     , defaultHamletSettings
