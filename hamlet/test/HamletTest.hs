@@ -14,11 +14,12 @@ import qualified Data.List
 import qualified Data.List as L
 import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
-import Data.Monoid (mappend)
+import Data.Monoid (mappend,mconcat)
 import qualified Data.Set as Set
 import qualified Text.Blaze.Html.Renderer.Text
 import Text.Blaze.Html (toHtml)
 import Text.Blaze.Internal (preEscapedString)
+import Text.Blaze
 
 specs = describe "hamlet"
   [ it "empty" caseEmpty
@@ -72,6 +73,7 @@ specs = describe "hamlet"
   , it "parens" caseParens
   , it "hamlet literals" caseHamletLiterals
   , it "hamlet' and xhamlet'" caseHamlet'
+  , it "hamlet tuple" caseTuple
 
 
 
@@ -835,6 +837,21 @@ $forall   x     <-   empty
 
 
 
+caseTuple :: Assertion
+caseTuple = do
+   helper "(1,1)" [hamlet| #{("1","1")}|]
+   helper "foo" [hamlet| 
+    $with (a,b) <- ("foo","bar")
+      #{a}
+   |]
+   helper "url" [hamlet| 
+    $with (a,b) <- (Home,Home)
+      @{a}
+   |]
+   helper "url" [hamlet| 
+    $with p <- (Home,[])
+      @?{p}
+   |]
 
 data Msg = Hello | Goodbye
 
@@ -845,3 +862,11 @@ ihelper res h = do
   where
     showMsg Hello = preEscapedString "Hola"
     showMsg Goodbye = preEscapedString "Adios"
+
+instance (ToMarkup a, ToMarkup b) => ToMarkup (a,b) where
+  toMarkup (a,b) = do
+    toMarkup "("
+    toMarkup a
+    toMarkup ","
+    toMarkup b
+    toMarkup ")"

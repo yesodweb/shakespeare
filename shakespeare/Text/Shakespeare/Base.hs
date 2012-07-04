@@ -48,6 +48,7 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefString String
            | DerefBranch Deref Deref
            | DerefList [Deref]
+           | DerefTuple [Deref]
     deriving (Show, Eq, Read, Data, Typeable)
 
 instance Lift Ident where
@@ -76,16 +77,24 @@ instance Lift Deref where
         return $ dr `AppE` InfixE (Just n) per (Just d)
     lift (DerefString s) = [|DerefString|] `appE` lift s
     lift (DerefList x) = [|DerefList $(lift x)|]
+    lift (DerefTuple x) = [|DerefTuple $(lift x)|]
 
 derefParens, derefCurlyBrackets :: Parser Deref
 derefParens        = between (char '(') (char ')') parseDeref
 derefCurlyBrackets = between (char '{') (char '}') parseDeref
 
-derefList :: Parser Deref
+derefList, derefTuple :: Parser Deref
 derefList = between (char '[') (char ']') (fmap DerefList $ sepBy parseDeref (char ','))
+derefTuple = try $ do
+  _ <- char '('
+  x <- sepBy1 parseDeref (char ',')
+  when (length x < 2) $ pzero
+  _ <- char ')'
+  return $ DerefTuple x
 
 parseDeref :: Parser Deref
-parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
+parseDeref = skipMany (oneOf " \t") >> (derefList <|>
+                                        derefTuple <|> (do
     x <- derefSingle
     (derefInfix x) <|> (do
         res <- deref' $ (:) x
@@ -95,10 +104,10 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
     delim = (many1 (char ' ') >> return())
             <|> lookAhead (oneOf "(\"" >> return ())
     derefOp = try $ do
-        _ <- char '('
-        x <- many1 $ noneOf " \t\n\r()"
-        _ <- char ')'
-        return $ DerefIdent $ Ident x
+            _ <- char '('
+            x <- many1 $ noneOf " \t\n\r()"
+            _ <- char ')'
+            return $ DerefIdent $ Ident x
     derefInfix x = try $ do
         () <- fail "Infix operator handling is currently disabled"
         _ <- many1 $ oneOf " \t"
@@ -109,7 +118,7 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|> (do
         _ <- many1 (oneOf " \t")
         y <- derefSingle
         return $ DerefBranch (DerefBranch op' x) y
-    derefSingle = derefOp <|> derefParens <|> numeric <|> strLit<|> ident
+    derefSingle = derefTuple <|> derefOp <|> derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'
                <|> return (foldl1 DerefBranch $ lhs [])
@@ -176,6 +185,7 @@ derefToExp _ (DerefIntegral i) = LitE $ IntegerL i
 derefToExp _ (DerefRational r) = LitE $ RationalL r
 derefToExp _ (DerefString s) = LitE $ StringL s
 derefToExp s (DerefList ds) = ListE $ map (derefToExp s) ds
+derefToExp s (DerefTuple ds) = TupE $ map (derefToExp s) ds
 
 -- FIXME shouldn't we use something besides a list here?
 flattenDeref :: Deref -> Maybe [String]
