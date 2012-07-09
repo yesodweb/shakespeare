@@ -85,7 +85,7 @@ $#a third one|]
 
 
   , it "ignores a blank line" $ do
-    helper "<p>foo</p>" [hamlet|
+    helper "<p>foo</p>\n" [hamlet|
 <p>
 
     foo
@@ -96,9 +96,10 @@ $#a third one|]
 
 
 
-  , it "hamlet angle bracket syntax" $
+  , it "angle bracket syntax" $
       helper "<p class=\"foo\" height=\"100\"><span id=\"bar\" width=\"50\">HELLO</span></p>"
         [hamlet|
+$newline never
 <p.foo height="100">
     <span #bar width=50>HELLO
 |]
@@ -108,7 +109,9 @@ $#a third one|]
   , it "hamlet module names" $
     let foo = "foo" in
       helper "oof oof 3.14 -5"
-        [hamlet|#{Data.List.reverse foo} #
+        [hamlet|
+$newline never
+#{Data.List.reverse foo} #
 #{L.reverse foo} #
 #{show 3.14} #{show -5}|]
 
@@ -159,6 +162,7 @@ $#a third one|]
 
   , it "HTML comments" $ do
     helper "<p>1</p><p>2 not ignored</p>" [hamlet|
+$newline never
 <p>1
 <!-- ignored comment -->
 <p>
@@ -194,13 +198,13 @@ $nothing
 
 
   , it "conditional class" $ do
-      helper "<p class=\"current\"></p>" 
+      helper "<p class=\"current\"></p>\n"
         [hamlet|<p :False:.ignored :True:.current>|]
 
-      helper "<p class=\"1 3 2 4\"></p>"
+      helper "<p class=\"1 3 2 4\"></p>\n"
         [hamlet|<p :True:.1 :True:class=2 :False:.a :False:class=b .3 class=4>|]
 
-      helper "<p class=\"foo bar baz\"></p>"
+      helper "<p class=\"foo bar baz\"></p>\n"
         [hamlet|<p class=foo class=bar class=baz>|]
 
 
@@ -216,31 +220,32 @@ $forall x <- set
 
 
   , it "non-poly HTML" $ do
-      helperHtml "<h1>HELLO WORLD</h1>" [shamlet|
+      helperHtml "<h1>HELLO WORLD</h1>\n" [shamlet|
   <h1>HELLO WORLD
   |]
-      helperHtml "<h1>HELLO WORLD</h1>" $(shamletFile "test/hamlets/nonpolyhtml.hamlet")
+      helperHtml "<h1>HELLO WORLD</h1>\n" $(shamletFile "test/hamlets/nonpolyhtml.hamlet")
 
 
   , it "non-poly Hamlet" $ do
       let embed = [hamlet|<p>EMBEDDED|]
-      helper "<h1>url</h1><p>EMBEDDED</p>" [hamlet|
+      helper "<h1>url</h1>\n<p>EMBEDDED</p>\n" [hamlet|
   <h1>@{Home}
   ^{embed}
   |]
-      helper "<h1>url</h1>" $(hamletFile "test/hamlets/nonpolyhamlet.hamlet")
+      helper "<h1>url</h1>\n" $(hamletFile "test/hamlets/nonpolyhamlet.hamlet")
 
   , it "non-poly IHamlet" $ do
       let embed = [ihamlet|<p>EMBEDDED|]
-      ihelper "<h1>Adios</h1><p>EMBEDDED</p>" [ihamlet|
+      ihelper "<h1>Adios</h1>\n<p>EMBEDDED</p>\n" [ihamlet|
   <h1>_{Goodbye}
   ^{embed}
   |]
-      ihelper "<h1>Hola</h1>" $(ihamletFile "test/hamlets/nonpolyihamlet.hamlet")
+      ihelper "<h1>Hola</h1>\n" $(ihamletFile "test/hamlets/nonpolyihamlet.hamlet")
 
   , it "pattern-match tuples: forall" $ do
       let people = [("Michael", 26), ("Miriam", 25)]
       helper "<dl><dt>Michael</dt><dd>26</dd><dt>Miriam</dt><dd>25</dd></dl>" [hamlet|
+$newline never
 <dl>
     $forall (name, age) <- people
         <dt>#{name}
@@ -249,6 +254,7 @@ $forall x <- set
   , it "pattern-match tuples: maybe" $ do
       let people = Just ("Michael", 26)
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+$newline never
 <dl>
     $maybe (name, age) <- people
         <dt>#{name}
@@ -257,6 +263,7 @@ $forall x <- set
   , it "pattern-match tuples: with" $ do
       let people = ("Michael", 26)
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+$newline never
 <dl>
     $with (name, age) <- people
         <dt>#{name}
@@ -264,6 +271,7 @@ $forall x <- set
 |]
   , it "list syntax for interpolation" $ do
       helper "<ul><li>1</li><li>2</li><li>3</li></ul>" [hamlet|
+$newline never
 <ul>
     $forall num <- [1, 2, 3]
         <li>#{show num}
@@ -275,6 +283,7 @@ $forall x <- set
       helper "5" [hamlet|#{show (2 + 3)}|]
       -}
   , it "doctypes" $ helper "<!DOCTYPE html>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" [hamlet|
+$newline never
 $doctype 5
 $doctype strict
 |]
@@ -283,6 +292,7 @@ $doctype strict
       let nothing  = Nothing
           justTrue = Just True
       in helper "<br><br><br><br>" [hamlet|
+$newline never
 $case nothing
     $of Just val
     $of Nothing
@@ -306,7 +316,8 @@ $case Nothing
   , it "case on Url" $
       let url1 = Home
           url2 = Sub SubUrl
-      in helper "<br><br>" [hamlet|
+      in helper "<br>\n<br>\n" [hamlet|
+$newline always
 $case url1
     $of Home
         <br>
@@ -322,6 +333,7 @@ $case url2
   , it "pattern-match constructors: forall" $ do
       let people = [Pair "Michael" 26, Pair "Miriam" 25]
       helper "<dl><dt>Michael</dt><dd>26</dd><dt>Miriam</dt><dd>25</dd></dl>" [hamlet|
+$newline text
 <dl>
     $forall Pair name age <- people
         <dt>#{name}
@@ -330,6 +342,7 @@ $case url2
   , it "pattern-match constructors: maybe" $ do
       let people = Just $ Pair "Michael" 26
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+$newline text
 <dl>
     $maybe Pair name age <- people
         <dt>#{name}
@@ -338,6 +351,7 @@ $case url2
   , it "pattern-match constructors: with" $ do
       let people = Pair "Michael" 26
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
+$newline text
 <dl>
     $with Pair name age <- people
         <dt>#{name}
@@ -345,24 +359,56 @@ $case url2
 |]
 
   , it "multiline tags" $ helper
-      "<foo bar=\"baz\" bin=\"bin\">content</foo>" [hamlet|
+      "<foo bar=\"baz\" bin=\"bin\">content</foo>\n" [hamlet|
 <foo bar=baz
      bin=bin>content
 |]
   , let attrs = [("bar", "baz"), ("bin", "<>\"&")]
      in it "*{...} attributes" $ helper
-      "<foo bar=\"baz\" bin=\"&lt;&gt;&quot;&amp;\">content</foo>" [hamlet|
+      "<foo bar=\"baz\" bin=\"&lt;&gt;&quot;&amp;\">content</foo>\n" [hamlet|
 <foo *{attrs}>content
 |]
   , it "blank attr values" $ helper
-      "<foo bar=\"\" baz bin=\"\"></foo>"
+      "<foo bar=\"\" baz bin=\"\"></foo>\n"
       [hamlet|<foo bar="" baz bin=>|]
   , it "greater than in attr" $ helper
-      "<button data-bind=\"enable: someFunction() > 5\">hello</button>"
+      "<button data-bind=\"enable: someFunction() > 5\">hello</button>\n"
       [hamlet|<button data-bind="enable: someFunction() > 5">hello|]
   , it "normal doctype" $ helper
       "<!DOCTYPE html>\n"
       [hamlet|<!DOCTYPE html>|]
+  , it "newline style" $ helper
+      "<p>foo</p>\n<pre>bar\nbaz\nbin</pre>\n"
+      [hamlet|
+$newline always
+<p>foo
+<pre>
+    bar
+    baz
+    bin
+|]
+  , it "avoid newlines" $ helper
+      "<p>foo</p><pre>barbazbin</pre>"
+      [hamlet|
+$newline always
+<p>foo#
+<pre>#
+    bar#
+    baz#
+    bin#
+|]
+  , it "manual linebreaks" $ helper
+      "<p>foo</p><pre>bar\nbaz\nbin</pre>"
+      [hamlet|
+$newline never
+<p>foo
+<pre>
+    bar
+    \
+    baz
+    \
+    bin
+|]
   ]
 
 data Pair = Pair String Int
@@ -450,10 +496,12 @@ caseStatic = helper "some static content" [hamlet|some static content|]
 caseTag :: Assertion
 caseTag = do
     helper "<p class=\"foo\"><div id=\"bar\">baz</div></p>" [hamlet|
+$newline text
 <p .foo>
   <#bar>baz
 |]
     helper "<p class=\"foo.bar\"><div id=\"bar\">baz</div></p>" [hamlet|
+$newline text
 <p class=foo.bar>
   <#bar>baz
 |]
@@ -585,24 +633,24 @@ $with n <- " , something", y <- n
 |]
 
 caseScriptNotEmpty :: Assertion
-caseScriptNotEmpty = helper "<script></script>" [hamlet|<script>|]
+caseScriptNotEmpty = helper "<script></script>\n" [hamlet|<script>|]
 
 caseMetaEmpty :: Assertion
 caseMetaEmpty = do
-    helper "<meta>" [hamlet|<meta>|]
-    helper "<meta/>" [xhamlet|<meta>|]
+    helper "<meta>\n" [hamlet|<meta>|]
+    helper "<meta/>\n" [xhamlet|<meta>|]
 
 caseInputEmpty :: Assertion
 caseInputEmpty = do
-    helper "<input>" [hamlet|<input>|]
-    helper "<input/>" [xhamlet|<input>|]
+    helper "<input>\n" [hamlet|<input>|]
+    helper "<input/>\n" [xhamlet|<input>|]
 
 caseMultiClass :: Assertion
-caseMultiClass = helper "<div class=\"foo bar\"></div>" [hamlet|<.foo.bar>|]
+caseMultiClass = helper "<div class=\"foo bar\"></div>\n" [hamlet|<.foo.bar>|]
 
 caseAttribOrder :: Assertion
 caseAttribOrder =
-    helper "<meta 1 2 3>" [hamlet|<meta 1 2 3>|]
+    helper "<meta 1 2 3>\n" [hamlet|<meta 1 2 3>|]
 
 caseNothing :: Assertion
 caseNothing = do
@@ -649,6 +697,7 @@ caseUrlParams = do
 caseEscape :: Assertion
 caseEscape = do
     helper "#this is raw\n " [hamlet|
+$newline never
 \#this is raw
 \
 \ 
@@ -664,16 +713,16 @@ caseEmptyStatementList = do
 
 caseAttribCond :: Assertion
 caseAttribCond = do
-    helper "<select></select>" [hamlet|<select :False:selected>|]
-    helper "<select selected></select>" [hamlet|<select :True:selected>|]
-    helper "<meta var=\"foo:bar\">" [hamlet|<meta var=foo:bar>|]
-    helper "<select selected></select>"
+    helper "<select></select>\n" [hamlet|<select :False:selected>|]
+    helper "<select selected></select>\n" [hamlet|<select :True:selected>|]
+    helper "<meta var=\"foo:bar\">\n" [hamlet|<meta var=foo:bar>|]
+    helper "<select selected></select>\n"
         [hamlet|<select :true theArg:selected>|]
 
-    helper "<select></select>" [hamlet|<select :False:selected>|]
-    helper "<select selected></select>" [hamlet|<select :True:selected>|]
-    helper "<meta var=\"foo:bar\">" [hamlet|<meta var=foo:bar>|]
-    helper "<select selected></select>"
+    helper "<select></select>\n" [hamlet|<select :False:selected>|]
+    helper "<select selected></select>\n" [hamlet|<select :True:selected>|]
+    helper "<meta var=\"foo:bar\">\n" [hamlet|<meta var=foo:bar>|]
+    helper "<select selected></select>\n"
         [hamlet|<select :true theArg:selected>|]
 
 caseNonAscii :: Assertion
@@ -689,7 +738,9 @@ $maybe x <- Just urlParams
 
 caseTrailingDollarSign :: Assertion
 caseTrailingDollarSign =
-    helper "trailing space \ndollar sign #" [hamlet|trailing space #
+    helper "trailing space \ndollar sign #" [hamlet|
+$newline never
+trailing space #
 \
 dollar sign #\
 |]
@@ -697,29 +748,31 @@ dollar sign #\
 caseNonLeadingPercent :: Assertion
 caseNonLeadingPercent =
     helper "<span style=\"height:100%\">foo</span>" [hamlet|
+$newline never
 <span style=height:100%>foo
 |]
 
 caseQuotedAttribs :: Assertion
 caseQuotedAttribs =
     helper "<input type=\"submit\" value=\"Submit response\">" [hamlet|
+$newline never
 <input type=submit value="Submit response">
 |]
 
 caseSpacedDerefs :: Assertion
 caseSpacedDerefs = do
     helper "&lt;var&gt;" [hamlet|#{var theArg}|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}>|]
+    helper "<div class=\"&lt;var&gt;\"></div>\n" [hamlet|<.#{var theArg}>|]
 
 caseAttribVars :: Assertion
 caseAttribVars = do
-    helper "<div id=\"&lt;var&gt;\"></div>" [hamlet|<##{var theArg}>|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}>|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [hamlet|< f=#{var theArg}>|]
+    helper "<div id=\"&lt;var&gt;\"></div>\n" [hamlet|<##{var theArg}>|]
+    helper "<div class=\"&lt;var&gt;\"></div>\n" [hamlet|<.#{var theArg}>|]
+    helper "<div f=\"&lt;var&gt;\"></div>\n" [hamlet|< f=#{var theArg}>|]
 
-    helper "<div id=\"&lt;var&gt;\"></div>" [hamlet|<##{var theArg}>|]
-    helper "<div class=\"&lt;var&gt;\"></div>" [hamlet|<.#{var theArg}>|]
-    helper "<div f=\"&lt;var&gt;\"></div>" [hamlet|< f=#{var theArg}>|]
+    helper "<div id=\"&lt;var&gt;\"></div>\n" [hamlet|<##{var theArg}>|]
+    helper "<div class=\"&lt;var&gt;\"></div>\n" [hamlet|<.#{var theArg}>|]
+    helper "<div f=\"&lt;var&gt;\"></div>\n" [hamlet|< f=#{var theArg}>|]
 
 caseStringsAndHtml :: Assertion
 caseStringsAndHtml = do
@@ -732,6 +785,7 @@ caseNesting = do
     helper
       "<table><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table>"
       [hamlet|
+$newline never
 <table>
   <tbody>
     $forall user <- users
@@ -746,6 +800,7 @@ caseNesting = do
           , "</select>"
           ])
         [hamlet|
+$newline never
 <select #"#{name}" name=#{name}>
     <option :isBoolBlank val:selected>
     <option value=true :isBoolTrue val:selected>Yes
@@ -771,8 +826,8 @@ caseCurrency =
 
 caseExternal :: Assertion
 caseExternal = do
-    helper "foo<br>" $(hamletFile "test/hamlets/external.hamlet")
-    helper "foo<br/>" $(xhamletFile "test/hamlets/external.hamlet")
+    helper "foo\n<br>\n" $(hamletFile "test/hamlets/external.hamlet")
+    helper "foo\n<br/>\n" $(xhamletFile "test/hamlets/external.hamlet")
   where
     foo = "foo"
 
@@ -803,14 +858,14 @@ caseHamlet' :: Assertion
 caseHamlet' = do
     helper' "foo" [shamlet|foo|]
     helper' "foo" [xshamlet|foo|]
-    helper "<br>" $ const $ [shamlet|<br>|]
-    helper "<br/>" $ const $ [xshamlet|<br>|]
+    helper "<br>\n" $ const $ [shamlet|<br>|]
+    helper "<br/>\n" $ const $ [xshamlet|<br>|]
 
     -- new with generalized stuff
     helper' "foo" [shamlet|foo|]
     helper' "foo" [xshamlet|foo|]
-    helper "<br>" $ const $ [shamlet|<br>|]
-    helper "<br/>" $ const $ [xshamlet|<br>|]
+    helper "<br>\n" $ const $ [shamlet|<br>|]
+    helper "<br/>\n" $ const $ [xshamlet|<br>|]
 
 
 instance Show Url where

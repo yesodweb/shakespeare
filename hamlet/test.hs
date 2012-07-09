@@ -1,5 +1,5 @@
 import HamletTest (specs)
-import Test.Hspec
+import Test.Hspec.Core
 
 main :: IO ()
-main = hspecX [specs]
+main = hspec [specs]

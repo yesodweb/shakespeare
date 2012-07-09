@@ -28,6 +28,7 @@ module Text.Hamlet
     , ToAttributes (..)
       -- * Internal, for making more
     , HamletSettings (..)
+    , NewlineStyle (..)
     , hamletWithSettings
     , hamletFileWithSettings
     , defaultHamletSettings
@@ -46,12 +47,8 @@ import Data.Char (isUpper, isDigit)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import qualified Data.Text.Lazy as TL
-#if MIN_VERSION_blaze_html(0,5,0)
 import Text.Blaze.Html (Html, toHtml)
 import Text.Blaze.Internal (preEscapedText)
-#else
-import Text.Blaze (Html, preEscapedText, toHtml)
-#endif
 import qualified Data.Foldable as F
 import Control.Monad (mplus)
 import Data.Monoid (mempty, mappend)
@@ -218,11 +215,6 @@ htmlRules = do
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings hamletRules defaultHamletSettings
 
--- | A variant which adds newlines to the output. Useful for debugging
--- but may alter browser page layout.
-hamlet' :: QuasiQuoter
-hamlet' = hamletWithSettings hamletRules defaultHamletSettings{hamletNewlines=True}
-         
 xhamlet :: QuasiQuoter
 xhamlet = hamletWithSettings hamletRules xhtmlHamletSettings
 
@@ -286,7 +278,11 @@ hamletFromString qhr set s = do
     hr <- qhr
     case parseDoc set s of
         Error s' -> error s'
-        Ok d -> hrWithEnv hr $ \env -> docsToExp env hr [] d
+        Ok (mnl, d) -> do
+            case (mnl, hamletNewlines set) of
+                (Nothing, DefaultNewlineStyle) -> qReport False "Warning: default newline style has changed, using an explicit $newline is recommended"
+                _ -> return ()
+            hrWithEnv hr $ \env -> docsToExp env hr [] d
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do

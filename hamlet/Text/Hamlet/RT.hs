@@ -64,7 +64,7 @@ parseHamletRT :: Failure HamletException m
 parseHamletRT set s =
     case parseDoc set s of
         Error s' -> failure $ HamletParseException s'
-        Ok x -> liftM HamletRT $ mapM convert x
+        Ok (_, x) -> liftM HamletRT $ mapM convert x
   where
     convert x@(DocForall deref (BindVar (Ident ident)) docs) = do
         deref' <- flattenDeref' x deref

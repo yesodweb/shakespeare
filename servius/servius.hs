@@ -1,11 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
-import Network.Wai.Application.Static
-    ( StaticSettings (..), staticApp, defaultMimeType, defaultListing
-    , defaultMimeTypes, mimeTypeByExt
-    , defaultFileServerSettings, fileSystemLookup
-    , fileName, toFilePath
-    )
+import Network.Wai.Application.Static (staticApp, defaultFileServerSettings)
 import Network.Wai.Handler.Warp (run)
 import System.Console.CmdArgs hiding (def)
 import Text.Printf (printf)
@@ -30,6 +25,10 @@ import Network.HTTP.Types (status200)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import qualified Data.Text.Lazy as TL
 import Blaze.ByteString.Builder.Char.Utf8 (fromLazyText)
+import WaiAppStatic.Mime (defaultMimeMap, mimeByExt, defaultMimeType)
+import WaiAppStatic.Types (ssIndices, toPiece, ssGetMimeType, fileName)
+import Data.String (fromString)
+import Data.Maybe (mapMaybe)
 
 data Args = Args
     { docroot :: FilePath
@@ -48,19 +47,17 @@ defaultArgs = Args "." ["index.html", "index.htm"] 3000 False False False []
 main :: IO ()
 main = do
     Args {..} <- cmdArgs defaultArgs
-    let mime' = map (toFilePath *** S8.pack) mime
-    let mimeMap = Map.fromList mime' `Map.union` defaultMimeTypes
+    let mime' = map (pack *** S8.pack) mime
+    let mimeMap = Map.fromList mime' `Map.union` defaultMimeMap
     docroot' <- canonicalizePath docroot
     unless quiet $ printf "Serving directory %s on port %d with %s index files.\n" docroot' port (if noindex then "no" else show index)
     let middle = gzip def
                . (if verbose then logStdoutDev else id)
                . autohead
                . shake docroot
-    run port $ middle $ staticApp defaultFileServerSettings
-        { ssFolder = fileSystemLookup $ toFilePath docroot
-        , ssIndices = if noindex then [] else map pack index
-        , ssListing = Just defaultListing
-        , ssGetMimeType = return . mimeTypeByExt mimeMap defaultMimeType . fileName
+    run port $ middle $ staticApp (defaultFileServerSettings $ fromString docroot)
+        { ssIndices = if noindex then [] else mapMaybe (toPiece . pack) index
+        , ssGetMimeType = return . mimeByExt mimeMap defaultMimeType . fileName
         }
 
 shake :: FilePath -> Middleware

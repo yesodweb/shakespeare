@@ -8,9 +8,9 @@ module Text.Hamlet.Parse
     , HamletSettings (..)
     , defaultHamletSettings
     , xhtmlHamletSettings
-    , debugHamletSettings
     , CloseStyle (..)
     , Binding (..)
+    , NewlineStyle (..)
     )
     where
 
@@ -60,15 +60,38 @@ data Line = LineForall Deref Binding
             , _lineContent :: [Content]
             , _lineClasses :: [(Maybe Deref, [Content])]
             , _lineAttrs :: [Deref]
+            , _lineNoNewline :: Bool
             }
-          | LineContent [Content]
+          | LineContent [Content] Bool -- ^ True == avoid newlines
     deriving (Eq, Show, Read)
 
-parseLines :: HamletSettings -> String -> Result [(Int, Line)]
+parseLines :: HamletSettings -> String -> Result (Maybe NewlineStyle, HamletSettings, [(Int, Line)])
 parseLines set s =
-    case parse (many $ parseLine set) s s of
+    case parse parser s s of
         Left e -> Error $ show e
         Right x -> Ok x
+  where
+    parser = do
+        mnewline <- parseNewline
+        let set' =
+                case mnewline of
+                    Nothing ->
+                        case hamletNewlines set of
+                            DefaultNewlineStyle -> set { hamletNewlines = AlwaysNewlines }
+                            _ -> set
+                    Just n -> set { hamletNewlines = n }
+        res <- many (parseLine set')
+        return (mnewline, set', res)
+
+    parseNewline =
+        (try (many eol' >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
+        return Nothing
+    parseNewline' =
+        (try (string "always") >> return (Just AlwaysNewlines)) <|>
+        (try (string "never") >> return (Just NoNewlines)) <|>
+        (try (string "text") >> return (Just NewlinesText))
+
+    eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
 parseLine :: HamletSettings -> Parser (Int, Line)
 parseLine set = do
@@ -91,13 +114,13 @@ parseLine set = do
          controlOf <|>
          angle <|>
          invalidDollar <|>
-         (eol' >> return (LineContent [])) <|>
+         (eol' >> return (LineContent [] True)) <|>
          (do
-            cs <- content InContent
+            (cs, avoidNewLines) <- content InContent
             isEof <- (eof >> return True) <|> return False
             if null cs && ss == 0 && isEof
                 then fail "End of Hamlet template"
-                else return $ LineContent cs)
+                else return $ LineContent cs avoidNewLines)
     return (ss, x)
   where
     eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
@@ -105,20 +128,20 @@ parseLine set = do
     spaceTabs = many $ oneOf " \t"
     doctype = do
         try $ string "!!!" >> eol
-        return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"]
+        return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"] True
     doctypeDollar = do
         _ <- try $ string "$doctype "
         name <- many $ noneOf "\r\n"
         eol
-        case lookup name doctypeNames of
+        case lookup name $ hamletDoctypeNames set of
             Nothing -> fail $ "Unknown doctype name: " ++ name
-            Just val -> return $ LineContent [ContentRaw $ val ++ "\n"]
+            Just val -> return $ LineContent [ContentRaw $ val ++ "\n"] True
 
     doctypeRaw = do
         x <- try $ string "<!"
         y <- many $ noneOf "\r\n"
         eol
-        return $ LineContent [ContentRaw $ concat [x, y, "\n"]]
+        return $ LineContent [ContentRaw $ concat [x, y, "\n"]] True
 
     invalidDollar = do
         _ <- char '$'
@@ -127,13 +150,13 @@ parseLine set = do
         _ <- try $ string "$#"
         _ <- many $ noneOf "\r\n"
         eol
-        return $ LineContent []
+        return $ LineContent [] True
     htmlComment = do
         _ <- try $ string "<!--"
         _ <- manyTill anyChar $ try $ string "-->"
         x <- many nonComments
         eol
-        return $ LineContent [ContentRaw $ concat x] -- FIXME handle variables?
+        return $ LineContent [ContentRaw $ concat x] False {- FIXME -} -- FIXME handle variables?
     nonComments = (many1 $ noneOf "\r\n<") <|> (do
         _ <- char '<'
         (do
@@ -142,8 +165,8 @@ parseLine set = do
             return "") <|> return "<")
     backslash = do
         _ <- char '\\'
-        (eol >> return (LineContent [ContentRaw "\n"]))
-            <|> (LineContent <$> content InContent)
+        (eol >> return (LineContent [ContentRaw "\n"] True))
+            <|> (uncurry LineContent <$> content InContent)
     controlIf = do
         _ <- try $ string "$if"
         spaces
@@ -204,41 +227,42 @@ parseLine set = do
             NotInQuotes -> return ()
             NotInQuotesAttr -> return ()
             InContent -> eol
-        return $ cc x
+        return (cc $ map fst x, or $ map snd x)
       where
         cc [] = []
         cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
         cc (a:b) = a : cc b
     content' cr = contentHash <|> contentAt <|> contentCaret
                               <|> contentUnder
-                              <|> contentReg cr
+                              <|> contentReg' cr
     contentHash = do
         x <- parseHash
         case x of
-            Left str -> return $ ContentRaw str
-            Right deref -> return $ ContentVar deref
+            Left str -> return (ContentRaw str, null str)
+            Right deref -> return (ContentVar deref, False)
     contentAt = do
         x <- parseAt
         return $ case x of
-                    Left str -> ContentRaw str
-                    Right (s, y) -> ContentUrl y s
+                    Left str -> (ContentRaw str, null str)
+                    Right (s, y) -> (ContentUrl y s, False)
     contentCaret = do
         x <- parseCaret
         case x of
-            Left str -> return $ ContentRaw str
-            Right deref -> return $ ContentEmbed deref
+            Left str -> return (ContentRaw str, null str)
+            Right deref -> return (ContentEmbed deref, False)
     contentUnder = do
         x <- parseUnder
         case x of
-            Left str -> return $ ContentRaw str
-            Right deref -> return $ ContentMsg deref
+            Left str -> return (ContentRaw str, null str)
+            Right deref -> return (ContentMsg deref, False)
+    contentReg' x = (flip (,) False) <$> contentReg x
     contentReg InContent = (ContentRaw . return) <$> noneOf "#@^\r\n"
     contentReg NotInQuotes = (ContentRaw . return) <$> noneOf "@^#. \t\n\r>"
     contentReg NotInQuotesAttr = (ContentRaw . return) <$> noneOf "@^ \t\n\r>"
     contentReg InQuotes = (ContentRaw . return) <$> noneOf "#@^\\\"\n\r"
     tagAttribValue notInQuotes = do
         cr <- (char '"' >> return InQuotes) <|> return notInQuotes
-        content cr
+        fst <$> content cr
     tagIdent = char '#' >> TagIdent <$> tagAttribValue NotInQuotes
     tagCond = do
         d <- between (char ':') (char ':') parseDeref
@@ -284,11 +308,11 @@ parseLine set = do
               (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrs <|> tagAttrib Nothing))
         _ <- many $ oneOf " \t\r\n"
         _ <- char '>'
-        c <- content InContent
+        (c, avoidNewLines) <- content InContent
         let (tn, attr, classes, attrsd) = tag' $ TagName name : xs
         if '/' `elem` tn
           then fail "A tag name may not contain a slash. Perhaps you have a closing tag in your HTML."
-          else return $ LineTag tn attr c classes attrsd
+          else return $ LineTag tn attr c classes attrsd avoidNewLines
 
 data TagPiece = TagName String
               | TagIdent [Content]
@@ -348,7 +372,7 @@ nestToDoc set (Nest (LineCase d) inside:rest) = do
     cases <- mapM getOf inside
     rest' <- nestToDoc set rest
     Ok $ DocCase d cases : rest'
-nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
+nestToDoc set (Nest (LineTag tn attrs content classes attrsD avoidNewLine) inside:rest) = do
     let attrFix (x, y, z) = (x, y, [(Nothing, z)])
     let takeClass (a, "class", b) = Just (a, fromMaybe [] b)
         takeClass _ = Nothing
@@ -374,24 +398,28 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD) inside:rest) = do
         start = DocContent $ ContentRaw $ "<" ++ tn
         attrs'' = concatMap attrToContent attrs'
         newline' = DocContent $ ContentRaw
-                 $ if hamletNewlines set then "\n" else ""
+                 $ case hamletNewlines set of { AlwaysNewlines | not avoidNewLine -> "\n"; _ -> "" }
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ start
        : attrs''
       ++ map (DocContent . ContentAttrs) attrsD
       ++ seal
-       : newline'
        : map DocContent content
       ++ inside'
       ++ end
        : newline'
        : rest'
-nestToDoc set (Nest (LineContent content) inside:rest) = do
+nestToDoc set (Nest (LineContent content avoidNewLine) inside:rest) = do
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     let newline' = DocContent $ ContentRaw
-                   $ if hamletNewlines set then "\n" else ""
+                   $ case hamletNewlines set of { NoNewlines -> ""; _ -> if nextIsContent && not avoidNewLine then "\n" else "" }
+        nextIsContent =
+            case (inside, rest) of
+                ([], Nest LineContent{} _:_) -> True
+                ([], Nest LineTag{} _:_) -> True
+                _ -> False
     Ok $ map DocContent content ++ newline':inside' ++ rest'
 nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
 nestToDoc _set (Nest LineElse _:_) = Error "Unexpected else"
@@ -421,14 +449,14 @@ compressDoc ( DocContent (ContentRaw x)
             ) = compressDoc $ (DocContent $ ContentRaw $ x ++ y) : rest
 compressDoc (DocContent x:rest) = DocContent x : compressDoc rest
 
-parseDoc :: HamletSettings -> String -> Result [Doc]
+parseDoc :: HamletSettings -> String -> Result (Maybe NewlineStyle, [Doc])
 parseDoc set s = do
-    ls <- parseLines set s
-    let notEmpty (_, LineContent []) = False
+    (mnl, set', ls) <- parseLines set s
+    let notEmpty (_, LineContent [] _) = False
         notEmpty _ = True
     let ns = nestLines $ filter notEmpty ls
-    ds <- nestToDoc set ns
-    return $ compressDoc ds
+    ds <- nestToDoc set' ns
+    return (mnl, compressDoc ds)
 
 attrToContent :: (Maybe Deref, String, [(Maybe Deref, Maybe [Content])]) -> [Doc]
 attrToContent (Just cond, k, v) =
@@ -466,11 +494,19 @@ data HamletSettings = HamletSettings
       hamletDoctype :: String
       -- | Should we add newlines to the output, making it more human-readable?
       --  Useful for client-side debugging but may alter browser page layout.
-    , hamletNewlines :: Bool
+    , hamletNewlines :: NewlineStyle
       -- | How a tag should be closed. Use this to switch between HTML, XHTML
       -- or even XML output.
     , hamletCloseStyle :: String -> CloseStyle
+      -- | Mapping from short names in \"$doctype\" statements to full doctype.
+    , hamletDoctypeNames :: [(String, String)]
     }
+
+data NewlineStyle = NoNewlines -- ^ never add newlines
+                  | NewlinesText -- ^ add newlines between consecutive text lines
+                  | AlwaysNewlines -- ^ add newlines everywhere
+                  | DefaultNewlineStyle
+    deriving Show
 
 htmlEmptyTags :: Set String
 htmlEmptyTags = Set.fromAscList
@@ -491,18 +527,15 @@ htmlEmptyTags = Set.fromAscList
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
 defaultHamletSettings :: HamletSettings
-defaultHamletSettings = HamletSettings "<!DOCTYPE html>" False htmlCloseStyle
+defaultHamletSettings = HamletSettings "<!DOCTYPE html>" DefaultNewlineStyle htmlCloseStyle doctypeNames
 
 xhtmlHamletSettings :: HamletSettings
 xhtmlHamletSettings =
-    HamletSettings doctype False xhtmlCloseStyle
+    HamletSettings doctype DefaultNewlineStyle xhtmlCloseStyle doctypeNames
   where
     doctype =
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " ++
       "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
-
-debugHamletSettings :: HamletSettings
-debugHamletSettings = HamletSettings "<!DOCTYPE html>" True htmlCloseStyle
 
 htmlCloseStyle :: String -> CloseStyle
 htmlCloseStyle s =
