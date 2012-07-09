@@ -824,8 +824,8 @@ caseCurrency =
 
 caseExternal :: Assertion
 caseExternal = do
-    helper "foo<br>\n" $(hamletFile "test/hamlets/external.hamlet")
-    helper "foo<br/>\n" $(xhamletFile "test/hamlets/external.hamlet")
+    helper "foo\n<br>\n" $(hamletFile "test/hamlets/external.hamlet")
+    helper "foo\n<br/>\n" $(xhamletFile "test/hamlets/external.hamlet")
   where
     foo = "foo"
 

@@ -418,6 +418,7 @@ nestToDoc set (Nest (LineContent content avoidNewLine) inside:rest) = do
         nextIsContent =
             case (inside, rest) of
                 ([], Nest LineContent{} _:_) -> True
+                ([], Nest LineTag{} _:_) -> True
                 _ -> False
     Ok $ map DocContent content ++ newline':inside' ++ rest'
 nestToDoc _set (Nest (LineElseIf _) _:_) = Error "Unexpected elseif"
