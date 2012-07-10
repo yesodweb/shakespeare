@@ -25,8 +25,8 @@ import Network.HTTP.Types (status200)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import qualified Data.Text.Lazy as TL
 import Blaze.ByteString.Builder.Char.Utf8 (fromLazyText)
-import WaiAppStatic.Mime (defaultMimeMap, mimeByExt, defaultMimeType)
-import WaiAppStatic.Types (ssIndices, toPiece, ssGetMimeType, fileName)
+import Network.Mime (defaultMimeMap, mimeByExt, defaultMimeType)
+import WaiAppStatic.Types (ssIndices, toPiece, ssGetMimeType, fileName, fromPiece)
 import Data.String (fromString)
 import Data.Maybe (mapMaybe)
 
@@ -57,7 +57,7 @@ main = do
                . shake docroot
     run port $ middle $ staticApp (defaultFileServerSettings $ fromString docroot)
         { ssIndices = if noindex then [] else mapMaybe (toPiece . pack) index
-        , ssGetMimeType = return . mimeByExt mimeMap defaultMimeType . fileName
+        , ssGetMimeType = return . mimeByExt mimeMap defaultMimeType . fromPiece . fileName
         }
 
 shake :: FilePath -> Middleware
