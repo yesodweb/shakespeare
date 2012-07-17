@@ -279,7 +279,7 @@ $newline never
   , it "infix operators" $
       helper "5" [hamlet|#{show $ (4 + 5) - (2 + 2)}|]
   , it "infix operators with parens" $
-      helper "5" [hamlet|#{show ((+) 1 1 + 3 + 2)}|]
+      helper "5" [hamlet|#{show ((+) 1 1 + 3)}|]
   , it "doctypes" $ helper "<!DOCTYPE html>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" [hamlet|
 $newline never
 $doctype 5
