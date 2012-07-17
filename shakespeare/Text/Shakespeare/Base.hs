@@ -35,6 +35,7 @@ import qualified Data.Text.Lazy as TL
 import qualified System.IO as SIO
 import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
+import Control.Applicative ((<*))
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
@@ -109,15 +110,14 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|>
             _ <- char ')'
             return $ DerefIdent $ Ident x
     derefInfix x = try $ do
-        () <- fail "Infix operator handling is currently disabled"
-        _ <- many1 $ oneOf " \t"
+        _ <- delim
+        xs <- many $ try $ derefSingle <* delim
         op <- many1 (satisfy $ \c -> isSymbol c || c `elem` "-") <?> "operator"
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
         let op' = DerefIdent $ Ident op
-        _ <- many1 (oneOf " \t")
-        y <- derefSingle
-        return $ DerefBranch (DerefBranch op' x) y
+        ys <- many1 $ delim >> derefSingle
+        return $ DerefBranch (DerefBranch op' $ foldl1 DerefBranch $ x : xs) (foldl1 DerefBranch ys)
     derefSingle = derefTuple <|> derefOp <|> derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'

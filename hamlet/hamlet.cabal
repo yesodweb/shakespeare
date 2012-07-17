@@ -41,7 +41,7 @@ extra-source-files:
 
 library
     build-depends:   base             >= 4       && < 5
-                   , shakespeare      >= 1.0     && < 1.1
+                   , shakespeare      >= 1.0.1   && < 1.1
                    , bytestring       >= 0.9
                    , template-haskell
                    , parsec           >= 2       && < 4
