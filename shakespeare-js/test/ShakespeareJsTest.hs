@@ -27,7 +27,7 @@ join l = (intercalate ";\n" l)
 join = intercalate "\n"
 #endif
 
-specs :: Specs
+specs :: Spec
 specs = describe "shakespeare-js" $ do
   it "julius" $ do
     let var = "x=2"
