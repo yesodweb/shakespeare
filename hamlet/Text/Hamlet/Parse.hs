@@ -84,7 +84,7 @@ parseLines set s =
         return (mnewline, set', res)
 
     parseNewline =
-        (try (many eol' >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
+        (try (many eol' >> spaceTabs >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
         return Nothing
     parseNewline' =
         (try (string "always") >> return (Just AlwaysNewlines)) <|>
@@ -125,7 +125,6 @@ parseLine set = do
   where
     eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
     eol = eof <|> eol'
-    spaceTabs = many $ oneOf " \t"
     doctype = do
         try $ string "!!!" >> eol
         return $ LineContent [ContentRaw $ hamletDoctype set ++ "\n"] True
@@ -573,3 +572,6 @@ doctypeNames =
 
 data Binding = BindVar Ident | BindConstr Ident [Ident] | BindTuple [Ident]
     deriving (Eq, Show, Read, Data, Typeable)
+
+spaceTabs :: Parser String
+spaceTabs = many $ oneOf " \t"
