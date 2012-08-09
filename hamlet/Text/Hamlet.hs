@@ -218,6 +218,9 @@ hamlet = hamletWithSettings hamletRules defaultHamletSettings
 xhamlet :: QuasiQuoter
 xhamlet = hamletWithSettings hamletRules xhtmlHamletSettings
 
+asHtmlUrl :: HtmlUrl url -> HtmlUrl url
+asHtmlUrl = id
+
 hamletRules :: Q HamletRules
 hamletRules = do
     i <- [|id|]
@@ -231,8 +234,9 @@ hamletRules = do
             return $ LamE [VarP r] h
     return $ HamletRules i ur em
   where
-    em (Env (Just urender) Nothing) e =
-            urender $ \ur' -> return (e `AppE` ur')
+    em (Env (Just urender) Nothing) e = do
+        asHtmlUrl' <- [|asHtmlUrl|]
+        urender $ \ur' -> return ((asHtmlUrl' `AppE` e) `AppE` ur')
     em _ _ = error "bad Env"
 
 ihamlet :: QuasiQuoter
