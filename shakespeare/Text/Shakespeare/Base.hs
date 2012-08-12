@@ -35,7 +35,6 @@ import qualified Data.Text.Lazy as TL
 import qualified System.IO as SIO
 import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
-import Control.Applicative ((<*))
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable)
@@ -111,7 +110,7 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|>
             return $ DerefIdent $ Ident x
     derefInfix x = try $ do
         _ <- delim
-        xs <- many $ try $ derefSingle <* delim
+        xs <- many $ try $ derefSingle >>= \x' -> delim >> return x'
         op <- many1 (satisfy $ \c -> isSymbol c || c `elem` "-") <?> "operator"
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
