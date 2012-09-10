@@ -26,7 +26,9 @@ module Text.Shakespeare
 import Text.ParserCombinators.Parsec hiding (Line)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
+#if !MIN_VERSION_template_haskell(2,6,0)
 import Language.Haskell.TH.Syntax.Internals
+#endif
 import Data.Text.Lazy.Builder (Builder, fromText)
 import Data.Monoid
 import System.IO.Unsafe (unsafePerformIO)
