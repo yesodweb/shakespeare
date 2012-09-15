@@ -1,10 +1,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-module ShakespeareTextTest (specs) where
+module ShakespeareTextTest (spec) where
 
 import Test.HUnit hiding (Test)
-import Test.Hspec.Core
-import Test.Hspec.HUnit ()
+import Test.Hspec
 
 import Prelude hiding (reverse)
 import Text.Shakespeare.Text
@@ -15,12 +14,13 @@ import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 
-specs :: Spec
-specs = describe "shakespeare-text"
-  [ it "text" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip telper [text|שלום
+spec :: Spec
+spec = do
+  describe "shakespeare-text" $ do
+    it "text" $ do
+      let var = "var"
+      let urlp = (Home, [(pack "p", pack "q")])
+      flip telper [text|שלום
 #{var}
 @{Home}
 @?{urlp}
@@ -34,31 +34,31 @@ specs = describe "shakespeare-text"
         ] ++ "\r\n"
 
 
-  , it "textFile" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip telper $(textFile "test/texts/external1.text") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
+    it "textFile" $ do
+      let var = "var"
+      let urlp = (Home, [(pack "p", pack "q")])
+      flip telper $(textFile "test/texts/external1.text") $ unlines
+          [ "שלום"
+          , var
+          , "url"
+          , "url?p=q"
+          , "var x;"
+          ]
 
 
-  , it "textFileReload" $ do
-    let var = "var"
-    let urlp = (Home, [(pack "p", pack "q")])
-    flip telper $(textFileReload "test/texts/external1.text") $ unlines
-        [ "שלום"
-        , var
-        , "url"
-        , "url?p=q"
-        , "var x;"
-        ]
+    it "textFileReload" $ do
+      let var = "var"
+      let urlp = (Home, [(pack "p", pack "q")])
+      flip telper $(textFileReload "test/texts/external1.text") $ unlines
+          [ "שלום"
+          , var
+          , "url"
+          , "url?p=q"
+          , "var x;"
+          ]
 
 {- TODO
-  , it "textFileReload" $ do
+    it "textFileReload" $ do
       let var = "somevar"
           test result = telper result $(textFileReload "test/texts/external2.text")
       writeFile "test/texts/external2.text" "var #{var} = 1;"
@@ -69,38 +69,37 @@ specs = describe "shakespeare-text"
       -}
 
 
-  , it "text module names" $
+    it "text module names" $
       let foo = "foo"
           double = 3.14 :: Double
           int = -5 :: Int in
         telper "oof oof 3.14 -5"
           [text|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
-  , it "stext module names" $
+    it "stext module names" $
       let foo = "foo"
           double = 3.14 :: Double
           int = -5 :: Int in
         simpT "oof oof 3.14 -5"
           [stext|#{Data.List.reverse foo} #{L.reverse foo} #{show double} #{show int}|]
 
-  , it "single dollar at and caret" $ do
+    it "single dollar at and caret" $ do
       telper "$@^" [text|$@^|]
       telper "#{@{^{" [text|#\{@\{^\{|]
 
-  , it "single dollar at and caret" $ do
+    it "single dollar at and caret" $ do
       simpT "$@^" [stext|$@^|]
       simpT "#{@{^{" [stext|#\{@\{^\{|]
 
-  , it "dollar operator" $ do
+    it "dollar operator" $ do
       let val = (1 :: Int, (2 :: Int, 3 :: Int))
       telper "2" [text|#{ show $ fst $ snd val }|]
       telper "2" [text|#{ show $ fst $ snd $ val}|]
 
-  , it "dollar operator" $ do
+    it "dollar operator" $ do
       let val = (1 :: Int, (2 :: Int, 3 :: Int))
       simpT "2" [stext|#{ show $ fst $ snd val }|]
       simpT "2" [stext|#{ show $ fst $ snd $ val}|]
-  ]
 
 simpT :: String -> TL.Text -> Assertion
 simpT a b = pack a @=? TL.toStrict b

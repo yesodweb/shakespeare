@@ -1,8 +1,6 @@
 module ShakespeareBaseTest (specs) where
 
-import Test.HUnit hiding (Test)
-import Test.Hspec.Monadic
-import Test.Hspec.HUnit ()
+import Test.Hspec
 
 import Text.ParserCombinators.Parsec (parse, ParseError, (<|>))
 import Text.Shakespeare.Base (parseVarString, parseUrlString, parseIntString)
@@ -10,29 +8,30 @@ import Text.Shakespeare (preFilter, defaultShakespeareSettings, ShakespeareSetti
 
 -- run :: Text.Parsec.Prim.Parsec Text.Parsec.Pos.SourceName () c -> Text.Parsec.Pos.SourceName -> c
 
-specs :: Specs
+specs :: Spec
 specs = describe "shakespeare-js" $ do
   it "parseStrings" $ do
-    Right "%{var}" @=?  run varString "%{var}"
-    Right "@{url}" @=?  run urlString "@{url}"
-    Right "^{int}" @=?  run intString "^{int}"
-    Right "@{url}" @=?  run (varString <|> urlString <|> intString) "@{url} #{var}"
+    run varString "%{var}" `shouldBe` Right "%{var}"
+    run urlString "@{url}" `shouldBe` Right "@{url}"
+    run intString "^{int}" `shouldBe` Right "^{int}"
+
+    run (varString <|> urlString <|> intString) "@{url} #{var}" `shouldBe` Right "@{url}"
 
   it "preFilter off" $ do
-    str <- preFilter defaultShakespeareSettings template
-    str @=? template
+    preFilter defaultShakespeareSettings template
+      `shouldReturn` template
 
   it "preFilter on" $ do
-    str <- preFilter preConversionSettings template
-    "unchanged `#{var}` `@{url}` `^{int}`" @=? str
+    preFilter preConversionSettings template
+      `shouldReturn` "unchanged `#{var}` `@{url}` `^{int}`"
 
   it "preFilter ignore quotes" $ do
-    str <- preFilter preConversionSettings templateQuote
-    "unchanged '#{var}' `@{url}` '^{int}'" @=? str
+    preFilter preConversionSettings templateQuote
+      `shouldReturn` "unchanged '#{var}' `@{url}` '^{int}'"
 
   it "preFilter ignore comments" $ do
-    str <- preFilter preConversionSettings templateCommented
-    "unchanged & '#{var}' @{url} '^{int}'" @=? str
+    preFilter preConversionSettings templateCommented
+      `shouldReturn` "unchanged & '#{var}' @{url} '^{int}'"
 
   where
     varString = parseVarString '%'

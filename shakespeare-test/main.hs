@@ -3,6 +3,6 @@ import qualified ShakespeareJsTest
 import qualified ShakespeareBaseTest
 
 main :: IO ()
-main = hspecX $ do
+main = hspec $ do
   ShakespeareJsTest.specs
   ShakespeareBaseTest.specs

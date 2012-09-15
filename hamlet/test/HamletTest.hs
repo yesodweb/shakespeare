@@ -1,10 +1,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-module HamletTest (specs) where 
+module HamletTest (spec) where
 
 import Test.HUnit hiding (Test)
-import Test.Hspec.Core
-import Test.Hspec.HUnit
+import Test.Hspec
 
 import Prelude hiding (reverse)
 import Text.Hamlet
@@ -21,71 +20,72 @@ import Text.Blaze.Html (toHtml)
 import Text.Blaze.Internal (preEscapedString)
 import Text.Blaze
 
-specs = describe "hamlet"
-  [ it "empty" caseEmpty
-  , it "static" caseStatic
-  , it "tag" caseTag
-  , it "var" caseVar
-  , it "var chain " caseVarChain
-  , it "url" caseUrl
-  , it "url chain " caseUrlChain
-  , it "embed" caseEmbed
-  , it "embed chain " caseEmbedChain
-  , it "if" caseIf
-  , it "if chain " caseIfChain
-  , it "else" caseElse
-  , it "else chain " caseElseChain
-  , it "elseif" caseElseIf
-  , it "elseif chain " caseElseIfChain
-  , it "list" caseList
-  , it "list chain" caseListChain
-  , it "with" caseWith
-  , it "with multi" caseWithMulti
-  , it "with chain" caseWithChain
-  , it "with comma string" caseWithCommaString
-  , it "with multi scope" caseWithMultiBindingScope
-  , it "script not empty" caseScriptNotEmpty
-  , it "meta empty" caseMetaEmpty
-  , it "input empty" caseInputEmpty
-  , it "multiple classes" caseMultiClass
-  , it "attrib order" caseAttribOrder
-  , it "nothing" caseNothing
-  , it "nothing chain " caseNothingChain
-  , it "just" caseJust
-  , it "just chain " caseJustChain
-  , it "constructor" caseConstructor
-  , it "url + params" caseUrlParams
-  , it "escape" caseEscape
-  , it "empty statement list" caseEmptyStatementList
-  , it "attribute conditionals" caseAttribCond
-  , it "non-ascii" caseNonAscii
-  , it "maybe function" caseMaybeFunction
-  , it "trailing dollar sign" caseTrailingDollarSign
-  , it "non leading percent sign" caseNonLeadingPercent
-  , it "quoted attributes" caseQuotedAttribs
-  , it "spaced derefs" caseSpacedDerefs
-  , it "attrib vars" caseAttribVars
-  , it "strings and html" caseStringsAndHtml
-  , it "nesting" caseNesting
-  , it "trailing space" caseTrailingSpace
-  , it "currency symbols" caseCurrency
-  , it "external" caseExternal
-  , it "parens" caseParens
-  , it "hamlet literals" caseHamletLiterals
-  , it "hamlet' and xhamlet'" caseHamlet'
-  , it "hamlet tuple" caseTuple
+spec = do
+  describe "hamlet" $ do
+    it "empty" caseEmpty
+    it "static" caseStatic
+    it "tag" caseTag
+    it "var" caseVar
+    it "var chain " caseVarChain
+    it "url" caseUrl
+    it "url chain " caseUrlChain
+    it "embed" caseEmbed
+    it "embed chain " caseEmbedChain
+    it "if" caseIf
+    it "if chain " caseIfChain
+    it "else" caseElse
+    it "else chain " caseElseChain
+    it "elseif" caseElseIf
+    it "elseif chain " caseElseIfChain
+    it "list" caseList
+    it "list chain" caseListChain
+    it "with" caseWith
+    it "with multi" caseWithMulti
+    it "with chain" caseWithChain
+    it "with comma string" caseWithCommaString
+    it "with multi scope" caseWithMultiBindingScope
+    it "script not empty" caseScriptNotEmpty
+    it "meta empty" caseMetaEmpty
+    it "input empty" caseInputEmpty
+    it "multiple classes" caseMultiClass
+    it "attrib order" caseAttribOrder
+    it "nothing" caseNothing
+    it "nothing chain " caseNothingChain
+    it "just" caseJust
+    it "just chain " caseJustChain
+    it "constructor" caseConstructor
+    it "url + params" caseUrlParams
+    it "escape" caseEscape
+    it "empty statement list" caseEmptyStatementList
+    it "attribute conditionals" caseAttribCond
+    it "non-ascii" caseNonAscii
+    it "maybe function" caseMaybeFunction
+    it "trailing dollar sign" caseTrailingDollarSign
+    it "non leading percent sign" caseNonLeadingPercent
+    it "quoted attributes" caseQuotedAttribs
+    it "spaced derefs" caseSpacedDerefs
+    it "attrib vars" caseAttribVars
+    it "strings and html" caseStringsAndHtml
+    it "nesting" caseNesting
+    it "trailing space" caseTrailingSpace
+    it "currency symbols" caseCurrency
+    it "external" caseExternal
+    it "parens" caseParens
+    it "hamlet literals" caseHamletLiterals
+    it "hamlet' and xhamlet'" caseHamlet'
+    it "hamlet tuple" caseTuple
 
 
 
-  , it "comments" $ do
+    it "comments" $ do
     -- FIXME reconsider Hamlet comment syntax?
-    helper "" [hamlet|$# this is a comment
+      helper "" [hamlet|$# this is a comment
 $# another comment
 $#a third one|]
 
 
-  , it "ignores a blank line" $ do
-    helper "<p>foo</p>\n" [hamlet|
+    it "ignores a blank line" $ do
+      helper "<p>foo</p>\n" [hamlet|
 <p>
 
     foo
@@ -96,7 +96,7 @@ $#a third one|]
 
 
 
-  , it "angle bracket syntax" $
+    it "angle bracket syntax" $
       helper "<p class=\"foo\" height=\"100\"><span id=\"bar\" width=\"50\">HELLO</span></p>"
         [hamlet|
 $newline never
@@ -106,8 +106,8 @@ $newline never
 
 
 
-  , it "hamlet module names" $
-    let foo = "foo" in
+    it "hamlet module names" $ do
+      let foo = "foo"
       helper "oof oof 3.14 -5"
         [hamlet|
 $newline never
@@ -119,27 +119,27 @@ $newline never
 
 
 
-  , it "single dollar at and caret" $ do
-    helper "$@^" [hamlet|\$@^|]
+    it "single dollar at and caret" $ do
+      helper "$@^" [hamlet|\$@^|]
 
-    helper "#{@{^{" [hamlet|#\{@\{^\{|]
-
-
-  , it "dollar operator" $ do
-    let val = (1, (2, 3))
-    helper "2" [hamlet|#{ show $ fst $ snd val }|]
-    helper "2" [hamlet|#{ show $ fst $ snd $ val}|]
+      helper "#{@{^{" [hamlet|#\{@\{^\{|]
 
 
-  , it "in a row" $ do
-    helper "1" [hamlet|#{ show $ const 1 2 }|]
+    it "dollar operator" $ do
+      let val = (1, (2, 3))
+      helper "2" [hamlet|#{ show $ fst $ snd val }|]
+      helper "2" [hamlet|#{ show $ fst $ snd $ val}|]
 
 
-  , it "embedded slash" $ do
-    helper "///" [hamlet|///|]
+    it "in a row" $ do
+      helper "1" [hamlet|#{ show $ const 1 2 }|]
+
+
+    it "embedded slash" $ do
+      helper "///" [hamlet|///|]
 
 {- compile-time error
-  , it "tag with slash" $ do
+    it "tag with slash" $ do
     helper "" [hamlet|
 <p>
   Text
@@ -147,21 +147,21 @@ $newline never
 |]
 -}
 
-  , it "string literals" $ do
-    helper "string" [hamlet|#{"string"}|]
-    helper "string" [hamlet|#{id "string"}|]
-    helper "gnirts" [hamlet|#{L.reverse $ id "string"}|]
-    helper "str&quot;ing" [hamlet|#{"str\"ing"}|]
-    helper "str&lt;ing" [hamlet|#{"str<ing"}|]
+    it "string literals" $ do
+      helper "string" [hamlet|#{"string"}|]
+      helper "string" [hamlet|#{id "string"}|]
+      helper "gnirts" [hamlet|#{L.reverse $ id "string"}|]
+      helper "str&quot;ing" [hamlet|#{"str\"ing"}|]
+      helper "str&lt;ing" [hamlet|#{"str<ing"}|]
 
 
-  , it "interpolated operators" $ do
-    helper "3" [hamlet|#{show $ (+) 1 2}|]
-    helper "6" [hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
+    it "interpolated operators" $ do
+      helper "3" [hamlet|#{show $ (+) 1 2}|]
+      helper "6" [hamlet|#{show $ sum $ (:) 1 ((:) 2 $ return 3)}|]
 
 
-  , it "HTML comments" $ do
-    helper "<p>1</p><p>2 not ignored</p>" [hamlet|
+    it "HTML comments" $ do
+      helper "<p>1</p><p>2 not ignored</p>" [hamlet|
 $newline never
 <p>1
 <!-- ignored comment -->
@@ -172,11 +172,11 @@ $newline never
 
 
 
-  , it "nested maybes" $ do
-    let muser = Just "User" :: Maybe String
-        mprof = Nothing :: Maybe Int
-        m3 = Nothing :: Maybe String
-    helper "justnothing" [hamlet|
+    it "nested maybes" $ do
+      let muser = Just "User" :: Maybe String
+          mprof = Nothing :: Maybe Int
+          m3 = Nothing :: Maybe String
+      helper "justnothing" [hamlet|
 $maybe user <- muser
     $maybe profile <- mprof
         First two are Just
@@ -197,7 +197,7 @@ $nothing
 
 
 
-  , it "conditional class" $ do
+    it "conditional class" $ do
       helper "<p class=\"current\"></p>\n"
         [hamlet|<p :False:.ignored :True:.current>|]
 
@@ -210,7 +210,7 @@ $nothing
 
 
 
-  , it "forall on Foldable" $ do
+    it "forall on Foldable" $ do
       let set = Set.fromList [1..5 :: Int]
       helper "12345" [hamlet|
 $forall x <- set
@@ -219,14 +219,14 @@ $forall x <- set
 
 
 
-  , it "non-poly HTML" $ do
+    it "non-poly HTML" $ do
       helperHtml "<h1>HELLO WORLD</h1>\n" [shamlet|
   <h1>HELLO WORLD
   |]
       helperHtml "<h1>HELLO WORLD</h1>\n" $(shamletFile "test/hamlets/nonpolyhtml.hamlet")
 
 
-  , it "non-poly Hamlet" $ do
+    it "non-poly Hamlet" $ do
       let embed = [hamlet|<p>EMBEDDED|]
       helper "<h1>url</h1>\n<p>EMBEDDED</p>\n" [hamlet|
   <h1>@{Home}
@@ -234,7 +234,7 @@ $forall x <- set
   |]
       helper "<h1>url</h1>\n" $(hamletFile "test/hamlets/nonpolyhamlet.hamlet")
 
-  , it "non-poly IHamlet" $ do
+    it "non-poly IHamlet" $ do
       let embed = [ihamlet|<p>EMBEDDED|]
       ihelper "<h1>Adios</h1>\n<p>EMBEDDED</p>\n" [ihamlet|
   <h1>_{Goodbye}
@@ -242,7 +242,7 @@ $forall x <- set
   |]
       ihelper "<h1>Hola</h1>\n" $(ihamletFile "test/hamlets/nonpolyihamlet.hamlet")
 
-  , it "pattern-match tuples: forall" $ do
+    it "pattern-match tuples: forall" $ do
       let people = [("Michael", 26), ("Miriam", 25)]
       helper "<dl><dt>Michael</dt><dd>26</dd><dt>Miriam</dt><dd>25</dd></dl>" [hamlet|
 $newline never
@@ -251,7 +251,7 @@ $newline never
         <dt>#{name}
         <dd>#{show age}
 |]
-  , it "pattern-match tuples: maybe" $ do
+    it "pattern-match tuples: maybe" $ do
       let people = Just ("Michael", 26)
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
 $newline never
@@ -260,7 +260,7 @@ $newline never
         <dt>#{name}
         <dd>#{show age}
 |]
-  , it "pattern-match tuples: with" $ do
+    it "pattern-match tuples: with" $ do
       let people = ("Michael", 26)
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
 $newline never
@@ -269,24 +269,24 @@ $newline never
         <dt>#{name}
         <dd>#{show age}
 |]
-  , it "list syntax for interpolation" $ do
+    it "list syntax for interpolation" $ do
       helper "<ul><li>1</li><li>2</li><li>3</li></ul>" [hamlet|
 $newline never
 <ul>
     $forall num <- [1, 2, 3]
         <li>#{show num}
 |]
-  , it "infix operators" $
+    it "infix operators" $
       helper "5" [hamlet|#{show $ (4 + 5) - (2 + 2)}|]
-  , it "infix operators with parens" $
+    it "infix operators with parens" $
       helper "5" [hamlet|#{show ((+) 1 1 + 3)}|]
-  , it "doctypes" $ helper "<!DOCTYPE html>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" [hamlet|
+    it "doctypes" $ helper "<!DOCTYPE html>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" [hamlet|
 $newline never
 $doctype 5
 $doctype strict
 |]
 
-  , it "case on Maybe" $
+    it "case on Maybe" $
       let nothing  = Nothing
           justTrue = Just True
       in helper "<br><br><br><br>" [hamlet|
@@ -311,7 +311,7 @@ $case Nothing
         <br>
 |]
 
-  , it "case on Url" $
+    it "case on Url" $
       let url1 = Home
           url2 = Sub SubUrl
       in helper "<br>\n<br>\n" [hamlet|
@@ -328,7 +328,7 @@ $case url2
     $of Home
 |]
 
-  , it "pattern-match constructors: forall" $ do
+    it "pattern-match constructors: forall" $ do
       let people = [Pair "Michael" 26, Pair "Miriam" 25]
       helper "<dl><dt>Michael</dt><dd>26</dd><dt>Miriam</dt><dd>25</dd></dl>" [hamlet|
 $newline text
@@ -337,7 +337,7 @@ $newline text
         <dt>#{name}
         <dd>#{show age}
 |]
-  , it "pattern-match constructors: maybe" $ do
+    it "pattern-match constructors: maybe" $ do
       let people = Just $ Pair "Michael" 26
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
 $newline text
@@ -346,7 +346,7 @@ $newline text
         <dt>#{name}
         <dd>#{show age}
 |]
-  , it "pattern-match constructors: with" $ do
+    it "pattern-match constructors: with" $ do
       let people = Pair "Michael" 26
       helper "<dl><dt>Michael</dt><dd>26</dd></dl>" [hamlet|
 $newline text
@@ -356,26 +356,26 @@ $newline text
         <dd>#{show age}
 |]
 
-  , it "multiline tags" $ helper
+    it "multiline tags" $ helper
       "<foo bar=\"baz\" bin=\"bin\">content</foo>\n" [hamlet|
 <foo bar=baz
      bin=bin>content
 |]
-  , let attrs = [("bar", "baz"), ("bin", "<>\"&")]
-     in it "*{...} attributes" $ helper
+    it "*{...} attributes" $
+      let attrs = [("bar", "baz"), ("bin", "<>\"&")] in helper
       "<foo bar=\"baz\" bin=\"&lt;&gt;&quot;&amp;\">content</foo>\n" [hamlet|
 <foo *{attrs}>content
 |]
-  , it "blank attr values" $ helper
+    it "blank attr values" $ helper
       "<foo bar=\"\" baz bin=\"\"></foo>\n"
       [hamlet|<foo bar="" baz bin=>|]
-  , it "greater than in attr" $ helper
+    it "greater than in attr" $ helper
       "<button data-bind=\"enable: someFunction() > 5\">hello</button>\n"
       [hamlet|<button data-bind="enable: someFunction() > 5">hello|]
-  , it "normal doctype" $ helper
+    it "normal doctype" $ helper
       "<!DOCTYPE html>\n"
       [hamlet|<!DOCTYPE html>|]
-  , it "newline style" $ helper
+    it "newline style" $ helper
       "<p>foo</p>\n<pre>bar\nbaz\nbin</pre>\n"
       [hamlet|
 $newline always
@@ -385,7 +385,7 @@ $newline always
     baz
     bin
 |]
-  , it "avoid newlines" $ helper
+    it "avoid newlines" $ helper
       "<p>foo</p><pre>barbazbin</pre>"
       [hamlet|
 $newline always
@@ -395,7 +395,7 @@ $newline always
     baz#
     bin#
 |]
-  , it "manual linebreaks" $ helper
+    it "manual linebreaks" $ helper
       "<p>foo</p><pre>bar\nbaz\nbin</pre>"
       [hamlet|
 $newline never
@@ -407,7 +407,7 @@ $newline never
     \
     bin
 |]
-  , it "indented newline" $ helper
+    it "indented newline" $ helper
       "<p>foo</p><pre>bar\nbaz\nbin</pre>"
       [hamlet|
     $newline never
@@ -419,7 +419,6 @@ $newline never
         \
         bin
 |]
-  ]
 
 data Pair = Pair String Int
 
