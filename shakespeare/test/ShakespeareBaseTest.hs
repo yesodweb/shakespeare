@@ -1,8 +1,7 @@
 module ShakespeareBaseTest (specs) where
 
 import Test.HUnit hiding (Test)
-import Test.Hspec.Monadic
-import Test.Hspec.HUnit ()
+import Test.Hspec
 
 import Text.ParserCombinators.Parsec (parse, ParseError, (<|>))
 import Text.Shakespeare.Base (parseVarString, parseUrlString, parseIntString)
@@ -10,7 +9,7 @@ import Text.Shakespeare (preFilter, defaultShakespeareSettings, ShakespeareSetti
 
 -- run :: Text.Parsec.Prim.Parsec Text.Parsec.Pos.SourceName () c -> Text.Parsec.Pos.SourceName -> c
 
-specs :: Specs
+specs :: Spec
 specs = describe "shakespeare-js" $ do
   it "parseStrings" $ do
     Right "%{var}" @=?  run varString "%{var}"
