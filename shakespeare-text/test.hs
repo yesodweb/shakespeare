@@ -1,5 +1,5 @@
-import  ShakespeareTextTest (specs)
-import Test.Hspec.Core
+import  ShakespeareTextTest (spec)
+import Test.Hspec
 
 main :: IO ()
-main = hspec [specs]
+main = hspec spec

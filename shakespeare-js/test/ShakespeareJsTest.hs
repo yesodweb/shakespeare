@@ -4,8 +4,7 @@
 module ShakespeareJsTest (specs) where
 
 import Test.HUnit hiding (Test)
-import Test.Hspec.Monadic
-import Test.Hspec.HUnit ()
+import Test.Hspec
 
 import Prelude hiding (reverse)
 #ifdef TEST_COFFEE
