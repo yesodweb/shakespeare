@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Hamlet
     ( -- * Plain HTML
@@ -163,9 +164,15 @@ docToExp env hr scope (DocCase deref cases) = do
     matches <- mapM toMatch cases
     return $ CaseE exp_ matches
   where
+    readMay s =
+        case reads s of
+            (x, ""):_ -> Just x
+            _ -> Nothing
     toMatch (idents, inside) = do
         let pat = case map unIdent idents of
                     ["_"] -> WildP
+                    [str]
+                        | Just i <- readMay str -> LitP $ IntegerL i
                     strs -> let (constr:fields) = map mkName strs
                             in ConP constr (map VarP fields)
         insideExp <- docsToExp env hr scope inside

@@ -419,6 +419,17 @@ $newline never
         \
         bin
 |]
+    it "case underscore" $
+        let num = 3
+         in helper "<p>Many</p>\n" [hamlet|
+$case num
+    $of 1
+        <p>1
+    $of 2
+        <p>2
+    $of _
+        <p>Many
+|]
 
 data Pair = Pair String Int
 
