@@ -37,6 +37,7 @@ module Text.Hamlet
     , Env (..)
     , HamletRules (..)
     , hamletRules
+    , ihamletRules
     , htmlRules
     ) where
 
