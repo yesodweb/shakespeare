@@ -69,6 +69,9 @@ newtype Javascript = Javascript { unJavascript :: Builder }
 -- | Return type of template-reading functions.
 type JavascriptUrl url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Javascript
 
+asJavascriptUrl :: JavascriptUrl url -> JavascriptUrl url
+asJavascriptUrl = id
+
 -- | A typeclass for types that can be interpolated in CoffeeScript templates.
 class ToJavascript a where
     toJavascript :: a -> Builder
@@ -81,9 +84,11 @@ javascriptSettings = do
   toJExp <- [|toJavascript|]
   wrapExp <- [|Javascript|]
   unWrapExp <- [|unJavascript|]
+  asJavascriptUrl' <- [|asJavascriptUrl|]
   return $ defaultShakespeareSettings { toBuilder = toJExp
   , wrap = wrapExp
   , unwrap = unWrapExp
+  , modifyFinalValue = Just asJavascriptUrl'
   }
 
 js, julius :: QuasiQuoter

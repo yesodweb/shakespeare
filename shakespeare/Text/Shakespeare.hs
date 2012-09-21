@@ -25,6 +25,7 @@ module Text.Shakespeare
 
 import Text.ParserCombinators.Parsec hiding (Line)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
+import Language.Haskell.TH (appE)
 import Language.Haskell.TH.Syntax
 #if !MIN_VERSION_template_haskell(2,8,0)
 import Language.Haskell.TH.Syntax.Internals
@@ -86,6 +87,10 @@ data ShakespeareSettings = ShakespeareSettings
     , unwrap :: Exp
     , justVarInterpolation :: Bool
     , preConversion :: Maybe PreConvert
+    , modifyFinalValue :: Maybe Exp
+    -- ^ A transformation applied to the final expression. Most often, this
+    -- would be used to force the type of the expression to help make more
+    -- meaningful error messages.
     }
 
 defaultShakespeareSettings :: ShakespeareSettings
@@ -95,6 +100,7 @@ defaultShakespeareSettings = ShakespeareSettings {
   , intChar = '^'
   , justVarInterpolation = False
   , preConversion = Nothing
+  , modifyFinalValue = Nothing
 }
 
 instance Lift PreConvert where
@@ -107,14 +113,16 @@ instance Lift PreConversion where
     lift Id = [|Id|]
 
 instance Lift ShakespeareSettings where
-    lift (ShakespeareSettings x1 x2 x3 x4 x5 x6 x7 x8) =
+    lift (ShakespeareSettings x1 x2 x3 x4 x5 x6 x7 x8 x9) =
         [|ShakespeareSettings
             $(lift x1) $(lift x2) $(lift x3)
-            $(liftExp x4) $(liftExp x5) $(liftExp x6) $(lift x7) $(lift x8)|]
+            $(liftExp x4) $(liftExp x5) $(liftExp x6) $(lift x7) $(lift x8) $(liftMExp x9)|]
       where
         liftExp (VarE n) = [|VarE $(liftName n)|]
         liftExp (ConE n) = [|ConE $(liftName n)|]
         liftExp _ = error "liftExp only supports VarE and ConE"
+        liftMExp Nothing = [|Nothing|]
+        liftMExp (Just e) = [|Just|] `appE` liftExp e
         liftName (Name (OccName a) b) = [|Name (OccName $(lift a)) $(liftFlavour b)|]
         liftFlavour NameS = [|NameS|]
         liftFlavour (NameQ (ModName a)) = [|NameQ (ModName $(lift a))|]
@@ -222,14 +230,17 @@ contentsToShakespeare rs a = do
     r <- newName "_render"
     c <- mapM (contentToBuilder r) a
     compiledTemplate <- case c of
-        []  -> [|mempty|]
+        -- Make sure we convert this mempty using toBuilder to pin down the
+        -- type appropriately
+        []  -> fmap (AppE $ wrap rs) [|mempty|]
         [x] -> return x
         _   -> do
               mc <- [|mconcat|]
               return $ mc `AppE` ListE c
-    if justVarInterpolation rs
-      then return compiledTemplate
-      else return $ LamE [VarP r] compiledTemplate
+    fmap (maybe id AppE $ modifyFinalValue rs) $
+        if justVarInterpolation rs
+            then return compiledTemplate
+            else return $ LamE [VarP r] compiledTemplate
       where
         contentToBuilder :: Name -> Content -> Q Exp
         contentToBuilder _ (ContentRaw s') = do
