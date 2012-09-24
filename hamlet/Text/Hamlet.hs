@@ -290,11 +290,7 @@ hamletFromString qhr set s = do
     hr <- qhr
     case parseDoc set s of
         Error s' -> error s'
-        Ok (mnl, d) -> do
-            case (mnl, hamletNewlines set) of
-                (Nothing, DefaultNewlineStyle) -> qReport False "Warning: default newline style has changed, using an explicit $newline is recommended"
-                _ -> return ()
-            hrWithEnv hr $ \env -> docsToExp env hr [] d
+        Ok (mnl, d) -> hrWithEnv hr $ \env -> docsToExp env hr [] d
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
