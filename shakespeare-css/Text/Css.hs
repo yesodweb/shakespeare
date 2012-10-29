@@ -19,6 +19,7 @@ import Text.Shakespeare.Base hiding (Scope)
 import Language.Haskell.TH
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***))
+import Text.IndentToBrace (i2b)
 
 type CssUrl url = (url -> [(T.Text, T.Text)] -> T.Text) -> Css
 
@@ -64,9 +65,11 @@ data CDData url = CDPlain Builder
                 | CDUrl url
                 | CDUrlParam (url, [(Text, Text)])
 
-cssFileDebug :: Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
-cssFileDebug parseBlocks' parseBlocks fp = do
-    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+cssFileDebug :: Bool -- ^ perform the indent-to-brace conversion
+             -> Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
+cssFileDebug toi2b parseBlocks' parseBlocks fp = do
+    s' <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    let s = if toi2b then i2b s' else s'
 #ifdef GHC_7_4
     qAddDependentFile fp
 #endif
@@ -74,7 +77,7 @@ cssFileDebug parseBlocks' parseBlocks fp = do
     let (scope, contents) = go a
     vs <- mapM (getVars scope) contents
     c <- mapM vtToExp $ concat vs
-    cr <- [|cssRuntime|]
+    cr <- [|cssRuntime toi2b|]
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
   where
@@ -158,13 +161,15 @@ contentToBuilderRT cd render' (ContentUrlParam d) =
             Right $ fromText $ render' u p
         _ -> Left $ show d ++ ": expected CDUrlParam"
 
-cssRuntime :: Parser [TopLevel]
+cssRuntime :: Bool -- ^ i2b?
+           -> Parser [TopLevel]
            -> FilePath
            -> [(Deref, CDData url)]
            -> (url -> [(Text, Text)] -> Text)
            -> Css
-cssRuntime parseBlocks fp cd render' = unsafePerformIO $ do
-    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+cssRuntime toi2b parseBlocks fp cd render' = unsafePerformIO $ do
+    s' <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    let s = if toi2b then i2b s' else s'
     let a = either (error . show) id $ parse parseBlocks s s
     return $ CssWhitespace $ goTop [] a
   where

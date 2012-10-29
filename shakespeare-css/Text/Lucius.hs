@@ -36,6 +36,8 @@ module Text.Lucius
     , PercentageSize (..)
     , percentageSize
     , PixelSize (..)
+      -- * Internal
+    , parseTopLevels
     ) where
 
 import Text.CssCommon
@@ -182,7 +184,7 @@ luciusFile fp = do
     luciusFromString contents
 
 luciusFileDebug, luciusFileReload :: FilePath -> Q Exp
-luciusFileDebug = cssFileDebug [|parseTopLevels|] parseTopLevels
+luciusFileDebug = cssFileDebug False [|parseTopLevels|] parseTopLevels
 luciusFileReload = luciusFileDebug
 
 parseTopLevels :: Parser [TopLevel]

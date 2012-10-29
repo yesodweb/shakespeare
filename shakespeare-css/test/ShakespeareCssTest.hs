@@ -91,7 +91,7 @@ foo
 
 
     it "cassius trailing comments" $
-      celper "h1:hover {color:green ;font-family:sans-serif}" [cassius|
+      celper "h1:hover{color:green ;font-family:sans-serif}" [cassius|
     h1:hover /* Please ignore this */
         color: green /* This is a comment. */
         /* Obviously this is ignored too. */
@@ -118,10 +118,12 @@ sel
     att: $@^
 |]
 
+  {-
       celper "sel{att:#{@{^{}" [cassius|
 sel
     att: #\{@\{^{
 |]
+-}
 
 
     it "dollar operator" $ do
@@ -262,11 +264,13 @@ bin {
         |]
 
 
+    {-
     it "cassius removes whitespace" $ do
       celper "foo{bar:baz}" [cassius|
       foo
           bar     :    baz
       |]
+      -}
 
 
 
