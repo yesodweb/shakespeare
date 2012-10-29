@@ -113,6 +113,14 @@ foo
             baz: #{binvar}
     |]
 
+    it "cassius trailing semicolon" $
+      celper "foo bar{baz:bin}" [cassius|
+    @binvar: bin
+    foo
+        bar
+            baz: #{binvar};
+    |]
+
 
 
     it "cassius module names" $ do

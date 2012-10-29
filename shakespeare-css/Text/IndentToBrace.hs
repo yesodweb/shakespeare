@@ -3,7 +3,7 @@ module Text.IndentToBrace
     ) where
 
 import Control.Monad.Trans.Writer (execWriter, tell, Writer)
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, isInfixOf)
 
 i2b :: String -> String
 i2b = ($ [])
@@ -72,7 +72,12 @@ unnest (Blank x) = do
 unnest (Nest l count inside) = do
     tell' $ replicate (lineIndent l) ' '
     tell' $ lineContent l
-    tell' $ if all isBlank inside then ";" else "{"
+    tell' $
+        case () of
+            ()
+                | not $ all isBlank inside -> "{"
+                | ";" `isInfixOf` lineContent l -> ""
+                | otherwise -> ";"
     tell' $ replicate count '}'
     tell' "\n"
     mapM_ unnest inside
