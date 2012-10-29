@@ -98,6 +98,21 @@ foo
         font-family:sans-serif
     |]
 
+    it "cassius nesting" $
+      celper "foo bar{baz:bin}" [cassius|
+    foo
+        bar
+            baz: bin
+    |]
+
+    it "cassius variable" $
+      celper "foo bar{baz:bin}" [cassius|
+    @binvar: bin
+    foo
+        bar
+            baz: #{binvar}
+    |]
+
 
 
     it "cassius module names" $ do
