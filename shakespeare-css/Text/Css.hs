@@ -20,6 +20,8 @@ import Language.Haskell.TH
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***))
 
+type CssUrl url = (url -> [(T.Text, T.Text)] -> T.Text) -> Css
+
 pack :: String -> Text
 pack = T.pack
 #if !MIN_VERSION_text(0, 11, 2)

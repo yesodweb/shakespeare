@@ -13,11 +13,32 @@ module Text.Lucius
       -- ** Runtime
     , luciusRT
     , luciusRT'
-      -- * Re-export cassius
-    , module Text.Cassius
+    , -- * Datatypes
+      Css
+    , CssUrl
+      -- * Type class
+    , ToCss (..)
+      -- * Rendering
+    , renderCss
+    , renderCssUrl
+      -- * ToCss instances
+      -- ** Color
+    , Color (..)
+    , colorRed
+    , colorBlack
+      -- ** Size
+    , mkSize
+    , AbsoluteUnit (..)
+    , AbsoluteSize (..)
+    , absoluteSize
+    , EmSize (..)
+    , ExSize (..)
+    , PercentageSize (..)
+    , percentageSize
+    , PixelSize (..)
     ) where
 
-import Text.Cassius hiding (cassius, cassiusFile, cassiusFileDebug, cassiusFileReload)
+import Text.CssCommon
 import Text.Shakespeare.Base
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax

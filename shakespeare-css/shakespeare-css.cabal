@@ -40,6 +40,7 @@ library
                      Text.Lucius
     other-modules:   Text.MkSizeType
                      Text.Css
+                     Text.CssCommon
     ghc-options:     -Wall
     if impl(ghc >= 7.4)
        cpp-options: -DGHC_7_4
