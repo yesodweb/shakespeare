@@ -39,6 +39,8 @@ module Text.Julius
 
       -- ** internal, used by 'Text.Coffee'
     , javascriptSettings
+      -- ** internal
+    , juliusUsedIdentifiers
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -119,3 +121,8 @@ juliusFileDebug = jsFileReload
 {-# DEPRECATED juliusFileDebug "Please use juliusFileReload instead." #-}
 jsFileDebug = jsFileReload
 {-# DEPRECATED jsFileDebug "Please use jsFileReload instead." #-}
+
+-- | Determine which identifiers are used by the given template, useful for
+-- creating systems like yesod devel.
+juliusUsedIdentifiers :: String -> [(Deref, VarType)]
+juliusUsedIdentifiers = shakespeareUsedIdentifiers defaultShakespeareSettings

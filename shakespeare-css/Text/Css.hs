@@ -20,6 +20,7 @@ import Language.Haskell.TH
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***))
 import Text.IndentToBrace (i2b)
+import Data.Functor.Identity (runIdentity)
 
 type CssUrl url = (url -> [(T.Text, T.Text)] -> T.Text) -> Css
 
@@ -65,22 +66,19 @@ data CDData url = CDPlain Builder
                 | CDUrl url
                 | CDUrlParam (url, [(Text, Text)])
 
-cssFileDebug :: Bool -- ^ perform the indent-to-brace conversion
-             -> Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
-cssFileDebug toi2b parseBlocks' parseBlocks fp = do
-    s' <- fmap TL.unpack $ qRunIO $ readUtf8File fp
-    let s = if toi2b then i2b s' else s'
-#ifdef GHC_7_4
-    qAddDependentFile fp
-#endif
-    let a = either (error . show) id $ parse parseBlocks s s
-    let (scope, contents) = go a
-    vs <- mapM (getVars scope) contents
-    c <- mapM vtToExp $ concat vs
-    cr <- [|cssRuntime toi2b|]
-    parseBlocks'' <- parseBlocks'
-    return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
+-- | Determine which identifiers are used by the given template, useful for
+-- creating systems like yesod devel.
+cssUsedIdentifiers :: Bool -- ^ perform the indent-to-brace conversion
+                   -> Parser [TopLevel]
+                   -> String
+                   -> [(Deref, VarType)]
+cssUsedIdentifiers toi2b parseBlocks s' =
+    concat $ runIdentity $ mapM (getVars scope0) contents
   where
+    s = if toi2b then i2b s' else s'
+    a = either (error . show) id $ parse parseBlocks s s
+    (scope0, contents) = go a
+
     go :: [TopLevel] -> ([(String, String)], [Content])
     go [] = ([], [])
     go (TopAtDecl dec _FIXMEcs:rest) =
@@ -109,6 +107,19 @@ cssFileDebug toi2b parseBlocks' parseBlocks fp = do
       where
         (scope, rest') = go rest
     go' (k, v) = k ++ v
+
+cssFileDebug :: Bool -- ^ perform the indent-to-brace conversion
+             -> Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
+cssFileDebug toi2b parseBlocks' parseBlocks fp = do
+    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+#ifdef GHC_7_4
+    qAddDependentFile fp
+#endif
+    let vs = cssUsedIdentifiers toi2b parseBlocks s
+    c <- mapM vtToExp vs
+    cr <- [|cssRuntime toi2b|]
+    parseBlocks'' <- parseBlocks'
+    return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
 
 combineSelectors :: Selector -> Selector -> Selector
 combineSelectors a b = do

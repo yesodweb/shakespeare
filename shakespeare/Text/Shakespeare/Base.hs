@@ -37,7 +37,7 @@ import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
 
 newtype Ident = Ident String
-    deriving (Show, Eq, Read, Data, Typeable)
+    deriving (Show, Eq, Read, Data, Typeable, Ord)
 
 type Scope = [(Ident, Exp)]
 
@@ -49,7 +49,7 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefBranch Deref Deref
            | DerefList [Deref]
            | DerefTuple [Deref]
-    deriving (Show, Eq, Read, Data, Typeable)
+    deriving (Show, Eq, Read, Data, Typeable, Ord)
 
 instance Lift Ident where
     lift (Ident s) = [|Ident|] `appE` lift s

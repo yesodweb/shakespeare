@@ -16,7 +16,10 @@ module Text.Shakespeare
     , shakespeareFileReload
     -- * low-level
     , shakespeareFromString
+    , shakespeareUsedIdentifiers
     , RenderUrl
+    , VarType
+    , Deref
 
 #ifdef TEST_EXPORT
     , preFilter
@@ -287,11 +290,16 @@ data VarExp url = EPlain Builder
                 | EUrlParam (url, [(TS.Text, TS.Text)])
                 | EMixin (Shakespeare url)
 
+-- | Determine which identifiers are used by the given template, useful for
+-- creating systems like yesod devel.
+shakespeareUsedIdentifiers :: ShakespeareSettings -> String -> [(Deref, VarType)]
+shakespeareUsedIdentifiers settings = concatMap getVars . contentFromString settings
+
 shakespeareFileReload :: ShakespeareSettings -> FilePath -> Q Exp
 shakespeareFileReload rs fp = do
     str <- readFileQ fp
     s <- qRunIO $ preFilter rs str
-    let b = concatMap getVars $ contentFromString rs s
+    let b = shakespeareUsedIdentifiers rs s
     c <- mapM vtToExp b
     rt <- [|shakespeareRuntime|]
     wrap' <- [|\x -> $(return $ wrap rs) . x|]

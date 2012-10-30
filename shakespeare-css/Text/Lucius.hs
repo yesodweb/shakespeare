@@ -38,6 +38,7 @@ module Text.Lucius
     , PixelSize (..)
       -- * Internal
     , parseTopLevels
+    , luciusUsedIdentifiers
     ) where
 
 import Text.CssCommon
@@ -285,3 +286,8 @@ luciusRT' tl =
 
 luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
 luciusRT tl scope = either Left (Right . renderCss . CssWhitespace) $ either Left ($ scope) (luciusRT' tl)
+
+-- | Determine which identifiers are used by the given template, useful for
+-- creating systems like yesod devel.
+luciusUsedIdentifiers :: String -> [(Deref, VarType)]
+luciusUsedIdentifiers = cssUsedIdentifiers False parseTopLevels

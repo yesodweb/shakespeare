@@ -32,6 +32,8 @@ module Text.Cassius
     , PercentageSize (..)
     , percentageSize
     , PixelSize (..)
+      -- * Internal
+    , cassiusUsedIdentifiers
     ) where
 
 import Text.Css
@@ -58,3 +60,8 @@ cassiusFile fp = do
 cassiusFileDebug, cassiusFileReload :: FilePath -> Q Exp
 cassiusFileDebug = cssFileDebug True [|Text.Lucius.parseTopLevels|] Text.Lucius.parseTopLevels
 cassiusFileReload = cassiusFileDebug
+
+-- | Determine which identifiers are used by the given template, useful for
+-- creating systems like yesod devel.
+cassiusUsedIdentifiers :: String -> [(Deref, VarType)]
+cassiusUsedIdentifiers = cssUsedIdentifiers True Text.Lucius.parseTopLevels
