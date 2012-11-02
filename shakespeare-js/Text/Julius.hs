@@ -80,6 +80,8 @@ class ToJavascript a where
 instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
 instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
+instance ToJavascript Javascript where toJavascript = unJavascript
+instance ToJavascript Builder where toJavascript = id
 
 javascriptSettings :: Q ShakespeareSettings
 javascriptSettings = do
