@@ -1,4 +1,4 @@
-import Test.Hspec.Monadic
+import Test.Hspec
 import ShakespeareJsTest (specs)
 
 main :: IO ()

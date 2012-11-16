@@ -10,8 +10,6 @@
 -- You might consider trying 'Text.Coffee', which compiles down to Javascript.
 --
 -- Further reading: <http://www.yesodweb.com/book/templates>
---
--- This module is currently in an identity crisis. Originally called Julius, now being changed to just Javascript (shakespeare-javascript)
 module Text.Julius
     ( -- * Functions
       -- ** Template-Reading Functions
