@@ -18,6 +18,7 @@ import qualified Data.List
 import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
+import Data.Aeson (toJSON)
 
 join :: [String] -> String
 #ifdef TEST_COFFEE
@@ -100,6 +101,8 @@ specs = describe "shakespeare-js" $ do
     jelper "2" [quote|#{ show $ fst $ snd $ val}|]
 
   it "empty file" $ jelper "" [quote||]
+
+  it "JSON data" $ jelper "\"Hello \\\"World!\\\"\"" [julius|#{toJSON "Hello \"World!\""}|]
 
 
 

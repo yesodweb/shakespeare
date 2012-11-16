@@ -48,6 +48,8 @@ import Data.Monoid
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
+import Data.Aeson (Value)
+import Data.Aeson.Encode (fromValue)
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -80,6 +82,7 @@ instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
 instance ToJavascript Javascript where toJavascript = unJavascript
 instance ToJavascript Builder where toJavascript = id
+instance ToJavascript Value where toJavascript = fromValue
 
 javascriptSettings :: Q ShakespeareSettings
 javascriptSettings = do
