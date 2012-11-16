@@ -27,9 +27,11 @@ module Text.Julius
       -- * Datatypes
     , JavascriptUrl
     , Javascript (..)
+    , RawJavascript (..)
 
       -- * Typeclass for interpolated variables
     , ToJavascript (..)
+    , RawJS (..)
 
       -- ** Rendering Functions
     , renderJavascript
@@ -77,12 +79,26 @@ asJavascriptUrl = id
 -- | A typeclass for types that can be interpolated in CoffeeScript templates.
 class ToJavascript a where
     toJavascript :: a -> Builder
+#ifndef SAFER_INTERPOLATION
 instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
 instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
 instance ToJavascript Javascript where toJavascript = unJavascript
 instance ToJavascript Builder where toJavascript = id
+#endif
 instance ToJavascript Value where toJavascript = fromValue
+
+newtype RawJavascript = RawJavascript Builder
+instance ToJavascript RawJavascript where
+    toJavascript (RawJavascript a) = a
+
+class RawJS a where
+    rawJS :: a -> RawJavascript
+
+instance RawJS [Char] where rawJS = RawJavascript . fromLazyText . TL.pack
+instance RawJS TS.Text where rawJS = RawJavascript . fromText
+instance RawJS TL.Text where rawJS = RawJavascript . fromLazyText
+instance RawJS Builder where rawJS = RawJavascript
 
 javascriptSettings :: Q ShakespeareSettings
 javascriptSettings = do

@@ -1,5 +1,5 @@
 שלום
-#{var}
+#{rawJS var}
 @{Home}
 @?{urlp}
 ^{jmixin}

@@ -32,7 +32,7 @@ specs = describe "shakespeare-js" $ do
   it "julius" $ do
     let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper [quote|['שלום', @{Home}, #{var}, '@?{urlp}', ^{jmixin} ]|]
+    flip jelper [quote|['שלום', @{Home}, #{rawJS var}, '@?{urlp}', ^{jmixin} ]|]
       $ intercalate " "
         [ "['שלום',"
         , "url, " ++ var ++ ","
@@ -84,7 +84,7 @@ specs = describe "shakespeare-js" $ do
 #ifdef TEST_COFFEE
          [quote|[%{Data.List.reverse foo}, %{L.reverse foo}, %{show double}, %{show int}]|]
 #else
-         [quote|[#{Data.List.reverse foo}, #{L.reverse foo}, #{show double}, #{show int}]|]
+         [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
 #endif
 
 
@@ -97,8 +97,8 @@ specs = describe "shakespeare-js" $ do
 
   it "dollar operator" $ do
     let val = (1 :: Int, (2 :: Int, 3 :: Int))
-    jelper "2" [quote|#{ show $ fst $ snd val }|]
-    jelper "2" [quote|#{ show $ fst $ snd $ val}|]
+    jelper "2" [quote|#{ rawJS $ show $ fst $ snd val }|]
+    jelper "2" [quote|#{ rawJS $ show $ fst $ snd $ val}|]
 
   it "empty file" $ jelper "" [quote||]
 
