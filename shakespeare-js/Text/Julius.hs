@@ -79,7 +79,7 @@ asJavascriptUrl = id
 -- | A typeclass for types that can be interpolated in CoffeeScript templates.
 class ToJavascript a where
     toJavascript :: a -> Builder
-#ifndef SAFER_INTERPOLATION
+#if 0
 instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
 instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
