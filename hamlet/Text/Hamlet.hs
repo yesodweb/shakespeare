@@ -39,6 +39,7 @@ module Text.Hamlet
     , hamletRules
     , ihamletRules
     , htmlRules
+    , CloseStyle (..)
     ) where
 
 import Text.Shakespeare.Base
