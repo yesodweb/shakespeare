@@ -100,6 +100,7 @@ parseLine set = do
     x <- doctype <|>
          doctypeDollar <|>
          comment <|>
+         ssiInclude <|>
          htmlComment <|>
          doctypeRaw <|>
          backslash <|>
@@ -150,6 +151,11 @@ parseLine set = do
         _ <- many $ noneOf "\r\n"
         eol
         return $ LineContent [] True
+    ssiInclude = do
+        x <- try $ string "<!--#"
+        y <- many $ noneOf "\r\n"
+        eol
+        return $ LineContent [ContentRaw $ x ++ y] False
     htmlComment = do
         _ <- try $ string "<!--"
         _ <- manyTill anyChar $ try $ string "-->"

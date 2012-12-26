@@ -170,6 +170,9 @@ $newline never
     <!-- ignored --> not ignored<!-- ignored -->
 |]
 
+    it "Keeps SSI includes" $
+      helper "<!--# SSI -->" [hamlet|<!--# SSI -->|]
+
 
 
     it "nested maybes" $ do
