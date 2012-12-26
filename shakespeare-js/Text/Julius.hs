@@ -85,8 +85,8 @@ instance ToJavascript TS.Text where toJavascript = fromText
 instance ToJavascript TL.Text where toJavascript = fromLazyText
 instance ToJavascript Javascript where toJavascript = unJavascript
 instance ToJavascript Builder where toJavascript = id
-instance ToJavascript Bool where toJavascript = fromText . TS.toLower . TS.pack . show
 #endif
+instance ToJavascript Bool where toJavascript = fromText . TS.toLower . TS.pack . show
 instance ToJavascript Value where toJavascript = fromValue
 
 newtype RawJavascript = RawJavascript Builder
@@ -100,7 +100,7 @@ instance RawJS [Char] where rawJS = RawJavascript . fromLazyText . TL.pack
 instance RawJS TS.Text where rawJS = RawJavascript . fromText
 instance RawJS TL.Text where rawJS = RawJavascript . fromLazyText
 instance RawJS Builder where rawJS = RawJavascript
-instance RawJS Bool where rawJS = RawJavascript . fromText . TS.toLower . TS.pack . show
+instance RawJS Bool where rawJS = RawJavascript . toJavascript
 
 javascriptSettings :: Q ShakespeareSettings
 javascriptSettings = do

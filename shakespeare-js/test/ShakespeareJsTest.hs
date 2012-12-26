@@ -104,6 +104,10 @@ specs = describe "shakespeare-js" $ do
 
   it "JSON data" $ jelper "\"Hello \\\"World!\\\"\"" [julius|#{toJSON "Hello \"World!\""}|]
 
+  it "boolean interpolation" $ jelper
+    "true false true false true false"
+    [julius|#{True} #{False} #{toJSON True} #{toJSON False} #{rawJS True} #{rawJS False}|]
+
 
 
 data Url = Home | Sub SubUrl
