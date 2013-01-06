@@ -21,12 +21,15 @@ module Text.Shakespeare.Base
     , derefToExp
     , flattenDeref
     , readUtf8File
+    , Parser
+    , parse
     ) where
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH (appE)
 import Data.Char (isUpper, isSymbol)
-import Text.ParserCombinators.Parsec
+import Text.Parsec.Prim (Parsec)
+import Text.ParserCombinators.Parsec hiding (Parser, parse)
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator, (%))
 import Data.Data (Data)
@@ -35,6 +38,12 @@ import qualified Data.Text.Lazy as TL
 import qualified System.IO as SIO
 import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
+
+-- | A parser with a user state of [String]
+type Parser = Parsec String [String]
+-- | run a parser with a user state of [String]
+parse ::  GenParser tok [a1] a -> SourceName -> [tok] -> Either ParseError a
+parse p = runParser p []
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable, Ord)

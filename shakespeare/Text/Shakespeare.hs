@@ -9,6 +9,7 @@
 module Text.Shakespeare
     ( ShakespeareSettings (..)
     , PreConvert (..)
+    , WrapInsertion (..)
     , PreConversion (..)
     , defaultShakespeareSettings
     , shakespeare
@@ -20,13 +21,16 @@ module Text.Shakespeare
     , RenderUrl
     , VarType
     , Deref
+    , Parser
 
 #ifdef TEST_EXPORT
     , preFilter
 #endif
     ) where
 
-import Text.ParserCombinators.Parsec hiding (Line)
+import Data.List (intersperse)
+import Text.ParserCombinators.Parsec hiding (Line, parse, Parser)
+import Text.Parsec.Prim (modifyState, Parsec)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH (appE)
 import Language.Haskell.TH.Syntax
@@ -51,7 +55,7 @@ readFileQ fp = qRunIO $ readFileUtf8 fp
 readFileUtf8 :: FilePath -> IO String
 readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
--- | The Coffeescript language compiles down to Javascript.
+-- | Coffeescript, TypeScript, and other languages compiles down to Javascript.
 -- Previously we waited until the very end, at the rendering stage to perform this compilation.
 -- Lets call is a post-conversion
 -- This had the advantage that all Haskell values were inserted first:
@@ -61,9 +65,16 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 -- The down-side is the template must be compiled down to Javascript during every request.
 -- If instead we do a pre-conversion to compile down to Javascript,
 -- we only need to perform the compilation once.
+--
+-- The problem then is the insertion of Haskell values: we need a hole for
+-- them. This can be done with variables known to the language.
 -- During the pre-conversion we first modify all Haskell insertions
--- so that they will be ignored by the Coffeescript compiler (backticks).
--- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
+-- So #{a} is change to yesod_var_a
+-- Then we can place the Haskell values in a function wrapper that exposes
+-- those variables: (function(yesod_var_a){ ... yesod_var_a ...})
+-- TypeScript can compile that, and then we tack an application of the
+-- Haskell values onto the result: (#{a})
+--
 -- preEscapeIgnoreBalanced is used to not insert backtacks for variable already inside strings or backticks.
 -- coffeescript will happily ignore the interpolations, and backticks would not be treated as escaping in that context.
 -- preEscapeIgnoreLine was added to ignore comments (which in Coffeescript begin with a '#')
@@ -74,6 +85,15 @@ data PreConvert = PreConvert
     , preEscapeEnd   :: String
     , preEscapeIgnoreBalanced :: [Char]
     , preEscapeIgnoreLine :: [Char]
+    , wrapInsertion :: Maybe WrapInsertion
+    }
+
+data WrapInsertion = WrapInsertion {
+      wrapInsertionStartBegin :: String
+    , wrapInsertionSeparator  :: String
+    , wrapInsertionStartClose :: String
+    , wrapInsertionEndBegin   :: String
+    , wrapInsertionEndClose   :: String
     }
 
 data PreConversion = ReadProcess String [String]
@@ -107,8 +127,12 @@ defaultShakespeareSettings = ShakespeareSettings {
 }
 
 instance Lift PreConvert where
-    lift (PreConvert convert begin end ignore comment) =
-        [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore) $(lift comment)|]
+    lift (PreConvert convert begin end ignore comment wrapInsertion) =
+        [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
+
+instance Lift WrapInsertion where
+    lift (WrapInsertion sb sep sc eb ec) =
+        [|WrapInsertion $(lift sb) $(lift sep) $(lift sc) $(lift eb) $(lift ec)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -179,19 +203,39 @@ parseContents = many1 . parseContent
 
 
 preFilter :: ShakespeareSettings -> String -> IO String
-preFilter ShakespeareSettings {..} s = 
+preFilter ShakespeareSettings {..} s =
     case preConversion of
       Nothing -> return s
-      Just pre@(PreConvert convert _ _ _ _) ->
-        let parsed = mconcat $ eShowErrors $ parse (parseConvert pre) s s
+      Just pre@(PreConvert convert _ _ _ _ wi) -> addVars wi `fmap`
+        let (groups, vars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
+            parsed = mconcat $ groups
         in  case convert of
-              Id -> return parsed
-              ReadProcess command args ->
-                readProcess command args parsed
+              Id -> return (parsed, vars)
+              ReadProcess command args -> do
+                converted <- readProcess command args parsed
+                return (converted, vars)
   where
-    parseConvert PreConvert {..} = many1 $ choice $
-        map (try . escapedParse) preEscapeIgnoreBalanced ++
-        [mainParser]
+    yesod_prefix = "yesod_var_"
+    yesod_var_conversion = (\(_:'{':str) -> yesod_prefix <> init str)
+
+    addVars Nothing (str, _) = str
+    addVars (Just WrapInsertion {..}) (str, vars) =
+         wrapInsertionStartBegin
+      <> (mconcat $ intersperse wrapInsertionSeparator $ map yesod_var_conversion vars)
+      <> wrapInsertionStartClose
+      <> str
+      <> wrapInsertionEndBegin
+      <> (mconcat $ intersperse wrapInsertionSeparator vars)
+      <> wrapInsertionEndClose
+
+    parseConvertWrapInsertion Nothing = parseConvert id
+    parseConvertWrapInsertion (Just _) = parseConvert yesod_var_conversion
+
+    parseConvert varConvert PreConvert {..} = do
+        str <- many1 $ choice $
+          map (try . escapedParse) preEscapeIgnoreBalanced ++ [mainParser]
+        st <- getState
+        return (str, st)
 
       where
         escapedParse ignoreC = do
@@ -207,8 +251,8 @@ preFilter ShakespeareSettings {..} s =
             parseCommentLine preEscapeIgnoreLine <|>
             parseChar' preEscapeIgnoreLine preEscapeIgnoreBalanced
 
-        escape str = preEscapeBegin ++ str ++ preEscapeEnd
-        escapeRight = either id escape
+        recordRight (Left str)  = return str
+        recordRight (Right str) = modifyState (\vars -> str:vars) >> (return $ varConvert str)
 
         newLine = "\r\n"
         parseCommentLine cs = do
@@ -216,9 +260,10 @@ preFilter ShakespeareSettings {..} s =
           comment <- many $ noneOf newLine
           return $ begin : comment
 
-        parseVar' = escapeRight `fmap` parseVarString varChar
-        parseUrl' = escapeRight `fmap` parseUrlString urlChar '?'
-        parseInt' = escapeRight `fmap` parseIntString intChar
+        parseVar' :: (Parsec String [String]) String
+        parseVar' = recordRight =<< parseVarString varChar
+        parseUrl' = recordRight =<< parseUrlString urlChar '?'
+        parseInt' = recordRight =<< parseIntString intChar
         parseChar' comments ignores =
             many1 (noneOf ([varChar, urlChar, intChar] ++ comments ++ ignores))
 
