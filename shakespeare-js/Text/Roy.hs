@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
@@ -15,7 +14,7 @@
 -- Therefore, it seems more future-proof to use @%{...}@ for interpolation
 --
 -- Integration with Roy is a bit rough right now.
--- You can only perorm a shakespeare insertion inside a Roy string.
+-- You can only perform a shakespeare insertion inside a Roy string.
 -- This should work well for urls and strings.
 -- Otherwise you should stick your Haskell into Julius as a window variable,
 -- and then retrieve it in your Roy code.
@@ -53,9 +52,9 @@ roySettings = do
   return $ jsettings { varChar = '%'
   , preConversion = Just PreConvert {
       preConvert = ReadProcess "roy" ["--stdio"]
-    , preEscapeBegin = "`"
-    , preEscapeEnd = "`"
-    , preEscapeIgnoreBalanced = "'\"`"
+    , preEscapeBegin = ""
+    , preEscapeEnd = ""
+    , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
     }
   }

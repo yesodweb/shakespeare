@@ -1,13 +1,11 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 -- | A Shakespearean module for Javascript templates, introducing type-safe,
 -- compile-time variable and url interpolation.--
--- To use this module, @coffee@ must be installed on your system.
 --
--- You might consider trying 'Text.Coffee', which compiles down to Javascript.
+-- You might consider trying 'Text.Typescript' or 'Text.Coffee' which compile down to Javascript.
 --
 -- Further reading: <http://www.yesodweb.com/book/templates>
 module Text.Julius
