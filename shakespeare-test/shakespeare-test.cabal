@@ -27,6 +27,7 @@ library
                    , parsec           >= 2       && < 4
                    , text             >= 0.7     && < 0.12
                    , process          >= 1.0     && < 1.2
+                   , aeson            >= 0.5
 
     hs-source-dirs: ., shakespeare, shakespeare-js
 
@@ -52,6 +53,8 @@ test-suite test
                    , text             >= 0.7     && < 0.12
                    , template-haskell
                    , parsec           >= 2       && < 4
+                   , aeson
+
 
     -- if impl(ghc >= 7.4)
     --   cpp-options: -DGHC_7_4

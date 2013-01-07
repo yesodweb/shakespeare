@@ -56,6 +56,13 @@ roySettings = do
     , preEscapeEnd = ""
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
+    , wrapInsertion = Just WrapInsertion { 
+        wrapInsertionStartBegin = "(\\"
+      , wrapInsertionSeparator = " "
+      , wrapInsertionStartClose = " ->"
+      , wrapInsertionEndBegin = ")("
+      , wrapInsertionEndClose = ")"
+    }
     }
   }
 

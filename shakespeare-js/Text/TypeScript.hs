@@ -61,6 +61,13 @@ typeScriptSettings = do
     , preEscapeEnd = ""
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
+    , wrapInsertion = WrapInsertion { 
+        wrapInsertionStartBegin = "(function("
+      , wrapInsertionSeparator = ", "
+      , wrapInsertionStartClose = "){"
+      , wrapInsertionEndBegin = "})("
+      , wrapInsertionEndClose = ")"
+      }
     }
   }
 
