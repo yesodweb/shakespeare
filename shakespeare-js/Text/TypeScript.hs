@@ -9,20 +9,43 @@
 --
 -- To use this module, @tsc@ must be installed on your system.
 --
--- The template is first compiled with tsc, and then wrapped with Yesod
--- variables. This means that in production the template can be compiled
+-- If you interpolate variables,
+-- the template is first wrapped with a function containing javascript variables representing shakespeare variables,
+-- then compiled with @tsc@,
+-- and then the value of the variables are applied to the function.
+-- This means that in production the template can be compiled
 -- once at compile time and there will be no dependency in your production
 -- system on @tsc@. 
 --
 -- Your code:
 --
--- > #{a} + 2
+-- > var b = 1
+-- > console.log(#{a} + b)
 --
--- Result:
+-- Final Result:
 --
--- > ;(function(yesod_splice_a){
--- >   yesod_splice_a + 2
+-- > ;(function(yesod_var_a){
+-- >   var b = 1;
+-- >   console.log(yesod_var_a + b);
 -- > })(#{a});
+--
+--
+-- Important Warnings! This integration is not ideal.
+--
+-- Due to the function wrapper, all type declarations must be in separate .d.ts files.
+-- However, if you don't interpolate variables, no function wrapper will be
+-- created, and you can make type declarations.
+--
+-- This does not work cross-platform!
+--
+-- Unfortunately tsc does not support stdin and stdout.
+-- So a hack of writing to temporary files using the mktemp
+-- command is used. This works on my version of Linux, but not for windows
+-- unless perhaps you install a mktemp utility, which I have not tested.
+-- Please vote up this bug: <http://typescript.codeplex.com/workitem/600>
+--
+-- Making this work on Windows would not be very difficult, it will just require a new
+-- package with a dependency on a package like temporary.
 --
 -- Further reading:
 --
@@ -54,19 +77,19 @@ import Text.Julius
 typeScriptSettings :: Q ShakespeareSettings
 typeScriptSettings = do
   jsettings <- javascriptSettings
-  return $ jsettings { varChar = '%'
+  return $ jsettings { varChar = '#'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "tsc" ["--nolib"]
-    , preEscapeBegin = ""
-    , preEscapeEnd = ""
+      preConvert = ReadProcess "sh" ["-c", "TMP_IN=$(mktemp XXXXXXXXXX.ts); TMP_OUT=$(mktemp XXXXXXXXXX.js); cat /dev/stdin > ${TMP_IN} && tsc --out ${TMP_OUT} ${TMP_IN} && cat ${TMP_OUT}; rm ${TMP_IN} && rm ${TMP_OUT}"]
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
-    , wrapInsertion = WrapInsertion { 
-        wrapInsertionStartBegin = "(function("
+    , wrapInsertion = Just WrapInsertion { 
+        wrapInsertionIndent = Nothing
+      , wrapInsertionStartBegin = ";(function("
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = "){"
-      , wrapInsertionEndBegin = "})("
-      , wrapInsertionEndClose = ")"
+      , wrapInsertionEnd = "})"
+      , wrapInsertionApplyBegin = "("
+      , wrapInsertionApplyClose = ");\n"
       }
     }
   }

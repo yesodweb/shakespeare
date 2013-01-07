@@ -29,6 +29,7 @@ module Text.Shakespeare
     ) where
 
 import Data.List (intersperse)
+import Data.Char (isAlphaNum, isSpace)
 import Text.ParserCombinators.Parsec hiding (Line, parse, Parser)
 import Text.Parsec.Prim (modifyState, Parsec)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -75,9 +76,9 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 -- The problem then is the insertion of Haskell values: we need a hole for
 -- them. This can be done with variables known to the language.
 -- During the pre-conversion we first modify all Haskell insertions
--- So #{a} is change to yesod_var_a
+-- So #{a} is change to shakespeare_var_a
 -- Then we can place the Haskell values in a function wrapper that exposes
--- those variables: (function(yesod_var_a){ ... yesod_var_a ...})
+-- those variables: (function(shakespeare_var_a){ ... shakespeare_var_a ...})
 -- TypeScript can compile that, and then we tack an application of the
 -- Haskell values onto the result: (#{a})
 --
@@ -87,19 +88,19 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
 data PreConvert = PreConvert
     { preConvert :: PreConversion
-    , preEscapeBegin :: String
-    , preEscapeEnd   :: String
     , preEscapeIgnoreBalanced :: [Char]
     , preEscapeIgnoreLine :: [Char]
     , wrapInsertion :: Maybe WrapInsertion
     }
 
 data WrapInsertion = WrapInsertion {
-      wrapInsertionStartBegin :: String
+      wrapInsertionIndent     :: Maybe String
+    , wrapInsertionStartBegin :: String
     , wrapInsertionSeparator  :: String
     , wrapInsertionStartClose :: String
-    , wrapInsertionEndBegin   :: String
-    , wrapInsertionEndClose   :: String
+    , wrapInsertionEnd :: String
+    , wrapInsertionApplyBegin :: String
+    , wrapInsertionApplyClose :: String
     }
 
 data PreConversion = ReadProcess String [String]
@@ -133,12 +134,12 @@ defaultShakespeareSettings = ShakespeareSettings {
 }
 
 instance Lift PreConvert where
-    lift (PreConvert convert begin end ignore comment wrapInsertion) =
-        [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
+    lift (PreConvert convert ignore comment wrapInsertion) =
+        [|PreConvert $(lift convert) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
 
 instance Lift WrapInsertion where
-    lift (WrapInsertion sb sep sc eb ec) =
-        [|WrapInsertion $(lift sb) $(lift sep) $(lift sc) $(lift eb) $(lift ec)|]
+    lift (WrapInsertion indent sb sep sc e ab ac) =
+        [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift ab) $(lift ac)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -209,33 +210,53 @@ parseContents = many1 . parseContent
 
 
 preFilter :: ShakespeareSettings -> String -> IO String
-preFilter ShakespeareSettings {..} s =
+preFilter ShakespeareSettings {..} template =
     case preConversion of
-      Nothing -> return s
-      Just pre@(PreConvert convert _ _ _ _ wi) -> addVars wi `fmap`
-        let (groups, vars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
-            parsed = mconcat $ groups
-        in  case convert of
-              Id -> return (parsed, vars)
-              ReadProcess command args -> do
-                converted <- readProcess command args parsed
-                return (converted, vars)
+      Nothing -> return template
+      Just pre@(PreConvert convert _ _ mwi) ->
+        if all isSpace template then return template else
+          let (groups, rvars) = eShowErrors $ parse
+                                  (parseConvertWrapInsertion mwi pre)
+                                  template
+                                  (indentedTemplate mwi)
+              vars = reverse rvars
+              parsed = mconcat groups
+          in  applyVars mwi vars `fmap` (case convert of
+                  Id -> return  
+                  ReadProcess command args -> readProcess command args
+                ) (addVars mwi vars parsed)
   where
-    yesod_prefix = "yesod_var_"
-    yesod_var_conversion = (\(_:'{':str) -> yesod_prefix <> init str)
+    indentedTemplate Nothing = template
+    indentedTemplate (Just wi) = addIndent $ wrapInsertionIndent wi
+      where
+        addIndent Nothing = template
+        addIndent (Just indent) = mapLines (\line -> indent <> line) template
+        mapLines f = unlines . map f . lines
 
-    addVars Nothing (str, _) = str
-    addVars (Just WrapInsertion {..}) (str, vars) =
+    shakespeare_prefix = "shakespeare_var_"
+    shakespeare_var_conversion ('@':'?':'{':str) = shakespeare_var_conversion ('@':'{':str)
+    shakespeare_var_conversion (_:'{':str) = shakespeare_prefix <> filter isAlphaNum (init str)
+    shakespeare_var_conversion err = error $ "did not expect: " <> err
+
+    applyVars Nothing _ str = str
+    applyVars _ [] str = str
+    applyVars (Just WrapInsertion {..}) vars str =
+      reverse (dropWhile (\c -> c == ';' || isSpace c) (reverse str))
+      <> wrapInsertionApplyBegin
+      <> (mconcat $ intersperse wrapInsertionSeparator vars)
+      <> wrapInsertionApplyClose
+
+    addVars Nothing _ str = str
+    addVars _ [] str = str
+    addVars (Just WrapInsertion {..}) vars str =
          wrapInsertionStartBegin
-      <> (mconcat $ intersperse wrapInsertionSeparator $ map yesod_var_conversion vars)
+      <> (mconcat $ intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)
       <> wrapInsertionStartClose
       <> str
-      <> wrapInsertionEndBegin
-      <> (mconcat $ intersperse wrapInsertionSeparator vars)
-      <> wrapInsertionEndClose
+      <> wrapInsertionEnd
 
     parseConvertWrapInsertion Nothing = parseConvert id
-    parseConvertWrapInsertion (Just _) = parseConvert yesod_var_conversion
+    parseConvertWrapInsertion (Just _) = parseConvert shakespeare_var_conversion
 
     parseConvert varConvert PreConvert {..} = do
         str <- many1 $ choice $

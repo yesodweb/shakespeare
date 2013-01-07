@@ -26,15 +26,15 @@ specs = describe "shakespeare-js" $ do
 
   it "preFilter on" $ do
     preFilter preConversionSettings template `shouldReturn`
-      "(function(yesod_var_int, yesod_var_url, yesod_var_var){unchanged yesod_var_var yesod_var_url yesod_var_int})(^{int}, @{url}, #{var})"
+      "(function(shakespeare_var_var, shakespeare_var_url, shakespeare_var_int){unchanged shakespeare_var_var shakespeare_var_url shakespeare_var_int})(#{var}, @{url}, ^{int})"
 
   it "preFilter ignore quotes" $ do
     preFilter preConversionSettings templateQuote `shouldReturn`
-      "(function(yesod_var_url){unchanged '#{var}' yesod_var_url '^{int}'})(@{url})"
+      "(function(shakespeare_var_url){unchanged '#{var}' shakespeare_var_url '^{int}'})(@{url})"
 
   it "preFilter ignore comments" $ do
     preFilter preConversionSettings templateCommented
-      `shouldReturn` "(function(){unchanged & '#{var}' @{url} '^{int}'})()"
+      `shouldReturn` "unchanged & '#{var}' @{url} '^{int}'"
 
   where
     varString = parseVarString '%'
@@ -44,16 +44,16 @@ specs = describe "shakespeare-js" $ do
     preConversionSettings = defaultShakespeareSettings {
       preConversion = Just PreConvert {
           preConvert = Id
-        , preEscapeBegin = "`"
-        , preEscapeEnd = "`"
         , preEscapeIgnoreBalanced = "'\""
         , preEscapeIgnoreLine = "&"
         , wrapInsertion = Just WrapInsertion { 
-            wrapInsertionStartBegin = "(function("
+            wrapInsertionIndent = Nothing
+          , wrapInsertionStartBegin = "(function("
           , wrapInsertionSeparator = ", "
           , wrapInsertionStartClose = "){"
-          , wrapInsertionEndBegin = "})("
-          , wrapInsertionEndClose = ")"
+          , wrapInsertionEnd = "})"
+          , wrapInsertionApplyBegin = "("
+          , wrapInsertionApplyClose = ")"
           }
         }
     }
