@@ -58,7 +58,7 @@ typeScriptSettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '%'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "tsc" ["--nolib"]
+      preConvert = ReadProcess "tsc" []
     , preEscapeBegin = ""
     , preEscapeEnd = ""
     , preEscapeIgnoreBalanced = "'\""
