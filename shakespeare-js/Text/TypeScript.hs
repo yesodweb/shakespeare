@@ -16,12 +16,14 @@
 --
 -- Your code:
 --
--- > #{a} + 2
+-- > var b = 1
+-- > console.log(#{a} + b)
 --
 -- Result:
 --
 -- > ;(function(yesod_splice_a){
--- >   yesod_splice_a + 2
+-- >   var b = 1;
+-- >   console.log(yesod_splice_a + b);
 -- > })(#{a});
 --
 -- Further reading:
@@ -61,7 +63,7 @@ typeScriptSettings = do
     , preEscapeEnd = ""
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
-    , wrapInsertion = WrapInsertion { 
+    , wrapInsertion = Just WrapInsertion { 
         wrapInsertionStartBegin = "(function("
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = "){"
