@@ -98,8 +98,9 @@ data WrapInsertion = WrapInsertion {
       wrapInsertionStartBegin :: String
     , wrapInsertionSeparator  :: String
     , wrapInsertionStartClose :: String
-    , wrapInsertionEndBegin   :: String
-    , wrapInsertionEndClose   :: String
+    , wrapInsertionEnd :: String
+    , wrapInsertionApplyBegin :: String
+    , wrapInsertionApplyClose :: String
     }
 
 data PreConversion = ReadProcess String [String]
@@ -137,8 +138,8 @@ instance Lift PreConvert where
         [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
 
 instance Lift WrapInsertion where
-    lift (WrapInsertion sb sep sc eb ec) =
-        [|WrapInsertion $(lift sb) $(lift sep) $(lift sc) $(lift eb) $(lift ec)|]
+    lift (WrapInsertion sb sep sc e ab ac) =
+        [|WrapInsertion $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift ab) $(lift ac)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -212,27 +213,31 @@ preFilter :: ShakespeareSettings -> String -> IO String
 preFilter ShakespeareSettings {..} s =
     case preConversion of
       Nothing -> return s
-      Just pre@(PreConvert convert _ _ _ _ wi) -> addVars wi `fmap`
+      Just pre@(PreConvert convert _ _ _ _ wi) ->
         let (groups, vars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
             parsed = mconcat $ groups
         in  case convert of
-              Id -> return (parsed, vars)
+              Id -> return $ applyVars wi vars $ addVars wi vars parsed
               ReadProcess command args -> do
-                converted <- readProcess command args parsed
-                return (converted, vars)
+                applyVars wi vars `fmap`
+                  readProcess command args (addVars wi vars parsed)
   where
     yesod_prefix = "yesod_var_"
     yesod_var_conversion = (\(_:'{':str) -> yesod_prefix <> init str)
 
-    addVars Nothing (str, _) = str
-    addVars (Just WrapInsertion {..}) (str, vars) =
+    applyVars Nothing _ str = str
+    applyVars (Just WrapInsertion {..}) vars str = str
+      <> wrapInsertionApplyBegin
+      <> (mconcat $ intersperse wrapInsertionSeparator vars)
+      <> wrapInsertionApplyClose
+
+    addVars Nothing _ str = str
+    addVars (Just WrapInsertion {..}) vars str =
          wrapInsertionStartBegin
       <> (mconcat $ intersperse wrapInsertionSeparator $ map yesod_var_conversion vars)
       <> wrapInsertionStartClose
       <> str
-      <> wrapInsertionEndBegin
-      <> (mconcat $ intersperse wrapInsertionSeparator vars)
-      <> wrapInsertionEndClose
+      <> wrapInsertionEnd
 
     parseConvertWrapInsertion Nothing = parseConvert id
     parseConvertWrapInsertion (Just _) = parseConvert yesod_var_conversion

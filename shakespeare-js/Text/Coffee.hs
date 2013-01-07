@@ -60,8 +60,9 @@ coffeeSettings = do
         wrapInsertionStartBegin = "(("
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = ") =>"
-      , wrapInsertionEndBegin = ")("
-      , wrapInsertionEndClose = ")"
+      , wrapInsertionEnd = ")"
+      , wrapInsertionApplyBegin = "("
+      , wrapInsertionApplyClose = ")"
       }
     }
   }

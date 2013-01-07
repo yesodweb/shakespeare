@@ -60,9 +60,10 @@ roySettings = do
         wrapInsertionStartBegin = "(\\"
       , wrapInsertionSeparator = " "
       , wrapInsertionStartClose = " ->"
-      , wrapInsertionEndBegin = ")("
-      , wrapInsertionEndClose = ")"
-    }
+      , wrapInsertionEnd = ")"
+      , wrapInsertionApplyBegin = "("
+      , wrapInsertionApplyClose = ")"
+      }
     }
   }
 

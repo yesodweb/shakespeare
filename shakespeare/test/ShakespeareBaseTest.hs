@@ -52,8 +52,9 @@ specs = describe "shakespeare-js" $ do
             wrapInsertionStartBegin = "(function("
           , wrapInsertionSeparator = ", "
           , wrapInsertionStartClose = "){"
-          , wrapInsertionEndBegin = "})("
-          , wrapInsertionEndClose = ")"
+          , wrapInsertionEnd = "})"
+          , wrapInsertionApplyBegin = "("
+          , wrapInsertionApplyClose = ")"
           }
         }
     }

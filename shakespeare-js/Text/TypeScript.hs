@@ -65,8 +65,9 @@ typeScriptSettings = do
         wrapInsertionStartBegin = "(function("
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = "){"
-      , wrapInsertionEndBegin = "})("
-      , wrapInsertionEndClose = ")"
+      , wrapInsertionEnd = "})"
+      , wrapInsertionApplyBegin = "("
+      , wrapInsertionApplyClose = ")"
       }
     }
   }
