@@ -214,16 +214,17 @@ preFilter ShakespeareSettings {..} s =
     case preConversion of
       Nothing -> return s
       Just pre@(PreConvert convert _ _ _ _ wi) ->
-        let (groups, vars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
-            parsed = mconcat $ groups
+        let (groups, rvars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
+            vars = reverse rvars
+            parsed = mconcat groups
         in  case convert of
               Id -> return $ applyVars wi vars $ addVars wi vars parsed
-              ReadProcess command args -> do
+              ReadProcess command args ->
                 applyVars wi vars `fmap`
                   readProcess command args (addVars wi vars parsed)
   where
     yesod_prefix = "yesod_var_"
-    yesod_var_conversion = (\(_:'{':str) -> yesod_prefix <> init str)
+    yesod_var_conversion (_:'{':str) = yesod_prefix <> init str
 
     applyVars Nothing _ str = str
     applyVars (Just WrapInsertion {..}) vars str = str
