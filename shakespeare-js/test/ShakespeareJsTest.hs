@@ -29,6 +29,7 @@ join = intercalate "\n"
 
 specs :: Spec
 specs = describe "shakespeare-js" $ do
+#ifndef TEST_COFFEE
   it "julius" $ do
     let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
@@ -63,6 +64,7 @@ specs = describe "shakespeare-js" $ do
         , "url?p=q"
         , "f(2)"
         ] ++ "\n"
+#endif
 
 {- TODO
   it "juliusFileDebugChange" $ do
@@ -82,7 +84,7 @@ specs = describe "shakespeare-js" $ do
         int = -5 :: Int
     in jelper "[oof, oof, 3.14, -5]"
 #ifdef TEST_COFFEE
-         [quote|[%{Data.List.reverse foo}, %{L.reverse foo}, %{show double}, %{show int}]|]
+         [quote|[%{rawJS $ Data.List.reverse foo}, %{rawJS $ L.reverse foo}, %{rawJS $ show double}, %{rawJS $ show int}]|]
 #else
          [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
 #endif

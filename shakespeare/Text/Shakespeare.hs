@@ -29,6 +29,7 @@ module Text.Shakespeare
     ) where
 
 import Data.List (intersperse)
+import Data.Char (isAlphaNum, isSpace)
 import Text.ParserCombinators.Parsec hiding (Line, parse, Parser)
 import Text.Parsec.Prim (modifyState, Parsec)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
@@ -213,21 +214,24 @@ preFilter :: ShakespeareSettings -> String -> IO String
 preFilter ShakespeareSettings {..} s =
     case preConversion of
       Nothing -> return s
-      Just pre@(PreConvert convert _ _ _ _ wi) ->
+      Just pre@(PreConvert convert _ _ _ _ wi) -> if all isSpace s then return s else
         let (groups, rvars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
             vars = reverse rvars
             parsed = mconcat groups
         in  case convert of
               Id -> return $ applyVars wi vars $ addVars wi vars parsed
               ReadProcess command args ->
-                applyVars wi vars `fmap`
-                  readProcess command args (addVars wi vars parsed)
+                  applyVars wi vars `fmap`
+                        readProcess command args (addVars wi vars parsed)
   where
     yesod_prefix = "yesod_var_"
-    yesod_var_conversion (_:'{':str) = yesod_prefix <> init str
+    yesod_var_conversion ('@':'?':'{':str) = yesod_var_conversion ('@':'{':str)
+    yesod_var_conversion (_:'{':str) = yesod_prefix <> filter isAlphaNum (init str)
+    yesod_var_conversion err = error $ "did not expect: " <> err
 
     applyVars Nothing _ str = str
-    applyVars (Just WrapInsertion {..}) vars str = str
+    applyVars (Just WrapInsertion {..}) vars str =
+      reverse (dropWhile (\c -> c == ';' || isSpace c) (reverse str))
       <> wrapInsertionApplyBegin
       <> (mconcat $ intersperse wrapInsertionSeparator vars)
       <> wrapInsertionApplyClose

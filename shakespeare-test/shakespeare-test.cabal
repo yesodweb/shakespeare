@@ -59,8 +59,8 @@ test-suite test
     -- if impl(ghc >= 7.4)
     --   cpp-options: -DGHC_7_4
 
-    --if flag(test_coffee)
-    --    cpp-options: -DTEST_COFFEE
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
 
 
 source-repository head

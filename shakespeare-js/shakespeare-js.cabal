@@ -59,14 +59,14 @@ flag test_coffee
     default: False
 
 test-suite test
-    hs-source-dirs: test
+    hs-source-dirs: test ./
     main-is: ../test.hs
     other-modules: Quoter
     type: exitcode-stdio-1.0
 
     ghc-options:   -Wall
-    build-depends: shakespeare-js
-                 , shakespeare
+    build-depends:
+                   shakespeare
                  , base
                  , HUnit
                  , hspec            >= 1.3
@@ -74,9 +74,9 @@ test-suite test
                  , template-haskell
                  , aeson
 
--- cabal bug
---    if flag(test_coffee)
---        cpp-options: -DTEST_COFFEE
+    cpp-options: -DTEST_EXPORT
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
 
 
 source-repository head
