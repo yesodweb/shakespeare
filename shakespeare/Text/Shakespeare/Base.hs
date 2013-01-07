@@ -21,15 +21,13 @@ module Text.Shakespeare.Base
     , derefToExp
     , flattenDeref
     , readUtf8File
-    , Parser
-    , parse
     ) where
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH (appE)
 import Data.Char (isUpper, isSymbol)
+import Text.ParserCombinators.Parsec
 import Text.Parsec.Prim (Parsec)
-import Text.ParserCombinators.Parsec hiding (Parser, parse)
 import Data.List (intercalate)
 import Data.Ratio (Ratio, numerator, denominator, (%))
 import Data.Data (Data)
@@ -38,12 +36,6 @@ import qualified Data.Text.Lazy as TL
 import qualified System.IO as SIO
 import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
-
--- | A parser with a user state of [String]
-type Parser = Parsec String [String]
--- | run a parser with a user state of [String]
-parse ::  GenParser tok [a1] a -> SourceName -> [tok] -> Either ParseError a
-parse p = runParser p []
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable, Ord)
@@ -88,11 +80,11 @@ instance Lift Deref where
     lift (DerefList x) = [|DerefList $(lift x)|]
     lift (DerefTuple x) = [|DerefTuple $(lift x)|]
 
-derefParens, derefCurlyBrackets :: Parser Deref
+derefParens, derefCurlyBrackets :: UserParser a Deref
 derefParens        = between (char '(') (char ')') parseDeref
 derefCurlyBrackets = between (char '{') (char '}') parseDeref
 
-derefList, derefTuple :: Parser Deref
+derefList, derefTuple :: UserParser a Deref
 derefList = between (char '[') (char ']') (fmap DerefList $ sepBy parseDeref (char ','))
 derefTuple = try $ do
   _ <- char '('
@@ -101,7 +93,7 @@ derefTuple = try $ do
   _ <- char ')'
   return $ DerefTuple x
 
-parseDeref :: Parser Deref
+parseDeref :: UserParser a Deref
 parseDeref = skipMany (oneOf " \t") >> (derefList <|>
                                         derefTuple <|> (do
     x <- derefSingle
@@ -203,17 +195,20 @@ flattenDeref (DerefBranch (DerefIdent (Ident x)) y) = do
     Just $ y' ++ [x]
 flattenDeref _ = Nothing
 
-parseHash :: Parser (Either String Deref)
+parseHash :: UserParser a (Either String Deref)
 parseHash = parseVar '#'
 
-curlyBrackets :: Parser String
+curlyBrackets :: UserParser a String
 curlyBrackets = do
   _<- char '{'
   var <- many1 $ noneOf "}"
   _<- char '}'
   return $ ('{':var) ++ "}"
 
-parseVar :: Char -> Parser (Either String Deref)
+
+type UserParser a = Parsec String a
+
+parseVar :: Char -> UserParser a (Either String Deref)
 parseVar c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
@@ -224,10 +219,10 @@ parseVar c = do
             return $ Left ""
             ) <|> return (Left [c])
 
-parseAt :: Parser (Either String (Deref, Bool))
+parseAt :: UserParser a (Either String (Deref, Bool))
 parseAt = parseUrl '@' '?'
 
-parseUrl :: Char -> Char -> Parser (Either String (Deref, Bool))
+parseUrl :: Char -> Char -> UserParser a (Either String (Deref, Bool))
 parseUrl c d = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
@@ -237,17 +232,17 @@ parseUrl c d = do
             return $ Right (deref, x))
                 <|> return (Left $ if x then [c, d] else [c]))
 
-parseInterpolatedString :: Char -> Parser (Either String String)
+parseInterpolatedString :: Char -> UserParser a (Either String String)
 parseInterpolatedString c = do
     _ <- char c
     (char '\\' >> return (Left ['\\', c])) <|> (do
         bracketed <- curlyBrackets
         return $ Right (c:bracketed)) <|> return (Left [c])
 
-parseVarString :: Char -> Parser (Either String String)
+parseVarString :: Char -> UserParser a (Either String String)
 parseVarString = parseInterpolatedString
 
-parseUrlString :: Char -> Char -> Parser (Either String String)
+parseUrlString :: Char -> Char -> UserParser a (Either String String)
 parseUrlString c d = do
     _ <- char c
     (char '\\' >> return (Left [c, '\\'])) <|> (do
@@ -256,20 +251,20 @@ parseUrlString c d = do
             return $ Right (c:ds ++ bracketed))
                 <|> return (Left (c:ds)))
 
-parseIntString :: Char -> Parser (Either String String)
+parseIntString :: Char -> UserParser a (Either String String)
 parseIntString = parseInterpolatedString
 
-parseCaret :: Parser (Either String Deref)
+parseCaret :: UserParser a (Either String Deref)
 parseCaret = parseInt '^'
 
-parseInt :: Char -> Parser (Either String Deref)
+parseInt :: Char -> UserParser a (Either String Deref)
 parseInt c = do
     _ <- char c
     (char '\\' >> return (Left [c])) <|> (do
         deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left [c])
 
-parseUnder :: Parser (Either String Deref)
+parseUnder :: UserParser a (Either String Deref)
 parseUnder = do
     _ <- char '_'
     (char '\\' >> return (Left "_")) <|> (do
