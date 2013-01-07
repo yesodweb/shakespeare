@@ -47,6 +47,12 @@ import Text.Shakespeare.Base
 -- for pre conversion
 import System.Process (readProcess)
 
+-- | A parser with a user state of [String]
+type Parser = Parsec String [String]
+-- | run a parser with a user state of [String]
+parse ::  GenParser tok [a1] a -> SourceName -> [tok] -> Either ParseError a
+parse p = runParser p []
+
 -- move to Shakespeare.Base?
 readFileQ :: FilePath -> Q String
 readFileQ fp = qRunIO $ readFileUtf8 fp
