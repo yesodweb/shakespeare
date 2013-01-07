@@ -76,9 +76,9 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 -- The problem then is the insertion of Haskell values: we need a hole for
 -- them. This can be done with variables known to the language.
 -- During the pre-conversion we first modify all Haskell insertions
--- So #{a} is change to yesod_var_a
+-- So #{a} is change to shakespeare_var_a
 -- Then we can place the Haskell values in a function wrapper that exposes
--- those variables: (function(yesod_var_a){ ... yesod_var_a ...})
+-- those variables: (function(shakespeare_var_a){ ... shakespeare_var_a ...})
 -- TypeScript can compile that, and then we tack an application of the
 -- Haskell values onto the result: (#{a})
 --
@@ -224,10 +224,10 @@ preFilter ShakespeareSettings {..} s =
                   applyVars wi vars `fmap`
                         readProcess command args (addVars wi vars parsed)
   where
-    yesod_prefix = "yesod_var_"
-    yesod_var_conversion ('@':'?':'{':str) = yesod_var_conversion ('@':'{':str)
-    yesod_var_conversion (_:'{':str) = yesod_prefix <> filter isAlphaNum (init str)
-    yesod_var_conversion err = error $ "did not expect: " <> err
+    shakespeare_prefix = "shakespeare_var_"
+    shakespeare_var_conversion ('@':'?':'{':str) = shakespeare_var_conversion ('@':'{':str)
+    shakespeare_var_conversion (_:'{':str) = shakespeare_prefix <> filter isAlphaNum (init str)
+    shakespeare_var_conversion err = error $ "did not expect: " <> err
 
     applyVars Nothing _ str = str
     applyVars (Just WrapInsertion {..}) vars str =
@@ -239,13 +239,13 @@ preFilter ShakespeareSettings {..} s =
     addVars Nothing _ str = str
     addVars (Just WrapInsertion {..}) vars str =
          wrapInsertionStartBegin
-      <> (mconcat $ intersperse wrapInsertionSeparator $ map yesod_var_conversion vars)
+      <> (mconcat $ intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)
       <> wrapInsertionStartClose
       <> str
       <> wrapInsertionEnd
 
     parseConvertWrapInsertion Nothing = parseConvert id
-    parseConvertWrapInsertion (Just _) = parseConvert yesod_var_conversion
+    parseConvertWrapInsertion (Just _) = parseConvert shakespeare_var_conversion
 
     parseConvert varConvert PreConvert {..} = do
         str <- many1 $ choice $

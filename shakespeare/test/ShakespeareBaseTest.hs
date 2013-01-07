@@ -26,11 +26,11 @@ specs = describe "shakespeare-js" $ do
 
   it "preFilter on" $ do
     preFilter preConversionSettings template `shouldReturn`
-      "(function(yesod_var_var, yesod_var_url, yesod_var_int){unchanged yesod_var_var yesod_var_url yesod_var_int})(#{var}, @{url}, ^{int})"
+      "(function(shakespeare_var_var, shakespeare_var_url, shakespeare_var_int){unchanged shakespeare_var_var shakespeare_var_url shakespeare_var_int})(#{var}, @{url}, ^{int})"
 
   it "preFilter ignore quotes" $ do
     preFilter preConversionSettings templateQuote `shouldReturn`
-      "(function(yesod_var_url){unchanged '#{var}' yesod_var_url '^{int}'})(@{url})"
+      "(function(shakespeare_var_url){unchanged '#{var}' shakespeare_var_url '^{int}'})(@{url})"
 
   it "preFilter ignore comments" $ do
     preFilter preConversionSettings templateCommented
