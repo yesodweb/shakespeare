@@ -218,11 +218,10 @@ preFilter ShakespeareSettings {..} s =
         let (groups, rvars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
             vars = reverse rvars
             parsed = mconcat groups
-        in  case convert of
-              Id -> return $ applyVars wi vars $ addVars wi vars parsed
-              ReadProcess command args ->
-                  applyVars wi vars `fmap`
-                        readProcess command args (addVars wi vars parsed)
+        in  applyVars wi vars `fmap` (case convert of
+                Id -> return  
+                ReadProcess command args -> readProcess command args
+              ) (addVars wi vars parsed)
   where
     shakespeare_prefix = "shakespeare_var_"
     shakespeare_var_conversion ('@':'?':'{':str) = shakespeare_var_conversion ('@':'{':str)

@@ -58,7 +58,7 @@ typeScriptSettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '%'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "tsc" []
+      preConvert = ReadProcess "sh" ["-c", "cat /dev/stdin > /tmp/typescript.ts && tsc /tmp/typescript.ts && cat /tmp/typescript.js"]
     , preEscapeBegin = ""
     , preEscapeEnd = ""
     , preEscapeIgnoreBalanced = "'\""
