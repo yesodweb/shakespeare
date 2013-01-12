@@ -82,10 +82,11 @@ specs = describe "shakespeare-js" $ do
     let foo = "foo"
         double = 3.14 :: Double
         int = -5 :: Int
+#ifndef TEST_COFFEE
     in jelper "[oof, oof, 3.14, -5]"
-#ifdef TEST_COFFEE
          [quote|[%{rawJS $ Data.List.reverse foo}, %{rawJS $ L.reverse foo}, %{rawJS $ show double}, %{rawJS $ show int}]|]
 #else
+    in jelper "var _this = this;\n\n(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5)"
          [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
 #endif
 
@@ -99,8 +100,13 @@ specs = describe "shakespeare-js" $ do
 
   it "dollar operator" $ do
     let val = (1 :: Int, (2 :: Int, 3 :: Int))
+#ifndef TEST_COFFEE
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd val }|]
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd $ val}|]
+#else
+    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2)" [quote|#{ rawJS $ show $ fst $ snd val }|]
+    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2)" [quote|#{ rawJS $ show $ fst $ snd val }|]
+#endif
 
   it "empty file" $ jelper "" [quote||]
 

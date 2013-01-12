@@ -88,15 +88,14 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
 data PreConvert = PreConvert
     { preConvert :: PreConversion
-    , preEscapeBegin :: String
-    , preEscapeEnd   :: String
     , preEscapeIgnoreBalanced :: [Char]
     , preEscapeIgnoreLine :: [Char]
     , wrapInsertion :: Maybe WrapInsertion
     }
 
 data WrapInsertion = WrapInsertion {
-      wrapInsertionStartBegin :: String
+      wrapInsertionIndent     :: Maybe String
+    , wrapInsertionStartBegin :: String
     , wrapInsertionSeparator  :: String
     , wrapInsertionStartClose :: String
     , wrapInsertionEnd :: String
@@ -135,12 +134,12 @@ defaultShakespeareSettings = ShakespeareSettings {
 }
 
 instance Lift PreConvert where
-    lift (PreConvert convert begin end ignore comment wrapInsertion) =
-        [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
+    lift (PreConvert convert ignore comment wrapInsertion) =
+        [|PreConvert $(lift convert) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
 
 instance Lift WrapInsertion where
-    lift (WrapInsertion sb sep sc e ab ac) =
-        [|WrapInsertion $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift ab) $(lift ac)|]
+    lift (WrapInsertion indent sb sep sc e ab ac) =
+        [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift ab) $(lift ac)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -211,18 +210,29 @@ parseContents = many1 . parseContent
 
 
 preFilter :: ShakespeareSettings -> String -> IO String
-preFilter ShakespeareSettings {..} s =
+preFilter ShakespeareSettings {..} template =
     case preConversion of
-      Nothing -> return s
-      Just pre@(PreConvert convert _ _ _ _ wi) -> if all isSpace s then return s else
-        let (groups, rvars) = eShowErrors $ parse (parseConvertWrapInsertion wi pre) s s
-            vars = reverse rvars
-            parsed = mconcat groups
-        in  applyVars wi vars `fmap` (case convert of
-                Id -> return  
-                ReadProcess command args -> readProcess command args
-              ) (addVars wi vars parsed)
+      Nothing -> return template
+      Just pre@(PreConvert convert _ _ mwi) ->
+        if all isSpace template then return template else
+          let (groups, rvars) = eShowErrors $ parse
+                                  (parseConvertWrapInsertion mwi pre)
+                                  template
+                                  (indentedTemplate mwi)
+              vars = reverse rvars
+              parsed = mconcat groups
+          in  applyVars mwi vars `fmap` (case convert of
+                  Id -> return  
+                  ReadProcess command args -> readProcess command args
+                ) (addVars mwi vars parsed)
   where
+    indentedTemplate Nothing = template
+    indentedTemplate (Just wi) = addIndent $ wrapInsertionIndent wi
+      where
+        addIndent Nothing = template
+        addIndent (Just indent) = mapLines (\line -> indent <> line) template
+        mapLines f = unlines . map f . lines
+
     shakespeare_prefix = "shakespeare_var_"
     shakespeare_var_conversion ('@':'?':'{':str) = shakespeare_var_conversion ('@':'{':str)
     shakespeare_var_conversion (_:'{':str) = shakespeare_prefix <> filter isAlphaNum (init str)

@@ -9,8 +9,10 @@
 --
 -- To use this module, @tsc@ must be installed on your system.
 --
--- The template is first compiled with tsc, and then wrapped with Yesod
--- variables. This means that in production the template can be compiled
+-- The template is first wrapped with javascript variable representing Yesod
+-- variables, then compiled with tsc, and then the value of the variables
+-- are applied.
+-- This means that in production the template can be compiled
 -- once at compile time and there will be no dependency in your production
 -- system on @tsc@. 
 --
@@ -19,12 +21,26 @@
 -- > var b = 1
 -- > console.log(#{a} + b)
 --
--- Result:
+-- Final Result:
 --
--- > ;(function(yesod_splice_a){
+-- > ;(function(yesod_var_a){
 -- >   var b = 1;
--- >   console.log(yesod_splice_a + b);
+-- >   console.log(yesod_var_a + b);
 -- > })(#{a});
+--
+--
+-- Important Warning!
+--
+-- Currntly this does not work cross-platform!
+--
+-- Unfortunately tsc does not support stdin and stdout.
+-- So a hack of writing to temporary files using the mktemp
+-- command is used. This works on my version of Linux, but not for windows
+-- unless perhaps you install a mktemp utility, which I have not tested.
+-- Please vote up this bug: <http://typescript.codeplex.com/workitem/600>
+--
+-- Making this work on Windows would not be very difficult, it will just require a new
+-- package with a dependency on a package like temporary.
 --
 -- Further reading:
 --
@@ -56,15 +72,14 @@ import Text.Julius
 typeScriptSettings :: Q ShakespeareSettings
 typeScriptSettings = do
   jsettings <- javascriptSettings
-  return $ jsettings { varChar = '%'
+  return $ jsettings { varChar = '#'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "sh" ["-c", "cat /dev/stdin > /tmp/typescript.ts && tsc /tmp/typescript.ts && cat /tmp/typescript.js"]
-    , preEscapeBegin = ""
-    , preEscapeEnd = ""
+      preConvert = ReadProcess "sh" ["-c", "TMP_IN=$(mktemp XXXXXXXXXX.ts); TMP_OUT=$(mktemp XXXXXXXXXX.js); cat /dev/stdin > ${TMP_IN} && tsc --out ${TMP_OUT} ${TMP_IN} && cat ${TMP_OUT}"]
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
     , wrapInsertion = Just WrapInsertion { 
-        wrapInsertionStartBegin = "(function("
+        wrapInsertionIndent = Nothing
+      , wrapInsertionStartBegin = "(function("
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = "){"
       , wrapInsertionEnd = "})"

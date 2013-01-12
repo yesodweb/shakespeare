@@ -9,16 +9,6 @@
 --
 -- To use this module, @roy@ must be installed on your system.
 --
--- @#{...}@ is the Shakespearean standard for variable interpolation, but
--- CoffeeScript already uses that sequence for string interpolation.
--- Therefore, it seems more future-proof to use @%{...}@ for interpolation
---
--- Integration with Roy is a bit rough right now.
--- You can only perform a shakespeare insertion inside a Roy string.
--- This should work well for urls and strings.
--- Otherwise you should stick your Haskell into Julius as a window variable,
--- and then retrieve it in your Roy code.
---
 -- Further reading:
 --
 -- 1. Shakespearean templates: <http://www.yesodweb.com/book/templates>
@@ -49,15 +39,14 @@ import Text.Julius
 roySettings :: Q ShakespeareSettings
 roySettings = do
   jsettings <- javascriptSettings
-  return $ jsettings { varChar = '%'
+  return $ jsettings { varChar = '#'
   , preConversion = Just PreConvert {
       preConvert = ReadProcess "roy" ["--stdio"]
-    , preEscapeBegin = ""
-    , preEscapeEnd = ""
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
     , wrapInsertion = Just WrapInsertion { 
-        wrapInsertionStartBegin = "(\\"
+        wrapInsertionIndent = Just "  "
+      , wrapInsertionStartBegin = "(\\"
       , wrapInsertionSeparator = " "
       , wrapInsertionStartClose = " ->"
       , wrapInsertionEnd = ")"
