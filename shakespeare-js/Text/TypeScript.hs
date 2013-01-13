@@ -29,9 +29,10 @@
 -- > })(#{a});
 --
 --
--- Important Warning!
+-- Important Warnings!
 --
--- Currntly this does not work cross-platform!
+-- * All type declarations must be in separate .d.ts files
+-- * This does not work cross-platform!
 --
 -- Unfortunately tsc does not support stdin and stdout.
 -- So a hack of writing to temporary files using the mktemp
@@ -74,7 +75,7 @@ typeScriptSettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '#'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "sh" ["-c", "TMP_IN=$(mktemp XXXXXXXXXX.ts); TMP_OUT=$(mktemp XXXXXXXXXX.js); cat /dev/stdin > ${TMP_IN} && tsc --out ${TMP_OUT} ${TMP_IN} && cat ${TMP_OUT}"]
+      preConvert = ReadProcess "sh" ["-c", "TMP_IN=$(mktemp XXXXXXXXXX.ts); TMP_OUT=$(mktemp XXXXXXXXXX.js); cat /dev/stdin > ${TMP_IN} && tsc --out ${TMP_OUT} ${TMP_IN} && cat ${TMP_OUT}; rm ${TMP_IN} && rm ${TMP_OUT}"]
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
     , wrapInsertion = Just WrapInsertion { 
