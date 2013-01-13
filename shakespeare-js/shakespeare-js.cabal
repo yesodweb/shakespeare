@@ -48,6 +48,9 @@ library
     if flag(test_coffee)
         cpp-options: -DTEST_COFFEE
 
+    if flag(test_roy)
+        cpp-options: -DTEST_ROY
+
     if flag(test_export)
         cpp-options: -DTEST_EXPORT
 
@@ -55,6 +58,11 @@ flag test_export
     default: False
 
 flag test_coffee
+    description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
+flag test_roy
     description: render tests through coffeescript render function
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
     default: False
@@ -78,6 +86,8 @@ test-suite test
     cpp-options: -DTEST_EXPORT
     if flag(test_coffee)
         cpp-options: -DTEST_COFFEE
+    if flag(test_roy)
+        cpp-options: -DTEST_ROY
 
 
 source-repository head

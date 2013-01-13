@@ -21,6 +21,7 @@ library
                      Text.Shakespeare.Base
                      Text.Julius
                      Text.Coffee
+                     Text.Roy
 
     build-depends:   base             >= 4       && < 5
                    , template-haskell
@@ -38,6 +39,11 @@ library
 
 flag test_coffee
     description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
+flag test_roy
+    description: render tests through roy render function
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
     default: False
 
@@ -61,6 +67,9 @@ test-suite test
 
     if flag(test_coffee)
         cpp-options: -DTEST_COFFEE
+
+    if flag(test_roy)
+        cpp-options: -DTEST_ROY
 
 
 source-repository head

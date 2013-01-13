@@ -9,6 +9,10 @@
 --
 -- To use this module, @roy@ must be installed on your system.
 --
+-- Unfortunately variable interpolation in Roy does not currently work,
+-- but it can with a small change to Roy:
+-- <https://github.com/pufuwozu/roy/issues/165>
+--
 -- Further reading:
 --
 -- 1. Shakespearean templates: <http://www.yesodweb.com/book/templates>
@@ -44,15 +48,18 @@ roySettings = do
       preConvert = ReadProcess "roy" ["--stdio"]
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
-    , wrapInsertion = Just WrapInsertion { 
+    , wrapInsertion = Nothing
+    {-
+    Just WrapInsertion { 
         wrapInsertionIndent = Just "  "
       , wrapInsertionStartBegin = "(\\"
       , wrapInsertionSeparator = " "
-      , wrapInsertionStartClose = " ->"
+      , wrapInsertionStartClose = " ->\n"
       , wrapInsertionEnd = ")"
-      , wrapInsertionApplyBegin = "("
+      , wrapInsertionApplyBegin = " "
       , wrapInsertionApplyClose = ")"
       }
+      -}
     }
   }
 
