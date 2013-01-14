@@ -21,12 +21,14 @@ library
                      Text.Shakespeare.Base
                      Text.Julius
                      Text.Coffee
+                     Text.Roy
 
     build-depends:   base             >= 4       && < 5
                    , template-haskell
                    , parsec           >= 2       && < 4
                    , text             >= 0.7     && < 0.12
                    , process          >= 1.0     && < 1.2
+                   , aeson            >= 0.5
 
     hs-source-dirs: ., shakespeare, shakespeare-js
 
@@ -37,6 +39,11 @@ library
 
 flag test_coffee
     description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
+flag test_roy
+    description: render tests through roy render function
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
     default: False
 
@@ -52,12 +59,17 @@ test-suite test
                    , text             >= 0.7     && < 0.12
                    , template-haskell
                    , parsec           >= 2       && < 4
+                   , aeson
+
 
     -- if impl(ghc >= 7.4)
     --   cpp-options: -DGHC_7_4
 
-    --if flag(test_coffee)
-    --    cpp-options: -DTEST_COFFEE
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
+
+    if flag(test_roy)
+        cpp-options: -DTEST_ROY
 
 
 source-repository head

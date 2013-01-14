@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
@@ -13,6 +12,34 @@
 -- @#{...}@ is the Shakespearean standard for variable interpolation, but
 -- CoffeeScript already uses that sequence for string interpolation. Therefore,
 -- Shakespearean interpolation is introduced with @%{...}@.
+--
+-- If you interpolate variables,
+-- the template is first wrapped with a function containing javascript variables representing shakespeare variables,
+-- then compiled with @coffee@,
+-- and then the value of the variables are applied to the function.
+-- This means that in production the template can be compiled
+-- once at compile time and there will be no dependency in your production
+-- system on @coffee@. 
+--
+-- Your code:
+--
+-- >   b = 1
+-- >   console.log(#{a} + b)
+--
+-- Function wrapper added to your coffeescript code:
+--
+-- > ((shakespeare_var_a) =>
+-- >   b = 1
+-- >   console.log(shakespeare_var_a + b)
+-- > )
+--
+-- This is then compiled down to javascript, and the variables are applied:
+--
+-- > ;(function(shakespeare_var_a){
+-- >   var b = 1;
+-- >   console.log(shakespeare_var_a + b);
+-- > })(#{a});
+--
 --
 -- Further reading:
 --
@@ -39,24 +66,23 @@ import Language.Haskell.TH.Syntax
 import Text.Shakespeare
 import Text.Julius
 
--- | The Coffeescript language compiles down to Javascript.
--- We do this compilation once at compile time to avoid needing to do it during the request.
--- We call this a preConversion because other shakespeare modules like Lucius use Haskell to compile during the request rather than a system call.
--- During the pre-conversion we first modify all Haskell insertions
--- so that they will be ignored by the Coffeescript compiler (backticks).
--- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
--- preEscapeIgnore is used to not insert backtacks for variable already inside strings or backticks.
--- coffeescript will happily ignore the interpolations, and backticks would not be treated as escaping in that context.
 coffeeSettings :: Q ShakespeareSettings
 coffeeSettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '%'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "coffee" ["-sp"]
-    , preEscapeBegin = "`"
-    , preEscapeEnd = "`"
-    , preEscapeIgnoreBalanced = "'\"`"
-    , preEscapeIgnoreLine = "#"
+      preConvert = ReadProcess "coffee" ["-spb"]
+    , preEscapeIgnoreBalanced = "'\"`"     -- don't insert backtacks for variable already inside strings or backticks.
+    , preEscapeIgnoreLine = "#"            -- ignore commented lines
+    , wrapInsertion = Just WrapInsertion { 
+        wrapInsertionIndent = Just "  "
+      , wrapInsertionStartBegin = "(("
+      , wrapInsertionSeparator = ", "
+      , wrapInsertionStartClose = ") =>"
+      , wrapInsertionEnd = ")"
+      , wrapInsertionApplyBegin = "("
+      , wrapInsertionApplyClose = ")\n"
+      }
     }
   }
 
