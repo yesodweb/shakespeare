@@ -29,6 +29,7 @@ join = intercalate "\n"
 
 specs :: Spec
 specs = describe "shakespeare-js" $ do
+#if !(defined TEST_COFFEE || defined TEST_ROY)
   it "julius" $ do
     let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
@@ -63,6 +64,7 @@ specs = describe "shakespeare-js" $ do
         , "url?p=q"
         , "f(2)"
         ] ++ "\n"
+#endif
 
 {- TODO
   it "juliusFileDebugChange" $ do
@@ -80,16 +82,20 @@ specs = describe "shakespeare-js" $ do
     let foo = "foo"
         double = 3.14 :: Double
         int = -5 :: Int
-    in jelper "[oof, oof, 3.14, -5]"
 #ifdef TEST_COFFEE
-         [quote|[%{Data.List.reverse foo}, %{L.reverse foo}, %{show double}, %{show int}]|]
+    in jelper "var _this = this;\n\n(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5)"
 #else
-         [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
+#  ifdef TEST_ROY
+    in jelper "(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5)"
+#  else
+    in jelper "[oof, oof, 3.14, -5]"
+#  endif
 #endif
+         [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
 
 
 -- not valid coffeescript
-#ifndef TEST_COFFEE
+#if !(defined TEST_COFFEE || defined TEST_ROY)
   it "single dollar at and caret" $ do
     jelper "$@^" [quote|$@^|]
     jelper "#{@{^{" [quote|#\{@\{^\{|]
@@ -97,8 +103,13 @@ specs = describe "shakespeare-js" $ do
 
   it "dollar operator" $ do
     let val = (1 :: Int, (2 :: Int, 3 :: Int))
+#if !(defined TEST_COFFEE || defined TEST_ROY)
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd val }|]
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd $ val}|]
+#else
+    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2)" [quote|#{ rawJS $ show $ fst $ snd val }|]
+    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2)" [quote|#{ rawJS $ show $ fst $ snd val }|]
+#endif
 
   it "empty file" $ jelper "" [quote||]
 
@@ -150,8 +161,10 @@ encodeUrlChar y =
 
 
 
+#ifndef TEST_ROY
 jmixin :: JavascriptUrl u
 jmixin = [quote|f(2)|]
+#endif
 
 jelper :: String -> JavascriptUrl Url -> Assertion
 jelper res h = do
