@@ -13,12 +13,20 @@
 -- CoffeeScript already uses that sequence for string interpolation. Therefore,
 -- Shakespearean interpolation is introduced with @%{...}@.
 --
+-- If you interpolate variables,
+-- the template is first wrapped with a function containing javascript variables representing shakespeare variables,
+-- then compiled with @coffee@,
+-- and then the value of the variables are applied to the function.
+-- This means that in production the template can be compiled
+-- once at compile time and there will be no dependency in your production
+-- system on @coffee@. 
+--
 -- Your code:
 --
 -- >   b = 1
 -- >   console.log(#{a} + b)
 --
--- Changes to your coffeescript code:
+-- Function wrapper added to your coffeescript code:
 --
 -- > ((yesod_var_a) =>
 -- >   b = 1

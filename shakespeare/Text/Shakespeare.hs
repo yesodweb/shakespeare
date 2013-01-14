@@ -239,6 +239,7 @@ preFilter ShakespeareSettings {..} template =
     shakespeare_var_conversion err = error $ "did not expect: " <> err
 
     applyVars Nothing _ str = str
+    applyVars _ [] str = str
     applyVars (Just WrapInsertion {..}) vars str =
       reverse (dropWhile (\c -> c == ';' || isSpace c) (reverse str))
       <> wrapInsertionApplyBegin
@@ -246,6 +247,7 @@ preFilter ShakespeareSettings {..} template =
       <> wrapInsertionApplyClose
 
     addVars Nothing _ str = str
+    addVars _ [] str = str
     addVars (Just WrapInsertion {..}) vars str =
          wrapInsertionStartBegin
       <> (mconcat $ intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)

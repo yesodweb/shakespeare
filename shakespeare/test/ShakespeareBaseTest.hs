@@ -34,7 +34,7 @@ specs = describe "shakespeare-js" $ do
 
   it "preFilter ignore comments" $ do
     preFilter preConversionSettings templateCommented
-      `shouldReturn` "(function(){unchanged & '#{var}' @{url} '^{int}'})()"
+      `shouldReturn` "unchanged & '#{var}' @{url} '^{int}'"
 
   where
     varString = parseVarString '%'

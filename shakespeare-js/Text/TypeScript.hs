@@ -9,9 +9,10 @@
 --
 -- To use this module, @tsc@ must be installed on your system.
 --
--- The template is first wrapped with javascript variable representing Yesod
--- variables, then compiled with tsc, and then the value of the variables
--- are applied.
+-- If you interpolate variables,
+-- the template is first wrapped with a function containing javascript variables representing shakespeare variables,
+-- then compiled with @tsc@,
+-- and then the value of the variables are applied to the function.
 -- This means that in production the template can be compiled
 -- once at compile time and there will be no dependency in your production
 -- system on @tsc@. 
@@ -29,10 +30,13 @@
 -- > })(#{a});
 --
 --
--- Important Warnings!
+-- Important Warnings! This integration is not ideal.
 --
--- * All type declarations must be in separate .d.ts files
--- * This does not work cross-platform!
+-- Due to the function wrapper, all type declarations must be in separate .d.ts files.
+-- However, if you don't interpolate variables, no function wrapper will be
+-- created, and you can make type declarations.
+--
+-- This does not work cross-platform!
 --
 -- Unfortunately tsc does not support stdin and stdout.
 -- So a hack of writing to temporary files using the mktemp
