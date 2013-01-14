@@ -28,16 +28,16 @@
 --
 -- Function wrapper added to your coffeescript code:
 --
--- > ((yesod_var_a) =>
+-- > ((shakespeare_var_a) =>
 -- >   b = 1
--- >   console.log(yesod_var_a + b)
+-- >   console.log(shakespeare_var_a + b)
 -- > )
 --
 -- This is then compiled down to javascript, and the variables are applied:
 --
--- > ;(function(yesod_var_a){
+-- > ;(function(shakespeare_var_a){
 -- >   var b = 1;
--- >   console.log(yesod_var_a + b);
+-- >   console.log(shakespeare_var_a + b);
 -- > })(#{a});
 --
 --

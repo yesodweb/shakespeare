@@ -24,9 +24,9 @@
 --
 -- Final Result:
 --
--- > ;(function(yesod_var_a){
+-- > ;(function(shakespeare_var_a){
 -- >   var b = 1;
--- >   console.log(yesod_var_a + b);
+-- >   console.log(shakespeare_var_a + b);
 -- > })(#{a});
 --
 --
@@ -34,7 +34,7 @@
 --
 -- Due to the function wrapper, all type declarations must be in separate .d.ts files.
 -- However, if you don't interpolate variables, no function wrapper will be
--- created, and you can make type declarations.
+-- created, and you can make type declarations in the same file.
 --
 -- This does not work cross-platform!
 --
