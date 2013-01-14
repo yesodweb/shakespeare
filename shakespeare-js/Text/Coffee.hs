@@ -73,7 +73,7 @@ coffeeSettings = do
       , wrapInsertionStartClose = ") =>"
       , wrapInsertionEnd = ")"
       , wrapInsertionApplyBegin = "("
-      , wrapInsertionApplyClose = ")"
+      , wrapInsertionApplyClose = ")\n"
       }
     }
   }

@@ -80,12 +80,12 @@ typeScriptSettings = do
     , preEscapeIgnoreLine = "//"
     , wrapInsertion = Just WrapInsertion { 
         wrapInsertionIndent = Nothing
-      , wrapInsertionStartBegin = "(function("
+      , wrapInsertionStartBegin = ";(function("
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = "){"
       , wrapInsertionEnd = "})"
       , wrapInsertionApplyBegin = "("
-      , wrapInsertionApplyClose = ")"
+      , wrapInsertionApplyClose = ");\n"
       }
     }
   }

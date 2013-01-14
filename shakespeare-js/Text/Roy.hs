@@ -57,7 +57,7 @@ roySettings = do
       , wrapInsertionStartClose = " ->\n"
       , wrapInsertionEnd = ")"
       , wrapInsertionApplyBegin = " "
-      , wrapInsertionApplyClose = ")"
+      , wrapInsertionApplyClose = ")\n"
       }
       -}
     }
