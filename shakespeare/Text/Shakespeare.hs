@@ -9,6 +9,7 @@
 module Text.Shakespeare
     ( ShakespeareSettings (..)
     , PreConvert (..)
+    , WrapInsertion (..)
     , PreConversion (..)
     , defaultShakespeareSettings
     , shakespeare
@@ -20,13 +21,17 @@ module Text.Shakespeare
     , RenderUrl
     , VarType
     , Deref
+    , Parser
 
 #ifdef TEST_EXPORT
     , preFilter
 #endif
     ) where
 
-import Text.ParserCombinators.Parsec hiding (Line)
+import Data.List (intersperse)
+import Data.Char (isAlphaNum, isSpace)
+import Text.ParserCombinators.Parsec hiding (Line, parse, Parser)
+import Text.Parsec.Prim (modifyState, Parsec)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH (appE)
 import Language.Haskell.TH.Syntax
@@ -43,6 +48,12 @@ import Text.Shakespeare.Base
 -- for pre conversion
 import System.Process (readProcess)
 
+-- | A parser with a user state of [String]
+type Parser = Parsec String [String]
+-- | run a parser with a user state of [String]
+parse ::  GenParser tok [a1] a -> SourceName -> [tok] -> Either ParseError a
+parse p = runParser p []
+
 -- move to Shakespeare.Base?
 readFileQ :: FilePath -> Q String
 readFileQ fp = qRunIO $ readFileUtf8 fp
@@ -51,7 +62,7 @@ readFileQ fp = qRunIO $ readFileUtf8 fp
 readFileUtf8 :: FilePath -> IO String
 readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
--- | The Coffeescript language compiles down to Javascript.
+-- | Coffeescript, TypeScript, and other languages compiles down to Javascript.
 -- Previously we waited until the very end, at the rendering stage to perform this compilation.
 -- Lets call is a post-conversion
 -- This had the advantage that all Haskell values were inserted first:
@@ -61,19 +72,35 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 -- The down-side is the template must be compiled down to Javascript during every request.
 -- If instead we do a pre-conversion to compile down to Javascript,
 -- we only need to perform the compilation once.
+--
+-- The problem then is the insertion of Haskell values: we need a hole for
+-- them. This can be done with variables known to the language.
 -- During the pre-conversion we first modify all Haskell insertions
--- so that they will be ignored by the Coffeescript compiler (backticks).
--- So %{var} is change to `%{var}` using the preEscapeBegin and preEscapeEnd.
+-- So #{a} is change to shakespeare_var_a
+-- Then we can place the Haskell values in a function wrapper that exposes
+-- those variables: (function(shakespeare_var_a){ ... shakespeare_var_a ...})
+-- TypeScript can compile that, and then we tack an application of the
+-- Haskell values onto the result: (#{a})
+--
 -- preEscapeIgnoreBalanced is used to not insert backtacks for variable already inside strings or backticks.
 -- coffeescript will happily ignore the interpolations, and backticks would not be treated as escaping in that context.
 -- preEscapeIgnoreLine was added to ignore comments (which in Coffeescript begin with a '#')
 
 data PreConvert = PreConvert
     { preConvert :: PreConversion
-    , preEscapeBegin :: String
-    , preEscapeEnd   :: String
     , preEscapeIgnoreBalanced :: [Char]
     , preEscapeIgnoreLine :: [Char]
+    , wrapInsertion :: Maybe WrapInsertion
+    }
+
+data WrapInsertion = WrapInsertion {
+      wrapInsertionIndent     :: Maybe String
+    , wrapInsertionStartBegin :: String
+    , wrapInsertionSeparator  :: String
+    , wrapInsertionStartClose :: String
+    , wrapInsertionEnd :: String
+    , wrapInsertionApplyBegin :: String
+    , wrapInsertionApplyClose :: String
     }
 
 data PreConversion = ReadProcess String [String]
@@ -107,8 +134,12 @@ defaultShakespeareSettings = ShakespeareSettings {
 }
 
 instance Lift PreConvert where
-    lift (PreConvert convert begin end ignore comment) =
-        [|PreConvert $(lift convert) $(lift begin) $(lift end) $(lift ignore) $(lift comment)|]
+    lift (PreConvert convert ignore comment wrapInsertion) =
+        [|PreConvert $(lift convert) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
+
+instance Lift WrapInsertion where
+    lift (WrapInsertion indent sb sep sc e ab ac) =
+        [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift ab) $(lift ac)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -179,19 +210,59 @@ parseContents = many1 . parseContent
 
 
 preFilter :: ShakespeareSettings -> String -> IO String
-preFilter ShakespeareSettings {..} s = 
+preFilter ShakespeareSettings {..} template =
     case preConversion of
-      Nothing -> return s
-      Just pre@(PreConvert convert _ _ _ _) ->
-        let parsed = mconcat $ eShowErrors $ parse (parseConvert pre) s s
-        in  case convert of
-              Id -> return parsed
-              ReadProcess command args ->
-                readProcess command args parsed
+      Nothing -> return template
+      Just pre@(PreConvert convert _ _ mwi) ->
+        if all isSpace template then return template else
+          let (groups, rvars) = eShowErrors $ parse
+                                  (parseConvertWrapInsertion mwi pre)
+                                  template
+                                  (indentedTemplate mwi)
+              vars = reverse rvars
+              parsed = mconcat groups
+          in  applyVars mwi vars `fmap` (case convert of
+                  Id -> return  
+                  ReadProcess command args -> readProcess command args
+                ) (addVars mwi vars parsed)
   where
-    parseConvert PreConvert {..} = many1 $ choice $
-        map (try . escapedParse) preEscapeIgnoreBalanced ++
-        [mainParser]
+    indentedTemplate Nothing = template
+    indentedTemplate (Just wi) = addIndent $ wrapInsertionIndent wi
+      where
+        addIndent Nothing = template
+        addIndent (Just indent) = mapLines (\line -> indent <> line) template
+        mapLines f = unlines . map f . lines
+
+    shakespeare_prefix = "shakespeare_var_"
+    shakespeare_var_conversion ('@':'?':'{':str) = shakespeare_var_conversion ('@':'{':str)
+    shakespeare_var_conversion (_:'{':str) = shakespeare_prefix <> filter isAlphaNum (init str)
+    shakespeare_var_conversion err = error $ "did not expect: " <> err
+
+    applyVars Nothing _ str = str
+    applyVars _ [] str = str
+    applyVars (Just WrapInsertion {..}) vars str =
+      reverse (dropWhile (\c -> c == ';' || isSpace c) (reverse str))
+      <> wrapInsertionApplyBegin
+      <> (mconcat $ intersperse wrapInsertionSeparator vars)
+      <> wrapInsertionApplyClose
+
+    addVars Nothing _ str = str
+    addVars _ [] str = str
+    addVars (Just WrapInsertion {..}) vars str =
+         wrapInsertionStartBegin
+      <> (mconcat $ intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)
+      <> wrapInsertionStartClose
+      <> str
+      <> wrapInsertionEnd
+
+    parseConvertWrapInsertion Nothing = parseConvert id
+    parseConvertWrapInsertion (Just _) = parseConvert shakespeare_var_conversion
+
+    parseConvert varConvert PreConvert {..} = do
+        str <- many1 $ choice $
+          map (try . escapedParse) preEscapeIgnoreBalanced ++ [mainParser]
+        st <- getState
+        return (str, st)
 
       where
         escapedParse ignoreC = do
@@ -207,8 +278,8 @@ preFilter ShakespeareSettings {..} s =
             parseCommentLine preEscapeIgnoreLine <|>
             parseChar' preEscapeIgnoreLine preEscapeIgnoreBalanced
 
-        escape str = preEscapeBegin ++ str ++ preEscapeEnd
-        escapeRight = either id escape
+        recordRight (Left str)  = return str
+        recordRight (Right str) = modifyState (\vars -> str:vars) >> (return $ varConvert str)
 
         newLine = "\r\n"
         parseCommentLine cs = do
@@ -216,9 +287,10 @@ preFilter ShakespeareSettings {..} s =
           comment <- many $ noneOf newLine
           return $ begin : comment
 
-        parseVar' = escapeRight `fmap` parseVarString varChar
-        parseUrl' = escapeRight `fmap` parseUrlString urlChar '?'
-        parseInt' = escapeRight `fmap` parseIntString intChar
+        parseVar' :: (Parsec String [String]) String
+        parseVar' = recordRight =<< parseVarString varChar
+        parseUrl' = recordRight =<< parseUrlString urlChar '?'
+        parseInt' = recordRight =<< parseIntString intChar
         parseChar' comments ignores =
             many1 (noneOf ([varChar, urlChar, intChar] ++ comments ++ ignores))
 

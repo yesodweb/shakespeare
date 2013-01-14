@@ -9,11 +9,13 @@ description:
     Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation . Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
     In this case, the variable type needs a ToJavascript instance.
     .
-    There is also shakespeare-coffeescript for coffeescript templates. Coffescript is a language that compiles down to javascript. It expects a coffeescript compiler in your path, and variable should be a ToCoffee instance. And we even have a Roy template for the adventorous FP addicts.
+    shakespeare-javascript is alson known as Julius, and passes through plain javascript
     .
+    There is also a shakespeare version for CoffeeScript, TypeScript, and Roy, all languages that compile down to Javascript. They all expect you to have the appropriate compiler in your path.
+    .
+    shakespeare originated from the hamlet template package.
     Please see http://www.yesodweb.com/book/shakespearean-templates for a more thorough description and examples
     .
-    shakespeare-js was originally called julius, and shakespeare originated from the hamlet template package.
 extra-source-files:
   test/juliuses/external1.coffee
   test/juliuses/external1.julius
@@ -38,12 +40,16 @@ library
                      Text.Julius
                      Text.Coffee
                      Text.Roy
+                     Text.TypeScript
     ghc-options:     -Wall
     if impl(ghc >= 7.4)
        cpp-options: -DGHC_7_4
 
     if flag(test_coffee)
         cpp-options: -DTEST_COFFEE
+
+    if flag(test_roy)
+        cpp-options: -DTEST_ROY
 
     if flag(test_export)
         cpp-options: -DTEST_EXPORT
@@ -56,15 +62,20 @@ flag test_coffee
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
     default: False
 
+flag test_roy
+    description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
 test-suite test
-    hs-source-dirs: test
+    hs-source-dirs: test ./
     main-is: ../test.hs
     other-modules: Quoter
     type: exitcode-stdio-1.0
 
     ghc-options:   -Wall
-    build-depends: shakespeare-js
-                 , shakespeare
+    build-depends:
+                   shakespeare
                  , base
                  , HUnit
                  , hspec            >= 1.3
@@ -72,9 +83,11 @@ test-suite test
                  , template-haskell
                  , aeson
 
--- cabal bug
---    if flag(test_coffee)
---        cpp-options: -DTEST_COFFEE
+    cpp-options: -DTEST_EXPORT
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
+    if flag(test_roy)
+        cpp-options: -DTEST_ROY
 
 
 source-repository head
