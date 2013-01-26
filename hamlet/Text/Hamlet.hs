@@ -106,11 +106,14 @@ bindingPattern (BindVar i@(Ident s)) = do
     name <- newName s
     return (VarP name, [(i, VarE name)])
 bindingPattern (BindTuple is) = do
-    names <- mapM (newName . unIdent) is
-    return (TupP $ map VarP names, zip is $ map VarE names)
+    (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
+    return (TupP patterns, concat scopes)
+bindingPattern (BindList is) = do
+    (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
+    return (ListP patterns, concat scopes)
 bindingPattern (BindConstr (Ident con) is) = do
-    names <- mapM (newName . unIdent) is
-    return (ConP (mkName con) (map VarP names), zip is $ map VarE names)
+    (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
+    return (ConP (mkName con) patterns, concat scopes)
 
 docToExp :: Env -> HamletRules -> Scope -> Doc -> Q Exp
 docToExp env hr scope (DocForall list idents inside) = do
@@ -291,7 +294,7 @@ hamletFromString qhr set s = do
     hr <- qhr
     case parseDoc set s of
         Error s' -> error s'
-        Ok (mnl, d) -> hrWithEnv hr $ \env -> docsToExp env hr [] d
+        Ok (_mnl, d) -> hrWithEnv hr $ \env -> docsToExp env hr [] d
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
