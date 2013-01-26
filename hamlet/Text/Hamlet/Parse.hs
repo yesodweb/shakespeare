@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE CPP #-}
 module Text.Hamlet.Parse
     ( Result (..)
@@ -18,6 +19,7 @@ import Text.Shakespeare.Base
 import Control.Applicative ((<$>), Applicative (..))
 import Control.Monad
 import Control.Arrow
+import Data.Char (isUpper)
 import Data.Data
 import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
@@ -297,20 +299,60 @@ parseLine set = do
     tag'' (TagAttribs s) (x, y, z, as) = (x, y, z, s : as)
 
     ident :: Parser Ident
-    ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'')
+    ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'') <?> "identifier"
+
+    parens = between (char '(' >> white) (char ')' >> white)
+
+    brackets = between (char '[' >> white) (char ']' >> white)
+
+    comma = char ',' >> white
+
+    atsign = char '@' >> white
+
+    white = skipMany $ char ' '
+
+    isVariable (Ident (x:_)) = not (isUpper x)
+    isVariable (Ident []) = error "isVariable: bad identifier"
+
+    isConstructor (Ident (x:_)) = isUpper x
+    isConstructor (Ident []) = error "isConstructor: bad identifier"
 
     identPattern :: Parser Binding
-    identPattern = (between
-        (char '(' >> spaces)
-        (spaces >> char ')' >> spaces)
-        (BindTuple <$> sepBy1 ident (spaces >> char ',' >> spaces))
-        ) <|> (do
-            i <- ident
-            is <- many $ try $ (many $ char ' ') >> ident
-            if null is
-                then return $ BindVar i
-                else return $ BindConstr i is
-            )
+    identPattern =
+          do c <- gcon
+             xs <- many apat
+             return $ BindConstr c xs
+        <|> apat
+      where
+      apat =  varpat
+          <|> fmap (\c -> BindConstr c []) gcon
+          <|> parens tuplepat
+          <|> brackets listpat
+
+      varpat = do
+        v <- try $ do v <- ident
+                      guard (isVariable v)
+                      return v
+        white
+        mb <- optionMaybe (atsign >> apat)
+        return (BindVar v mb)
+       <?> "variable"
+
+      gcon = try (do
+        c <- ident
+        guard (isConstructor c)
+        white
+        return c)
+       <?> "constructor"
+
+      tuplepat = do
+        xs <- identPattern `sepBy` comma
+        return $ case xs of
+          [x] -> x
+          _   -> BindTuple xs
+
+      listpat = BindList <$> identPattern `sepBy` comma
+
     angle = do
         _ <- char '<'
         name' <- many  $ noneOf " \t.#\r\n!>"
@@ -582,7 +624,7 @@ doctypeNames =
     , ("strict", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
     ]
 
-data Binding = BindVar Ident | BindConstr Ident [Ident] | BindTuple [Ident]
+data Binding = BindVar Ident (Maybe Binding) | BindConstr Ident [Binding] | BindTuple [Binding] | BindList [Binding]
     deriving (Eq, Show, Read, Data, Typeable)
 
 spaceTabs :: Parser String
