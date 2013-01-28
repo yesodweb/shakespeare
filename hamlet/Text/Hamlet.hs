@@ -117,7 +117,10 @@ bindingPattern (BindList is) = do
     return (ListP patterns, concat scopes)
 bindingPattern (BindConstr (Ident con) is) = do
     (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
-    return (ConP (mkName con) patterns, concat scopes)
+    let name
+          | con == show '() = tupleDataName 0
+          | otherwise = mkName con
+    return (ConP name patterns, concat scopes)
 
 docToExp :: Env -> HamletRules -> Scope -> Doc -> Q Exp
 docToExp env hr scope (DocForall list idents inside) = do
