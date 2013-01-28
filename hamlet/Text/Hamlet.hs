@@ -102,7 +102,11 @@ unIdent :: Ident -> String
 unIdent (Ident s) = s
 
 bindingPattern :: Binding -> Q (Pat, [(Ident, Exp)])
-bindingPattern (BindVar i@(Ident s)) = do
+bindingPattern (BindVar i@(Ident s) (Just b)) = do
+    name <- newName s
+    (pattern, scope) <- bindingPattern b
+    return (AsP name pattern, (i, VarE name):scope)
+bindingPattern (BindVar i@(Ident s) Nothing) = do
     name <- newName s
     return (VarP name, [(i, VarE name)])
 bindingPattern (BindTuple is) = do

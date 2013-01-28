@@ -308,28 +308,15 @@ parseLine set = do
 
     comma = char ',' >> white
 
+    atsign = char '@' >> white
+
+    white = skipMany $ char ' '
+
     isVariable (Ident (x:_)) = not (isUpper x)
     isVariable (Ident []) = error "isVariable: bad identifier"
 
     isConstructor (Ident (x:_)) = isUpper x
     isConstructor (Ident []) = error "isConstructor: bad identifier"
-
-    varpat = try (do
-      v <- ident
-      guard (isVariable v)
-      white
-      return $ BindVar v)
-     <?> "variable"
-
-    gcon = try (do
-      c <- ident
-      guard (isConstructor c)
-      white
-      return c)
-     <?> "constructor"
-
-    mkIdent :: Name -> Ident
-    mkIdent n = Ident (show n)
 
     identPattern :: Parser Binding
     identPattern =
@@ -337,23 +324,39 @@ parseLine set = do
              xs <- many apat
              return $ BindConstr c xs
         <|> apat
+      where
+      apat =  varpat
+          <|> fmap (\c -> BindConstr c []) gcon
+          <|> parens tuplepat
+          <|> brackets listpat
 
-    apat =  varpat
-        <|> fmap (\c -> BindConstr c []) gcon
-        <|> parens tuplepat
-        <|> brackets listpat
+      varpat = do
+        v <- try $ do v <- ident
+                      guard (isVariable v)
+                      return v
+        white
+        mb <- optionMaybe (atsign >> apat)
+        return (BindVar v mb)
+       <?> "variable"
 
-    tuplepat = do
-      xs <- identPattern `sepBy` comma
-      return $ case xs of
-        []  -> BindConstr (mkIdent '()) []
-        [x] -> x
-        _   -> BindTuple xs
+      gcon = try (do
+        c <- ident
+        guard (isConstructor c)
+        white
+        return c)
+       <?> "constructor"
 
-    listpat = BindList <$> identPattern `sepBy` comma
+      mkIdent :: Name -> Ident
+      mkIdent n = Ident (show n)
 
-    white :: Parser ()
-    white = skipMany $ char ' '
+      tuplepat = do
+        xs <- identPattern `sepBy` comma
+        return $ case xs of
+          []  -> BindConstr (mkIdent '()) []
+          [x] -> x
+          _   -> BindTuple xs
+
+      listpat = BindList <$> identPattern `sepBy` comma
 
     angle = do
         _ <- char '<'
@@ -626,7 +629,7 @@ doctypeNames =
     , ("strict", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
     ]
 
-data Binding = BindVar Ident | BindConstr Ident [Binding] | BindTuple [Binding] | BindList [Binding]
+data Binding = BindVar Ident (Maybe Binding) | BindConstr Ident [Binding] | BindTuple [Binding] | BindList [Binding]
     deriving (Eq, Show, Read, Data, Typeable)
 
 spaceTabs :: Parser String
