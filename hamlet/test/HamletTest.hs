@@ -74,6 +74,7 @@ spec = do
     it "hamlet literals" caseHamletLiterals
     it "hamlet' and xhamlet'" caseHamlet'
     it "hamlet tuple" caseTuple
+    it "complex pattern" caseComplex
 
 
 
@@ -930,6 +931,18 @@ caseTuple = do
     $with p <- (Home,[])
       @?{p}
    |]
+
+
+
+caseComplex :: Assertion
+caseComplex = do
+  let z :: ((Int,Int),Maybe Int,(),Bool,[[Int]])
+      z = ((1,2),Just 3,(),True,[[4],[5,6]])
+  helper "1 2 3 4 5 61 2 3 4 5 6" [hamlet|
+    $with ((a,b),Just c, () ,True,d@[[e],[f,g]]) <- z
+      $forall h <- d
+        #{a} #{b} #{c} #{e} #{f} #{g}
+    |]
 
 data Msg = Hello | Goodbye
 
