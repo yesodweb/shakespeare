@@ -66,12 +66,16 @@ parseHamletRT set s =
         Error s' -> failure $ HamletParseException s'
         Ok (_, x) -> liftM HamletRT $ mapM convert x
   where
-    convert x@(DocForall deref (BindVar (Ident ident)) docs) = do
+    convert x@(DocForall deref (BindVar _             (Just _)) docs) =
+       error "Runtime Hamlet does not currently support 'as' patterns"
+    convert x@(DocForall deref (BindVar (Ident ident) Nothing) docs) = do
         deref' <- flattenDeref' x deref
         docs' <- mapM convert docs
         return $ SDForall deref' ident docs'
     convert DocForall{} = error "Runtime Hamlet does not currently support tuple patterns"
-    convert x@(DocMaybe deref (BindVar (Ident ident)) jdocs ndocs) = do
+    convert x@(DocMaybe deref (BindVar _ (Just _)) jdocs ndocs) =
+       error "Runtime Hamlet does not currently support 'as' patterns"
+    convert x@(DocMaybe deref (BindVar (Ident ident) Nothing) jdocs ndocs) = do
         deref' <- flattenDeref' x deref
         jdocs' <- mapM convert jdocs
         ndocs' <- maybe (return []) (mapM convert) ndocs
