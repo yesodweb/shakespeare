@@ -260,7 +260,7 @@ parseCaret = parseInt '^'
 parseInt :: Char -> UserParser a (Either String Deref)
 parseInt c = do
     _ <- char c
-    (char '\\' >> return (Left [c])) <|> (do
+    (try $ char '\\' >> char '{' >> return (Left [c, '{'])) <|> (do
         deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left [c])
 

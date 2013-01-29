@@ -119,6 +119,13 @@ specs = describe "shakespeare-js" $ do
     "true false true false true false"
     [julius|#{True} #{False} #{toJSON True} #{toJSON False} #{rawJS True} #{rawJS False}|]
 
+  it "^\\ should not be escaped" $ jelper
+     "var re = /[^\\r]/;"
+     [julius|var re = /[^\r]/;|]
+
+  it "^\\{ should be escaped" $ jelper
+     "var re = /[^{]/;"
+     [julius|var re = /[^\{]/;|]
 
 
 data Url = Home | Sub SubUrl
