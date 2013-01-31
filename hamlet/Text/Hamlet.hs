@@ -102,11 +102,11 @@ unIdent :: Ident -> String
 unIdent (Ident s) = s
 
 bindingPattern :: Binding -> Q (Pat, [(Ident, Exp)])
-bindingPattern (BindVar i@(Ident s) (Just b)) = do
+bindingPattern (BindAs i@(Ident s) b) = do
     name <- newName s
     (pattern, scope) <- bindingPattern b
     return (AsP name pattern, (i, VarE name):scope)
-bindingPattern (BindVar i@(Ident s) Nothing) = do
+bindingPattern (BindVar i@(Ident s)) = do
     name <- newName s
     return (VarP name, [(i, VarE name)])
 bindingPattern (BindTuple is) = do
@@ -118,6 +118,12 @@ bindingPattern (BindList is) = do
 bindingPattern (BindConstr (Ident con) is) = do
     (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
     return (ConP (mkName con) patterns, concat scopes)
+bindingPattern (BindRecord (Ident con) fields) = do
+    let f (Ident field,b) =
+           do (p,s) <- bindingPattern b
+              return ((mkName field,p),s)
+    (patterns, scopes) <- fmap unzip $ mapM f fields
+    return (RecP (mkName con) patterns, concat scopes)
 
 docToExp :: Env -> HamletRules -> Scope -> Doc -> Q Exp
 docToExp env hr scope (DocForall list idents inside) = do

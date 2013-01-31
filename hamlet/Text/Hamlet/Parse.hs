@@ -299,15 +299,23 @@ parseLine set = do
     tag'' (TagAttribs s) (x, y, z, as) = (x, y, z, s : as)
 
     ident :: Parser Ident
-    ident = Ident <$> many1 (alphaNum <|> char '_' <|> char '\'') <?> "identifier"
+    ident = do
+      i <- many1 (alphaNum <|> char '_' <|> char '\'')
+      white
+      return (Ident i)
+     <?> "identifier"
 
     parens = between (char '(' >> white) (char ')' >> white)
 
     brackets = between (char '[' >> white) (char ']' >> white)
 
+    braces = between (char '{' >> white) (char '}' >> white)
+
     comma = char ',' >> white
 
     atsign = char '@' >> white
+
+    equals = char '=' >> white
 
     white = skipMany $ char ' '
 
@@ -318,32 +326,42 @@ parseLine set = do
     isConstructor (Ident []) = error "isConstructor: bad identifier"
 
     identPattern :: Parser Binding
-    identPattern =
-          do c <- gcon
-             xs <- many apat
-             return $ BindConstr c xs
-        <|> apat
+    identPattern = gcon True <|> apat
       where
-      apat =  varpat
-          <|> fmap (\c -> BindConstr c []) gcon
-          <|> parens tuplepat
-          <|> brackets listpat
+      apat = choice
+        [ varpat
+        , gcon False
+        , parens tuplepat
+        , brackets listpat
+        ]
 
       varpat = do
         v <- try $ do v <- ident
                       guard (isVariable v)
                       return v
-        white
-        mb <- optionMaybe (atsign >> apat)
-        return (BindVar v mb)
+        option (BindVar v) $ do
+          atsign
+          b <- apat
+          return (BindAs v b)
        <?> "variable"
 
-      gcon = try (do
-        c <- ident
-        guard (isConstructor c)
-        white
-        return c)
+      gcon :: Bool -> Parser Binding
+      gcon allowArgs = do
+        c <- try $ do c <- ident
+                      guard (isConstructor c)
+                      return c
+        choice
+          [ fmap (BindRecord c) (braces (recordField `sepBy` comma))
+          , fmap (BindConstr c) (guard allowArgs >> many apat)
+          , return (BindConstr c [])
+          ]
        <?> "constructor"
+
+      recordField = do
+        field <- ident
+        p <- option (BindVar field) -- support punning
+                    (equals >> identPattern)
+        return (field,p)
 
       tuplepat = do
         xs <- identPattern `sepBy` comma
@@ -624,7 +642,9 @@ doctypeNames =
     , ("strict", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
     ]
 
-data Binding = BindVar Ident (Maybe Binding) | BindConstr Ident [Binding] | BindTuple [Binding] | BindList [Binding]
+data Binding = BindVar Ident | BindAs Ident Binding | BindConstr Ident [Binding]
+             | BindTuple [Binding] | BindList [Binding]
+             | BindRecord Ident [(Ident, Binding)]
     deriving (Eq, Show, Read, Data, Typeable)
 
 spaceTabs :: Parser String
