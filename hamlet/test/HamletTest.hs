@@ -75,6 +75,7 @@ spec = do
     it "hamlet' and xhamlet'" caseHamlet'
     it "hamlet tuple" caseTuple
     it "complex pattern" caseComplex
+    it "record pattern" caseRecord
 
 
 
@@ -942,6 +943,16 @@ caseComplex = do
     $with ((a,b),Just c, () ,True,d@[[e],[f,g]]) <- z
       $forall h <- d
         #{a} #{b} #{c} #{e} #{f} #{g}
+    |]
+
+data ARecord = ARecCon { field1 :: Int, field2 :: Bool }
+
+caseRecord :: Assertion
+caseRecord = do
+  let z = ARecCon 10 True
+  helper "10" [hamlet|
+    $with ARecCon { field1, field2 = True } <- z
+        #{field1}
     |]
 
 data Msg = Hello | Goodbye
