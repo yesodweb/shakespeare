@@ -118,12 +118,46 @@ bindingPattern (BindList is) = do
 bindingPattern (BindConstr (Ident con) is) = do
     (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
     return (ConP (mkName con) patterns, concat scopes)
-bindingPattern (BindRecord (Ident con) fields) = do
+bindingPattern (BindRecord (Ident con) fields wild) = do
     let f (Ident field,b) =
            do (p,s) <- bindingPattern b
               return ((mkName field,p),s)
     (patterns, scopes) <- fmap unzip $ mapM f fields
-    return (RecP (mkName con) patterns, concat scopes)
+    (patterns1, scopes1) <- if wild
+       then bindWildFields con $ map fst fields
+       else return ([],[])
+    return (RecP (mkName con) (patterns++patterns1), concat scopes ++ scopes1)
+
+-- Wildcards bind all of the unbound fields to variables whose name
+-- matches the field name.
+--
+-- For example: data R = C { f1, f2 :: Int }
+-- C {..}           is equivalent to   C {f1=f1, f2=f2}
+-- C {f1 = a, ..}   is equivalent to   C {f1=a,  f2=f2}
+-- C {f2 = a, ..}   is equivalent to   C {f1=f1, f2=a}
+bindWildFields :: String -> [Ident] -> Q ([(Name, Pat)], [(Ident, Exp)])
+bindWildFields conName fields = do
+  fieldNames <- recordToFieldNames conName
+  let available n     = nameBase n `notElem` map unIdent fields
+  let remainingFields = filter available fieldNames
+  let mkPat n = do
+        e <- newName (nameBase n)
+        return ((n,VarP e), (Ident (nameBase n), VarE e))
+  fmap unzip $ mapM mkPat remainingFields
+
+-- Important note! reify will fail if the record type is defined in the
+-- same module as the reify is used. This means quasi-quoted Hamlet
+-- literals will not be able to use wildcards to match record types
+-- defined in the same module.
+recordToFieldNames :: String -> Q [Name]
+recordToFieldNames conStr = do
+  -- use 'lookupValueName' instead of just using 'mkName' so we reify the
+  -- data constructor and not the type constructor if their names match.
+  Just conName                <- lookupValueName conStr
+  DataConI _ _ typeName _     <- reify conName
+  TyConI (DataD _ _ _ cons _) <- reify typeName
+  [fields] <- return [fields | RecC name fields <- cons, name == conName]
+  return [fieldName | (fieldName, _, _) <- fields]
 
 docToExp :: Env -> HamletRules -> Scope -> Doc -> Q Exp
 docToExp env hr scope (DocForall list idents inside) = do
