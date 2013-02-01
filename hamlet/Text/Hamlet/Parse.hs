@@ -319,6 +319,8 @@ parseLine set = do
 
     white = skipMany $ char ' '
 
+    wildDots = string ".." >> white
+
     isVariable (Ident (x:_)) = not (isUpper x)
     isVariable (Ident []) = error "isVariable: bad identifier"
 
@@ -351,11 +353,20 @@ parseLine set = do
                       guard (isConstructor c)
                       return c
         choice
-          [ fmap (BindRecord c) (braces (recordField `sepBy` comma))
+          [ record c
           , fmap (BindConstr c) (guard allowArgs >> many apat)
           , return (BindConstr c [])
           ]
        <?> "constructor"
+
+      record c = braces $ do
+        (fields, wild) <- option ([], False) $ go
+        return (BindRecord c fields wild)
+        where
+        go = (wildDots >> return ([], True))
+           <|> (do x         <- recordField
+                   (xs,wild) <- option ([],False) (comma >> go)
+                   return (x:xs,wild))
 
       recordField = do
         field <- ident
@@ -644,7 +655,7 @@ doctypeNames =
 
 data Binding = BindVar Ident | BindAs Ident Binding | BindConstr Ident [Binding]
              | BindTuple [Binding] | BindList [Binding]
-             | BindRecord Ident [(Ident, Binding)]
+             | BindRecord Ident [(Ident, Binding)] Bool
     deriving (Eq, Show, Read, Data, Typeable)
 
 spaceTabs :: Parser String
