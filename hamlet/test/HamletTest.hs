@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module HamletTest (spec) where
 
+import HamletTestTypes (ARecord(..))
+
 import Test.HUnit hiding (Test)
 import Test.Hspec
 
@@ -76,6 +78,8 @@ spec = do
     it "hamlet tuple" caseTuple
     it "complex pattern" caseComplex
     it "record pattern" caseRecord
+    it "record wildcard pattern #1" caseRecordWildCard
+    it "record wildcard pattern #2" caseRecordWildCard1
 
 
 
@@ -945,13 +949,27 @@ caseComplex = do
         #{a} #{b} #{c} #{e} #{f} #{g}
     |]
 
-data ARecord = ARecCon { field1 :: Int, field2 :: Bool }
-
 caseRecord :: Assertion
 caseRecord = do
-  let z = ARecCon 10 True
+  let z = ARecord 10 True
   helper "10" [hamlet|
-    $with ARecCon { field1, field2 = True } <- z
+    $with ARecord { field1, field2 = True } <- z
+        #{field1}
+    |]
+
+caseRecordWildCard :: Assertion
+caseRecordWildCard = do
+  let z = ARecord 10 True
+  helper "10 True" [hamlet|
+    $with ARecord {..} <- z
+        #{field1} #{field2}
+    |]
+
+caseRecordWildCard1 :: Assertion
+caseRecordWildCard1 = do
+  let z = ARecord 10 True
+  helper "10" [hamlet|
+    $with ARecord {field2 = True, ..} <- z
         #{field1}
     |]
 
