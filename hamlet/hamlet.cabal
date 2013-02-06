@@ -1,5 +1,5 @@
 name:            hamlet
-version:         1.1.6
+version:         1.1.6.1
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -36,6 +36,7 @@ extra-source-files:
   test/hamlets/nonpolyhtml.hamlet
   test/hamlets/nonpolyihamlet.hamlet
   test/HamletTest.hs
+  test/HamletTestTypes.hs
   test/tmp.hs
   test.hs
 
