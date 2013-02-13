@@ -1,5 +1,5 @@
 name:            hamlet
-version:         1.1.6.1
+version:         1.1.6.2
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -47,10 +47,10 @@ library
                    , template-haskell
                    , parsec           >= 2       && < 4
                    , failure          >= 0.1     && < 0.3
-                   , text             >= 0.7     && < 0.12
+                   , text             >= 0.7
                    , containers       >= 0.2
                    , blaze-builder    >= 0.2     && < 0.4
-                   , process          >= 1.0     && < 1.2
+                   , process          >= 1.0
                    , blaze-html       >= 0.5     && < 0.6
                    , blaze-markup     >= 0.5.1   && < 0.6
 
