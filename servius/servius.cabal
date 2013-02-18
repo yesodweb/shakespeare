@@ -1,5 +1,5 @@
 Name:                servius
-Version:             1.1.0.1
+Version:             1.1.0.2
 Synopsis:            Serve Shakespearean templates via Warp
 Homepage:            http://github.com/yesodweb/hamlet
 License:             MIT
@@ -29,7 +29,7 @@ Executable servius
                , hamlet          >= 1.1                && < 1.2
                , shakespeare-css >= 1.0                && < 1.1
                , transformers
-               , wai             >= 1.3                && < 1.4
+               , wai             >= 1.3                && < 1.5
                , mime-types      >= 0.1                && < 0.2
 
 source-repository head
