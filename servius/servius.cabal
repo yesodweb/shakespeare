@@ -1,5 +1,5 @@
 Name:                servius
-Version:             1.1.0
+Version:             1.1.0.1
 Synopsis:            Serve Shakespearean templates via Warp
 Homepage:            http://github.com/yesodweb/hamlet
 License:             MIT
@@ -24,7 +24,7 @@ Executable servius
                , bytestring      >= 0.9.1.4
                , text            >= 0.7
                , blaze-builder
-               , blaze-html      >= 0.5                && < 0.6
+               , blaze-html      >= 0.5
                , http-types
                , hamlet          >= 1.1                && < 1.2
                , shakespeare-css >= 1.0                && < 1.1
