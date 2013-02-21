@@ -13,6 +13,7 @@ module Text.Lucius
       -- ** Runtime
     , luciusRT
     , luciusRT'
+    , luciusRTMinified
     , -- * Datatypes
       Css
     , CssUrl
@@ -286,6 +287,12 @@ luciusRT' tl =
 
 luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
 luciusRT tl scope = either Left (Right . renderCss . CssWhitespace) $ either Left ($ scope) (luciusRT' tl)
+
+-- | Same as 'luciusRT', but output has no added whitespace.
+--
+-- Since 1.0.3
+luciusRTMinified :: TL.Text -> [(Text, Text)] -> Either String TL.Text
+luciusRTMinified tl scope = either Left (Right . renderCss . CssNoWhitespace) $ either Left ($ scope) (luciusRT' tl)
 
 -- | Determine which identifiers are used by the given template, useful for
 -- creating systems like yesod devel.
