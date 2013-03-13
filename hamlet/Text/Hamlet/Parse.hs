@@ -12,6 +12,7 @@ module Text.Hamlet.Parse
     , CloseStyle (..)
     , Binding (..)
     , NewlineStyle (..)
+    , specialOrIdent
     )
     where
 
@@ -24,7 +25,7 @@ import Data.Data
 import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (mapMaybe, fromMaybe)
+import Data.Maybe (mapMaybe, fromMaybe, isNothing)
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -464,7 +465,7 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD avoidNewLine) insid
     let attrs' =
             case clazzes of
               [] -> map attrFix noclass
-              _ -> (Nothing, "class", map (second Just) clazzes)
+              _ -> (testIncludeClazzes clazzes, "class", map (second Just) clazzes)
                        : map attrFix noclass
     let closeStyle =
             if not (null content) || not (null inside)
@@ -660,3 +661,24 @@ data Binding = BindVar Ident | BindAs Ident Binding | BindConstr Ident [Binding]
 
 spaceTabs :: Parser String
 spaceTabs = many $ oneOf " \t"
+
+-- | When using conditional classes, it will often be a single class, e.g.:
+--
+-- > <div :isHome:.homepage>
+--
+-- If isHome is False, we do not want any class attribute to be present.
+-- However, due to combining multiple classes together, the most obvious
+-- implementation would produce a class="". The purpose of this function is to
+-- work around that. It does so by checking if all the classes on this tag are
+-- optional. If so, it will only include the class attribute if at least one
+-- conditional is true.
+testIncludeClazzes :: [(Maybe Deref, [Content])] -> Maybe Deref
+testIncludeClazzes cs
+    | any (isNothing . fst) cs = Nothing
+    | otherwise = Just $ DerefBranch (DerefIdent specialOrIdent) $ DerefList $ mapMaybe fst cs
+
+-- | This funny hack is to allow us to refer to the 'or' function without
+-- requiring the user to have it in scope. See how this function is used in
+-- Text.Hamlet.
+specialOrIdent :: Ident
+specialOrIdent = Ident "__or__hamlet__special"

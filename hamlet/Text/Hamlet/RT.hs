@@ -101,6 +101,11 @@ parseHamletRT set s =
         els' <- maybe (return []) (mapM convert) els
         return $ SDCond conds' els'
       where
+        -- | See the comments in Text.Hamlet.Parse.testIncludeClazzes. The conditional
+        -- added there doesn't work for runtime Hamlet, so we remove it here.
+        go (DerefBranch (DerefIdent x) _, docs') | x == specialOrIdent = do
+            docs'' <- mapM convert docs'
+            return (["True"], docs'')
         go (deref, docs') = do
             deref' <- flattenDeref' x deref
             docs'' <- mapM convert docs'
@@ -176,6 +181,7 @@ renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
             => [String] -> [String] -> HamletMap url -> m (HamletData url)
     lookup' orig k m =
         case lookup k m of
+            Nothing | k == ["True"] -> return $ HDBool True
             Nothing -> fa $ showName orig ++ ": not found"
             Just x -> return x
 

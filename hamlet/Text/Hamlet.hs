@@ -205,7 +205,7 @@ docToExp env hr scope (DocCond conds final) = do
   where
     go :: (Deref, [Doc]) -> Q Exp
     go (d, docs) = do
-        let d' = derefToExp scope d
+        let d' = derefToExp ((specialOrIdent, VarE 'or):scope) d
         docs' <- docsToExp env hr scope docs
         return $ TupE [d', docs']
 docToExp env hr scope (DocCase deref cases) = do

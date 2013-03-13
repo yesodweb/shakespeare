@@ -439,6 +439,12 @@ $case num
     $of _
         <p>Many
 |]
+    it "optional and missing classes" $
+        helper "<i>foo</i>\n" [hamlet|<i :False:.not-present>foo|]
+    it "multiple optional and missing classes" $
+        helper "<i>foo</i>\n" [hamlet|<i :False:.not-present :False:.also-not-here>foo|]
+    it "optional and present classes" $
+        helper "<i class=\"present\">foo</i>\n" [hamlet|<i :False:.not-present :True:.present>foo|]
 
 data Pair = Pair String Int
 
