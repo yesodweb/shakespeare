@@ -979,6 +979,16 @@ caseRecordWildCard1 = do
         #{field1}
     |]
 
+caseCaseRecord :: Assertion
+caseCaseRecord = do
+  let z = ARecord 10 True
+  helper "10\nTrue" [hamlet|
+    $case z
+      $of ARecord { field1, field2 = x }
+        #{field1}
+        #{x}
+    |]
+
 data Msg = Hello | Goodbye
 
 ihelper :: String -> HtmlUrlI18n Msg Url -> Assertion
