@@ -217,14 +217,11 @@ docToExp env hr scope (DocCase deref cases) = do
         case reads s of
             (x, ""):_ -> Just x
             _ -> Nothing
+    toMatch :: (Binding, [Doc]) -> Q Match
     toMatch (idents, inside) = do
-        let pat = case map unIdent idents of
-                    ["_"] -> WildP
-                    [str]
-                        | Just i <- readMay str -> LitP $ IntegerL i
-                    strs -> let (constr:fields) = map mkName strs
-                            in ConP constr (map VarP fields)
-        insideExp <- docsToExp env hr scope inside
+        (pat, extraScope) <- bindingPattern idents
+        let scope' = extraScope ++ scope
+        insideExp <- docsToExp env hr scope' inside
         return $ Match pat (NormalB insideExp) []
 docToExp env hr v (DocContent c) = contentToExp env hr v c
 

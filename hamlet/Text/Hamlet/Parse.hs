@@ -56,7 +56,7 @@ data Line = LineForall Deref Binding
           | LineMaybe Deref Binding
           | LineNothing
           | LineCase Deref
-          | LineOf [Ident]
+          | LineOf Binding
           | LineTag
             { _lineTagName :: String
             , _lineAttr :: [(Maybe Deref, String, Maybe [Content])]
@@ -224,10 +224,11 @@ parseLine set = do
         return $ LineCase x
     controlOf = do
         _   <- try $ string "$of"
-        pat <- many1 $ try $ spaces >> ident
+        spaces
+        x <- identPattern
         _   <- spaceTabs
         eol
-        return $ LineOf pat
+        return $ LineOf x
     content cr = do
         x <- many $ content' cr
         case cr of
@@ -418,7 +419,7 @@ data Doc = DocForall Deref Binding [Doc]
          | DocWith [(Deref, Binding)] [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
          | DocMaybe Deref Binding [Doc] (Maybe [Doc])
-         | DocCase Deref [([Ident], [Doc])]
+         | DocCase Deref [(Binding, [Doc])]
          | DocContent Content
     deriving (Show, Eq, Read, Data, Typeable)
 
@@ -448,9 +449,9 @@ nestToDoc set (Nest (LineMaybe d i) inside:rest) = do
     rest'' <- nestToDoc set rest'
     Ok $ DocMaybe d i inside' nothing : rest''
 nestToDoc set (Nest (LineCase d) inside:rest) = do
-    let getOf (Nest (LineOf pat) insideC) = do
+    let getOf (Nest (LineOf x) insideC) = do
             insideC' <- nestToDoc set insideC
-            Ok (pat, insideC')
+            Ok (x, insideC')
         getOf _ = Error "Inside a $case there may only be $of.  Use '$of _' for a wildcard."
     cases <- mapM getOf inside
     rest' <- nestToDoc set rest
