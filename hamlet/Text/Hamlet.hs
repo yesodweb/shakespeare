@@ -106,9 +106,12 @@ bindingPattern (BindAs i@(Ident s) b) = do
     name <- newName s
     (pattern, scope) <- bindingPattern b
     return (AsP name pattern, (i, VarE name):scope)
-bindingPattern (BindVar i@(Ident s)) = do
-    name <- newName s
-    return (VarP name, [(i, VarE name)])
+bindingPattern (BindVar i@(Ident s))
+    | all isDigit s = do
+        return (LitP $ IntegerL $ read s, [])
+    | otherwise = do
+        name <- newName s
+        return (VarP name, [(i, VarE name)])
 bindingPattern (BindTuple is) = do
     (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
     return (TupP patterns, concat scopes)
