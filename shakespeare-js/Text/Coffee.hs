@@ -76,12 +76,11 @@ coffeeSettings = do
     , preEscapeIgnoreLine = "#"            -- ignore commented lines
     , wrapInsertion = Just WrapInsertion { 
         wrapInsertionIndent = Just "  "
-      , wrapInsertionStartBegin = "(("
+      , wrapInsertionStartBegin = "("
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = ") =>"
-      , wrapInsertionEnd = ")"
-      , wrapInsertionApplyBegin = "("
-      , wrapInsertionApplyClose = ")\n"
+      , wrapInsertionEnd = ""
+      , wrapInsertionAddParens = False
       }
     }
   }
