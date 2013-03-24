@@ -106,9 +106,12 @@ bindingPattern (BindAs i@(Ident s) b) = do
     name <- newName s
     (pattern, scope) <- bindingPattern b
     return (AsP name pattern, (i, VarE name):scope)
-bindingPattern (BindVar i@(Ident s)) = do
-    name <- newName s
-    return (VarP name, [(i, VarE name)])
+bindingPattern (BindVar i@(Ident s))
+    | all isDigit s = do
+        return (LitP $ IntegerL $ read s, [])
+    | otherwise = do
+        name <- newName s
+        return (VarP name, [(i, VarE name)])
 bindingPattern (BindTuple is) = do
     (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
     return (TupP patterns, concat scopes)
@@ -217,14 +220,11 @@ docToExp env hr scope (DocCase deref cases) = do
         case reads s of
             (x, ""):_ -> Just x
             _ -> Nothing
+    toMatch :: (Binding, [Doc]) -> Q Match
     toMatch (idents, inside) = do
-        let pat = case map unIdent idents of
-                    ["_"] -> WildP
-                    [str]
-                        | Just i <- readMay str -> LitP $ IntegerL i
-                    strs -> let (constr:fields) = map mkName strs
-                            in ConP constr (map VarP fields)
-        insideExp <- docsToExp env hr scope inside
+        (pat, extraScope) <- bindingPattern idents
+        let scope' = extraScope ++ scope
+        insideExp <- docsToExp env hr scope' inside
         return $ Match pat (NormalB insideExp) []
 docToExp env hr v (DocContent c) = contentToExp env hr v c
 
