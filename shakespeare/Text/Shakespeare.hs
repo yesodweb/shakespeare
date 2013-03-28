@@ -44,6 +44,8 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
+import Prelude hiding (catch)
+import Control.Exception (throwIO, catch)
 
 -- for pre conversion
 import System.Process (readProcess)
@@ -99,8 +101,7 @@ data WrapInsertion = WrapInsertion {
     , wrapInsertionSeparator  :: String
     , wrapInsertionStartClose :: String
     , wrapInsertionEnd :: String
-    , wrapInsertionApplyBegin :: String
-    , wrapInsertionApplyClose :: String
+    , wrapInsertionAddParens :: Bool
     }
 
 data PreConversion = ReadProcess String [String]
@@ -138,8 +139,8 @@ instance Lift PreConvert where
         [|PreConvert $(lift convert) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
 
 instance Lift WrapInsertion where
-    lift (WrapInsertion indent sb sep sc e ab ac) =
-        [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift ab) $(lift ac)|]
+    lift (WrapInsertion indent sb sep sc e wp) =
+        [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift wp)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -213,24 +214,25 @@ preFilter :: ShakespeareSettings -> String -> IO String
 preFilter ShakespeareSettings {..} template =
     case preConversion of
       Nothing -> return template
-      Just pre@(PreConvert convert _ _ mwi) ->
+      Just pre@(PreConvert convert _ _ mWrapI) ->
         if all isSpace template then return template else
           let (groups, rvars) = eShowErrors $ parse
-                                  (parseConvertWrapInsertion mwi pre)
+                                  (parseConvertWrapInsertion mWrapI pre)
                                   template
-                                  (indentedTemplate mwi)
+                                  template
               vars = reverse rvars
               parsed = mconcat groups
-          in  applyVars mwi vars `fmap` (case convert of
-                  Id -> return  
-                  ReadProcess command args -> readProcess command args
-                ) (addVars mwi vars parsed)
+              withVars = (addVars mWrapI vars parsed)
+          in  applyVars mWrapI vars `fmap` case convert of
+                  Id -> return withVars
+                  ReadProcess command args ->
+                    readProcess command args withVars
+                      `catch` (\ex -> print withVars >> throwIO (ex :: IOError))
   where
-    indentedTemplate Nothing = template
-    indentedTemplate (Just wi) = addIndent $ wrapInsertionIndent wi
+    addIndent :: Maybe String -> String -> String
+    addIndent Nothing str = str
+    addIndent (Just indent) str = mapLines (\line -> indent <> line) str
       where
-        addIndent Nothing = template
-        addIndent (Just indent) = mapLines (\line -> indent <> line) template
         mapLines f = unlines . map f . lines
 
     shakespeare_prefix = "shakespeare_var_"
@@ -238,21 +240,26 @@ preFilter ShakespeareSettings {..} template =
     shakespeare_var_conversion (_:'{':str) = shakespeare_prefix <> filter isAlphaNum (init str)
     shakespeare_var_conversion err = error $ "did not expect: " <> err
 
+    applyVars _      [] str = str
     applyVars Nothing _ str = str
-    applyVars _ [] str = str
     applyVars (Just WrapInsertion {..}) vars str =
-      reverse (dropWhile (\c -> c == ';' || isSpace c) (reverse str))
-      <> wrapInsertionApplyBegin
-      <> (mconcat $ intersperse wrapInsertionSeparator vars)
-      <> wrapInsertionApplyClose
+         (if wrapInsertionAddParens then "(" else "")
+      <> removeTrailingSemiColon
+      <> (if wrapInsertionAddParens then ")" else "")
+      <> "("
+      <> (mconcat $ intersperse ", " vars)
+      <> ");\n"
+        where 
+          removeTrailingSemiColon = reverse $
+             dropWhile (\c -> c == ';' || isSpace c) (reverse str)
 
+    addVars _      [] str = str
     addVars Nothing _ str = str
-    addVars _ [] str = str
     addVars (Just WrapInsertion {..}) vars str =
          wrapInsertionStartBegin
       <> (mconcat $ intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)
       <> wrapInsertionStartClose
-      <> str
+      <> addIndent wrapInsertionIndent str
       <> wrapInsertionEnd
 
     parseConvertWrapInsertion Nothing = parseConvert id

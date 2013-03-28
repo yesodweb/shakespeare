@@ -9,9 +9,25 @@
 --
 -- To use this module, @roy@ must be installed on your system.
 --
--- Unfortunately variable interpolation in Roy does not currently work,
--- but it can with a small change to Roy:
--- <https://github.com/pufuwozu/roy/issues/165>
+-- If you interpolate variables,
+-- the template is first wrapped with a function containing javascript variables representing shakespeare variables,
+-- then compiled with @roy@,
+-- and then the value of the variables are applied to the function.
+-- This means that in production the template can be compiled
+-- once at compile time and there will be no dependency in your production
+-- system on @roy@. 
+--
+-- Your code:
+--
+-- > let b = 1
+-- > console.log(#{a} + b)
+--
+-- Final Result:
+--
+-- > ;(function(shakespeare_var_a){
+-- >   var b = 1;
+-- >   console.log(shakespeare_var_a + b);
+-- > })(#{a});
 --
 -- Further reading:
 --
@@ -45,21 +61,17 @@ roySettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '#'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "roy" ["--stdio"]
+      preConvert = ReadProcess "roy" ["--stdio", "--browser"]
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = "//"
-    , wrapInsertion = Nothing
-    {-
-    Just WrapInsertion { 
+    , wrapInsertion = Just WrapInsertion {
         wrapInsertionIndent = Just "  "
       , wrapInsertionStartBegin = "(\\"
       , wrapInsertionSeparator = " "
       , wrapInsertionStartClose = " ->\n"
       , wrapInsertionEnd = ")"
-      , wrapInsertionApplyBegin = " "
-      , wrapInsertionApplyClose = ")\n"
+      , wrapInsertionAddParens = True
       }
-      -}
     }
   }
 

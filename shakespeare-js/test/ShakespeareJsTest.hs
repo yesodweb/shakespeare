@@ -83,10 +83,10 @@ specs = describe "shakespeare-js" $ do
         double = 3.14 :: Double
         int = -5 :: Int
 #ifdef TEST_COFFEE
-    in jelper "var _this = this;\n\n(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5)"
+    in jelper "var _this = this;\n\n(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5);\n"
 #else
 #  ifdef TEST_ROY
-    in jelper "(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5)"
+    in jelper "(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n    return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5);\n"
 #  else
     in jelper "[oof, oof, 3.14, -5]"
 #  endif
@@ -103,14 +103,29 @@ specs = describe "shakespeare-js" $ do
 
   it "dollar operator" $ do
     let val = (1 :: Int, (2 :: Int, 3 :: Int))
-#if !(defined TEST_COFFEE || defined TEST_ROY)
+#if (defined TEST_COFFEE)
+    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
+    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
+#else
+
+#  if (defined TEST_ROY)
+    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
+    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
+
+#  else
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd val }|]
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd $ val}|]
-#else
-    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2)" [quote|#{ rawJS $ show $ fst $ snd val }|]
-    jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2)" [quote|#{ rawJS $ show $ fst $ snd val }|]
+#  endif
 #endif
 
+#if (defined TEST_ROY)
+  it "roy function wrapper" $ do
+    let royInsert = rawJS "\"royInsert\""
+    jelper "(function(shakespeare_var_royInsert) {\n    var roy = {\n        \"royInsert\": shakespeare_var_royInsert\n    };\n    return console.log(roy);\n})(\"royInsert\");\n" [quote|
+let roy = { royInsert: #{royInsert} }
+console.log roy
+|]
+#endif
   it "empty file" $ jelper "" [quote||]
 
   it "JSON data" $ jelper "\"Hello \\\"World!\\\"\"" [julius|#{toJSON "Hello \"World!\""}|]
