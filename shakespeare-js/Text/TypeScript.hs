@@ -88,8 +88,7 @@ typeScriptSettings = do
       , wrapInsertionSeparator = ", "
       , wrapInsertionStartClose = "){"
       , wrapInsertionEnd = "})"
-      , wrapInsertionApplyBegin = "("
-      , wrapInsertionApplyClose = ");\n"
+      , wrapInsertionAddParens = False
       }
     }
   }

@@ -26,11 +26,11 @@ specs = describe "shakespeare-js" $ do
 
   it "preFilter on" $ do
     preFilter preConversionSettings template `shouldReturn`
-      "(function(shakespeare_var_var, shakespeare_var_url, shakespeare_var_int){unchanged shakespeare_var_var shakespeare_var_url shakespeare_var_int})(#{var}, @{url}, ^{int})"
+      "(function(shakespeare_var_var, shakespeare_var_url, shakespeare_var_int){unchanged shakespeare_var_var shakespeare_var_url shakespeare_var_int})(#{var}, @{url}, ^{int});\n"
 
   it "preFilter ignore quotes" $ do
     preFilter preConversionSettings templateQuote `shouldReturn`
-      "(function(shakespeare_var_url){unchanged '#{var}' shakespeare_var_url '^{int}'})(@{url})"
+      "(function(shakespeare_var_url){unchanged '#{var}' shakespeare_var_url '^{int}'})(@{url});\n"
 
   it "preFilter ignore comments" $ do
     preFilter preConversionSettings templateCommented
@@ -48,12 +48,11 @@ specs = describe "shakespeare-js" $ do
         , preEscapeIgnoreLine = "&"
         , wrapInsertion = Just WrapInsertion { 
             wrapInsertionIndent = Nothing
-          , wrapInsertionStartBegin = "(function("
+          , wrapInsertionStartBegin = "function("
           , wrapInsertionSeparator = ", "
           , wrapInsertionStartClose = "){"
-          , wrapInsertionEnd = "})"
-          , wrapInsertionApplyBegin = "("
-          , wrapInsertionApplyClose = ")"
+          , wrapInsertionEnd = "}"
+          , wrapInsertionAddParens = True
           }
         }
     }
