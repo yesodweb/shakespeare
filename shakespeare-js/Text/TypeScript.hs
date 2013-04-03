@@ -100,7 +100,7 @@ tsc = QuasiQuoter { quoteExp = \s -> do
     quoteExp (shakespeare rs) s
     }
 
--- | Read in a Roy template file. This function reads the file once, at
+-- | Read in a TypeScript template file. This function reads the file once, at
 -- compile time.
 typeScriptFile :: FilePath -> Q Exp
 typeScriptFile fp = do
