@@ -11,6 +11,7 @@ import Text.Shakespeare (preFilter, defaultShakespeareSettings, ShakespeareSetti
 
 specs :: Spec
 specs = describe "shakespeare-js" $ do
+  let preFilterN = preFilter Nothing
   {-
   it "parseStrings" $ do
     run varString "%{var}" `shouldBe` Right "%{var}"
@@ -21,19 +22,19 @@ specs = describe "shakespeare-js" $ do
   -}
 
   it "preFilter off" $ do
-    preFilter defaultShakespeareSettings template
+    preFilterN defaultShakespeareSettings template
       `shouldReturn` template
 
   it "preFilter on" $ do
-    preFilter preConversionSettings template `shouldReturn`
+    preFilterN preConversionSettings template `shouldReturn`
       "(function(shakespeare_var_var, shakespeare_var_url, shakespeare_var_int){unchanged shakespeare_var_var shakespeare_var_url shakespeare_var_int})(#{var}, @{url}, ^{int});\n"
 
   it "preFilter ignore quotes" $ do
-    preFilter preConversionSettings templateQuote `shouldReturn`
+    preFilterN preConversionSettings templateQuote `shouldReturn`
       "(function(shakespeare_var_url){unchanged '#{var}' shakespeare_var_url '^{int}'})(@{url});\n"
 
   it "preFilter ignore comments" $ do
-    preFilter preConversionSettings templateCommented
+    preFilterN preConversionSettings templateCommented
       `shouldReturn` "unchanged & '#{var}' @{url} '^{int}'"
 
   where

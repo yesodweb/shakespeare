@@ -44,11 +44,10 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
-import Prelude hiding (catch)
-import Control.Exception (throwIO, catch)
 
 -- for pre conversion
-import System.Process (readProcess)
+import System.Process (readProcessWithExitCode)
+import System.Exit (ExitCode(..))
 
 -- | A parser with a user state of [String]
 type Parser = Parsec String [String]
@@ -210,8 +209,31 @@ parseContents = many1 . parseContent
         parseChar' = ContentRaw `fmap` many1 (noneOf [varChar, urlChar, intChar])
 
 
-preFilter :: ShakespeareSettings -> String -> IO String
-preFilter ShakespeareSettings {..} template =
+-- | calls 'error' when there is stderr or exit code failure
+readProcessError :: FilePath -> [String] -> String
+                 -> Maybe FilePath -- ^ for error reporting
+                 -> IO String
+readProcessError cmd args input mfp = do
+  (ex, output, err) <- readProcessWithExitCode cmd args input
+  case ex of
+   ExitSuccess   ->
+     case err of
+       [] -> return output
+       msg -> error $ "stderr received during readProcess:" ++ displayCmd ++ "\n\n" ++ msg
+   ExitFailure r ->
+    error $ "exit code " ++ show r ++ " from readProcess: " ++ displayCmd ++ "\n\n"
+      ++ "stderr:\n" ++ err
+  where
+    displayCmd = cmd ++ ' ':unwords (map show args) ++
+        case mfp of
+          Nothing -> ""
+          Just fp -> ' ':fp
+
+preFilter :: Maybe FilePath -- ^ for error reporting
+          -> ShakespeareSettings
+          -> String
+          -> IO String
+preFilter mfp ShakespeareSettings {..} template =
     case preConversion of
       Nothing -> return template
       Just pre@(PreConvert convert _ _ mWrapI) ->
@@ -226,8 +248,7 @@ preFilter ShakespeareSettings {..} template =
           in  applyVars mWrapI vars `fmap` case convert of
                   Id -> return withVars
                   ReadProcess command args ->
-                    readProcess command args withVars
-                      `catch` (\ex -> print withVars >> throwIO (ex :: IOError))
+                    readProcessError command args withVars mfp
   where
     addIndent :: Maybe String -> String -> String
     addIndent Nothing str = str
@@ -345,7 +366,7 @@ shakespeare r = QuasiQuoter { quoteExp = shakespeareFromString r }
 
 shakespeareFromString :: ShakespeareSettings -> String -> Q Exp
 shakespeareFromString r str = do
-    s <- qRunIO $ preFilter r str
+    s <- qRunIO $ preFilter Nothing r str
     contentsToShakespeare r $ contentFromString r s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
@@ -377,7 +398,7 @@ shakespeareUsedIdentifiers settings = concatMap getVars . contentFromString sett
 shakespeareFileReload :: ShakespeareSettings -> FilePath -> Q Exp
 shakespeareFileReload rs fp = do
     str <- readFileQ fp
-    s <- qRunIO $ preFilter rs str
+    s <- qRunIO $ preFilter (Just fp) rs str
     let b = shakespeareUsedIdentifiers rs s
     c <- mapM vtToExp b
     rt <- [|shakespeareRuntime|]
@@ -401,7 +422,7 @@ shakespeareFileReload rs fp = do
 shakespeareRuntime :: ShakespeareSettings -> FilePath -> [(Deref, VarExp url)] -> Shakespeare url
 shakespeareRuntime rs fp cd render' = unsafePerformIO $ do
     str <- readFileUtf8 fp
-    s <- preFilter rs str
+    s <- preFilter (Just fp) rs str
     return $ mconcat $ map go $ contentFromString rs s
   where
     go :: Content -> Builder
