@@ -45,6 +45,12 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
 
+import Filesystem (getModified)
+import Filesystem.Path.CurrentOS (decodeString)
+import Data.Time (UTCTime)
+import Data.IORef
+import qualified Data.Map as M
+
 -- for pre conversion
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
@@ -395,16 +401,30 @@ data VarExp url = EPlain Builder
 shakespeareUsedIdentifiers :: ShakespeareSettings -> String -> [(Deref, VarType)]
 shakespeareUsedIdentifiers settings = concatMap getVars . contentFromString settings
 
+type MTime = UTCTime
+
+{-# NOINLINE reloadMapRef #-}
+reloadMapRef :: IORef (M.Map FilePath (MTime, Builder))
+reloadMapRef = unsafePerformIO $ newIORef M.empty
+
+lookupReloadMap :: FilePath -> IO (Maybe (MTime, Builder))
+lookupReloadMap fp = do
+  reloads <- readIORef reloadMapRef
+  return $ M.lookup fp reloads
+
+insertReloadMap :: FilePath -> (MTime, Builder) -> IO Builder
+insertReloadMap fp (mt, content) = atomicModifyIORef reloadMapRef
+  (\reloadMap -> (M.insert fp (mt, content) reloadMap, content))
+
 shakespeareFileReload :: ShakespeareSettings -> FilePath -> Q Exp
-shakespeareFileReload rs fp = do
+shakespeareFileReload settings fp = do
     str <- readFileQ fp
-    s <- qRunIO $ preFilter (Just fp) rs str
-    let b = shakespeareUsedIdentifiers rs s
+    s <- qRunIO $ preFilter (Just fp) settings str
+    let b = shakespeareUsedIdentifiers settings s
     c <- mapM vtToExp b
-    rt <- [|shakespeareRuntime|]
-    wrap' <- [|\x -> $(return $ wrap rs) . x|]
-    r' <- lift rs
-    return $ wrap' `AppE` (rt `AppE` r' `AppE` (LitE $ StringL fp) `AppE` ListE c)
+    rt <- [|shakespeareRuntime settings fp|]
+    wrap' <- [|\x -> $(return $ wrap settings) . x|]
+    return $ wrap' `AppE` (rt `AppE` ListE c)
   where
     vtToExp :: (Deref, VarType) -> Q Exp
     vtToExp (d, vt) = do
@@ -413,18 +433,29 @@ shakespeareFileReload rs fp = do
         return $ TupE [d', c' `AppE` derefToExp [] d]
       where
         c :: VarType -> Q Exp
-        c VTPlain = [|EPlain . $(return $ toBuilder rs)|]
+        c VTPlain = [|EPlain . $(return $ toBuilder settings)|]
         c VTUrl = [|EUrl|]
         c VTUrlParam = [|EUrlParam|]
-        c VTMixin = [|\x -> EMixin $ \r -> $(return $ unwrap rs) $ x r|]
+        c VTMixin = [|\x -> EMixin $ \r -> $(return $ unwrap settings) $ x r|]
+
+
 
 
 shakespeareRuntime :: ShakespeareSettings -> FilePath -> [(Deref, VarExp url)] -> Shakespeare url
-shakespeareRuntime rs fp cd render' = unsafePerformIO $ do
-    str <- readFileUtf8 fp
-    s <- preFilter (Just fp) rs str
-    return $ mconcat $ map go $ contentFromString rs s
+shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
+    mtime <- qRunIO $ getModified $ decodeString fp
+    mdata <- lookupReloadMap fp
+    case mdata of
+      Just (lastMtime, lastContents) ->
+        if mtime == lastMtime then return lastContents
+          else newContent mtime
+      Nothing -> newContent mtime
   where
+    newContent mtime = do
+        str <- readFileUtf8 fp
+        s <- preFilter (Just fp) settings str
+        insertReloadMap fp $ (mtime, mconcat $ map go $ contentFromString settings s)
+
     go :: Content -> Builder
     go (ContentRaw s) = fromText $ TS.pack s
     go (ContentVar d) =
