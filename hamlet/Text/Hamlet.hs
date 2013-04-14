@@ -56,6 +56,7 @@ import qualified Data.Foldable as F
 import Control.Monad (mplus)
 import Data.Monoid (mempty, mappend)
 import Control.Arrow ((***))
+import Data.List (intercalate)
 
 -- | Convert some value to a list of attribute pairs.
 class ToAttributes a where
@@ -118,10 +119,10 @@ bindingPattern (BindTuple is) = do
 bindingPattern (BindList is) = do
     (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
     return (ListP patterns, concat scopes)
-bindingPattern (BindConstr (Ident con) is) = do
+bindingPattern (BindConstr con is) = do
     (patterns, scopes) <- fmap unzip $ mapM bindingPattern is
-    return (ConP (mkName con) patterns, concat scopes)
-bindingPattern (BindRecord (Ident con) fields wild) = do
+    return (ConP (mkConName con) patterns, concat scopes)
+bindingPattern (BindRecord con fields wild) = do
     let f (Ident field,b) =
            do (p,s) <- bindingPattern b
               return ((mkName field,p),s)
@@ -129,7 +130,14 @@ bindingPattern (BindRecord (Ident con) fields wild) = do
     (patterns1, scopes1) <- if wild
        then bindWildFields con $ map fst fields
        else return ([],[])
-    return (RecP (mkName con) (patterns++patterns1), concat scopes ++ scopes1)
+    return (RecP (mkConName con) (patterns++patterns1), concat scopes ++ scopes1)
+
+mkConName :: DataConstr -> Name
+mkConName = mkName . conToStr
+
+conToStr :: DataConstr -> String
+conToStr (DCUnqualified (Ident x)) = x
+conToStr (DCQualified (Module xs) (Ident x)) = intercalate "." $ xs ++ [x]
 
 -- Wildcards bind all of the unbound fields to variables whose name
 -- matches the field name.
@@ -138,7 +146,7 @@ bindingPattern (BindRecord (Ident con) fields wild) = do
 -- C {..}           is equivalent to   C {f1=f1, f2=f2}
 -- C {f1 = a, ..}   is equivalent to   C {f1=a,  f2=f2}
 -- C {f2 = a, ..}   is equivalent to   C {f1=f1, f2=a}
-bindWildFields :: String -> [Ident] -> Q ([(Name, Pat)], [(Ident, Exp)])
+bindWildFields :: DataConstr -> [Ident] -> Q ([(Name, Pat)], [(Ident, Exp)])
 bindWildFields conName fields = do
   fieldNames <- recordToFieldNames conName
   let available n     = nameBase n `notElem` map unIdent fields
@@ -152,11 +160,11 @@ bindWildFields conName fields = do
 -- same module as the reify is used. This means quasi-quoted Hamlet
 -- literals will not be able to use wildcards to match record types
 -- defined in the same module.
-recordToFieldNames :: String -> Q [Name]
+recordToFieldNames :: DataConstr -> Q [Name]
 recordToFieldNames conStr = do
   -- use 'lookupValueName' instead of just using 'mkName' so we reify the
   -- data constructor and not the type constructor if their names match.
-  Just conName                <- lookupValueName conStr
+  Just conName                <- lookupValueName $ conToStr conStr
   DataConI _ _ typeName _     <- reify conName
   TyConI (DataD _ _ _ cons _) <- reify typeName
   [fields] <- return [fields | RecC name fields <- cons, name == conName]

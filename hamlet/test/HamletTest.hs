@@ -201,7 +201,17 @@ $nothing
    |]
 
 
+    it "maybe with qualified constructor" $ do
+        helper "5" [hamlet|
+            $maybe HamletTestTypes.ARecord x y <- Just $ ARecord 5 True
+                \#{x}
+        |]
 
+    it "record with qualified constructor" $ do
+        helper "5" [hamlet|
+            $maybe HamletTestTypes.ARecord {..} <- Just $ ARecord 5 True
+                \#{field1}
+        |]
 
 
 

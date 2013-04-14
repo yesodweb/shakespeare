@@ -13,6 +13,8 @@ module Text.Hamlet.Parse
     , Binding (..)
     , NewlineStyle (..)
     , specialOrIdent
+    , DataConstr (..)
+    , Module (..)
     )
     where
 
@@ -351,8 +353,7 @@ parseLine set = do
 
       gcon :: Bool -> Parser Binding
       gcon allowArgs = do
-        c <- try $ do c <- ident
-                      guard (isConstructor c)
+        c <- try $ do c <- dataConstr
                       return c
         choice
           [ record c
@@ -360,6 +361,27 @@ parseLine set = do
           , return (BindConstr c [])
           ]
        <?> "constructor"
+
+      dataConstr = do
+        p <- dcPiece
+        ps <- many dcPieces
+        return $ toDataConstr p ps
+
+      dcPiece = do
+        x@(Ident y) <- ident
+        guard $ isConstructor x
+        return y
+
+      dcPieces = do
+        _ <- char '.'
+        dcPiece
+
+      toDataConstr x [] = DCUnqualified $ Ident x
+      toDataConstr x (y:ys) =
+          go (x:) y ys
+        where
+          go front next [] = DCQualified (Module $ front []) (Ident next)
+          go front next (rest:rests) = go (front . (next:)) rest rests
 
       record c = braces $ do
         (fields, wild) <- option ([], False) $ go
@@ -655,9 +677,19 @@ doctypeNames =
     , ("strict", "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">")
     ]
 
-data Binding = BindVar Ident | BindAs Ident Binding | BindConstr Ident [Binding]
-             | BindTuple [Binding] | BindList [Binding]
-             | BindRecord Ident [(Ident, Binding)] Bool
+data Binding = BindVar Ident
+             | BindAs Ident Binding
+             | BindConstr DataConstr [Binding]
+             | BindTuple [Binding]
+             | BindList [Binding]
+             | BindRecord DataConstr [(Ident, Binding)] Bool
+    deriving (Eq, Show, Read, Data, Typeable)
+
+data DataConstr = DCQualified Module Ident
+                | DCUnqualified Ident
+    deriving (Eq, Show, Read, Data, Typeable)
+
+newtype Module = Module [String]
     deriving (Eq, Show, Read, Data, Typeable)
 
 spaceTabs :: Parser String
