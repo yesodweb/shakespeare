@@ -55,6 +55,12 @@ import qualified Data.Map as M
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 
+#if !MIN_VERSION_base(4,5,0)
+(<>) :: Monoid m => m -> m -> m
+(<>) = mappend
+{-# INLINE (<>) #-}
+#endif
+
 -- | A parser with a user state of [String]
 type Parser = Parsec String [String]
 -- | run a parser with a user state of [String]
