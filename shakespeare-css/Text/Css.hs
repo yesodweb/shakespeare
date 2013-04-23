@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards #-}
@@ -7,11 +8,10 @@
 {-# LANGUAGE EmptyDataDecls #-}
 module Text.Css where
 
-import Data.List (intersperse, intercalate, foldl')
+import Data.List (intersperse, intercalate)
 import Data.Text.Lazy.Builder (Builder, singleton, toLazyText, fromLazyText, fromString)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
-import Data.Monoid (mconcat, mappend, mempty)
 import Data.Monoid (mconcat, mappend, mempty)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -59,15 +59,14 @@ data Block a = Block
     , blockBlocks :: !(ChildBlocks a)
     }
 
-data TopLevel a
-    = TopBlock !(Block a)
-    | TopAtBlock
-        { _atBlockName :: !String -- ^ e.g., media
-        , _atBlockSelector :: !(Str a)
-        , _atBlockInner :: ![Block a]
-        }
-    | TopAtDecl !String !(Str a)
-    | TopVar !String !String
+data TopLevel a where
+    TopBlock   :: !(Block a) -> TopLevel a
+    TopAtBlock :: !String -- ^ name e.g., media
+               -> !(Str a) -- ^ selector
+               -> ![Block a]
+               -> TopLevel a
+    TopAtDecl  :: !String -> !(Str a) -> TopLevel a
+    TopVar     :: !String -> !String -> TopLevel Unresolved
 
 data Attr a = Attr
     { attrKey :: !(Str a)
