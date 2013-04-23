@@ -3,12 +3,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE EmptyDataDecls #-}
 module Text.Css where
 
-import Data.List (intersperse, intercalate)
+import Data.List (intersperse, intercalate, foldl')
 import Data.Text.Lazy.Builder (Builder, singleton, toLazyText, fromLazyText, fromString)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
+import Data.Monoid (mconcat, mappend, mempty)
 import Data.Monoid (mconcat, mappend, mempty)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -22,7 +25,72 @@ import Control.Arrow ((***))
 import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
 
+#if MIN_VERSION_base(4,5,0)
+import Data.Monoid ((<>))
+#else
+(<>) :: Monoid m => m -> m -> m
+(<>) = mappend
+{-# INLINE (<>) #-}
+#endif
+
 type CssUrl url = (url -> [(T.Text, T.Text)] -> T.Text) -> Css
+
+type DList a = [a] -> [a]
+
+-- FIXME great use case for data kinds
+data Resolved
+data Unresolved
+
+type family Selector a
+type instance Selector Resolved = Builder
+type instance Selector Unresolved = [Contents]
+
+type family ChildBlocks a
+type instance ChildBlocks Resolved = ()
+type instance ChildBlocks Unresolved = [Block Unresolved]
+
+type family Str a
+type instance Str Resolved = Builder
+type instance Str Unresolved = Contents
+
+data Block a = Block
+    { blockSelector :: !(Selector a)
+    , blockAttrs :: ![Attr a]
+    , blockBlocks :: !(ChildBlocks a)
+    }
+
+data TopLevel a
+    = TopBlock !(Block a)
+    | TopAtBlock
+        { _atBlockName :: !String -- ^ e.g., media
+        , _atBlockSelector :: !(Str a)
+        , _atBlockInner :: ![Block a]
+        }
+    | TopAtDecl !String !(Str a)
+    | TopVar !String !String
+
+data Attr a = Attr
+    { attrKey :: !(Str a)
+    , attrVal :: !(Str a)
+    }
+
+data Css = CssWhitespace ![TopLevel Resolved]
+         | CssNoWhitespace ![TopLevel Resolved]
+
+data Content = ContentRaw String
+             | ContentVar Deref
+             | ContentUrl Deref
+             | ContentUrlParam Deref
+    deriving (Show, Eq)
+
+type Contents = [Content]
+
+data VarType = VTPlain | VTUrl | VTUrlParam
+    deriving Show
+
+data CDData url = CDPlain Builder
+                | CDUrl url
+                | CDUrlParam (url, [(Text, Text)])
 
 pack :: String -> Text
 pack = T.pack
@@ -41,35 +109,10 @@ instance ToCss [Char] where toCss = fromLazyText . TL.pack
 instance ToCss Text where toCss = fromText
 instance ToCss TL.Text where toCss = fromLazyText
 
-data Css' = Css'
-    { _cssSelectors :: Builder
-    , _cssAttributes :: [(Builder, Builder)]
-    }
-data CssTop = AtBlock String Builder [Css'] | Css Css' | AtDecl String Builder
-
-data Css = CssWhitespace [CssTop]
-         | CssNoWhitespace [CssTop]
-
-data Content = ContentRaw String
-             | ContentVar Deref
-             | ContentUrl Deref
-             | ContentUrlParam Deref
-    deriving (Show, Eq)
-
-type Contents = [Content]
-type ContentPair = (Contents, Contents)
-
-data VarType = VTPlain | VTUrl | VTUrlParam
-    deriving Show
-
-data CDData url = CDPlain Builder
-                | CDUrl url
-                | CDUrlParam (url, [(Text, Text)])
-
 -- | Determine which identifiers are used by the given template, useful for
 -- creating systems like yesod devel.
 cssUsedIdentifiers :: Bool -- ^ perform the indent-to-brace conversion
-                   -> Parser [TopLevel]
+                   -> Parser [TopLevel Unresolved]
                    -> String
                    -> [(Deref, VarType)]
 cssUsedIdentifiers toi2b parseBlocks s' =
@@ -79,7 +122,8 @@ cssUsedIdentifiers toi2b parseBlocks s' =
     a = either (error . show) id $ parse parseBlocks s s
     (scope0, contents) = go a
 
-    go :: [TopLevel] -> ([(String, String)], [Content])
+    go :: [TopLevel Unresolved]
+       -> (Scope, [Content])
     go [] = ([], [])
     go (TopAtDecl dec _FIXMEcs:rest) =
         (scope, rest'')
@@ -106,10 +150,13 @@ cssUsedIdentifiers toi2b parseBlocks s' =
         ((k, v):scope, rest')
       where
         (scope, rest') = go rest
-    go' (k, v) = k ++ v
+    go' (Attr k v) = k ++ v
 
 cssFileDebug :: Bool -- ^ perform the indent-to-brace conversion
-             -> Q Exp -> Parser [TopLevel] -> FilePath -> Q Exp
+             -> Q Exp
+             -> Parser [TopLevel Unresolved]
+             -> FilePath
+             -> Q Exp
 cssFileDebug toi2b parseBlocks' parseBlocks fp = do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
 #ifdef GHC_7_4
@@ -121,7 +168,7 @@ cssFileDebug toi2b parseBlocks' parseBlocks fp = do
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
 
-combineSelectors :: Selector -> Selector -> Selector
+combineSelectors :: [Contents] -> [Contents] -> [Contents]
 combineSelectors a b = do
     a' <- a
     b' <- b
@@ -129,14 +176,18 @@ combineSelectors a b = do
 
 blockRuntime :: [(Deref, CDData url)]
              -> (url -> [(Text, Text)] -> Text)
-             -> Block
-             -> Either String ([Css'] -> [Css'])
+             -> Block Unresolved
+             -> Either String (DList (Block Resolved))
 -- FIXME share code with blockToCss
-blockRuntime cd render' (Block x y z) = do
+blockRuntime cd render' (Block x attrs z) = do
     x' <- mapM go' $ intercalate [ContentRaw ","] x
-    y' <- mapM go'' y
+    attrs' <- mapM resolveAttr attrs
     z' <- mapM (subGo x) z -- FIXME use difflists again
-    Right $ \rest -> Css' (mconcat x') y' : foldr ($) rest z'
+    Right $ \rest -> Block
+        { blockSelector = mconcat x'
+        , blockAttrs    = attrs'
+        , blockBlocks   = ()
+        } : foldr ($) rest z'
     {-
     (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
     . foldr (.) id (map (subGo x) z)
@@ -144,10 +195,12 @@ blockRuntime cd render' (Block x y z) = do
   where
     go' = contentToBuilderRT cd render'
 
-    go'' :: ([Content], [Content]) -> Either String (Builder, Builder)
-    go'' (k, v) = (,) <$> (mconcat <$> mapM go' k) <*> (mconcat <$> mapM go' v)
+    resolveAttr :: Attr Unresolved -> Either String (Attr Resolved)
+    resolveAttr (Attr k v) = Attr <$> (mconcat <$> mapM go' k) <*> (mconcat <$> mapM go' v)
 
-    subGo :: Selector -> Block -> Either String ([Css'] -> [Css'])
+    subGo :: [Contents] -- ^ parent selectors
+          -> Block Unresolved
+          -> Either String (DList (Block Resolved))
     subGo x' (Block a b c) =
         blockRuntime cd render' (Block a' b c)
       where
@@ -173,7 +226,7 @@ contentToBuilderRT cd render' (ContentUrlParam d) =
         _ -> Left $ show d ++ ": expected CDUrlParam"
 
 cssRuntime :: Bool -- ^ i2b?
-           -> Parser [TopLevel]
+           -> Parser [TopLevel Unresolved]
            -> FilePath
            -> [(Deref, CDData url)]
            -> (url -> [(Text, Text)] -> Text)
@@ -184,17 +237,19 @@ cssRuntime toi2b parseBlocks fp cd render' = unsafePerformIO $ do
     let a = either (error . show) id $ parse parseBlocks s s
     return $ CssWhitespace $ goTop [] a
   where
-    goTop :: [(String, String)] -> [TopLevel] -> [CssTop]
+    goTop :: [(String, String)] -- ^ scope
+          -> [TopLevel Unresolved]
+          -> [TopLevel Resolved]
     goTop _ [] = []
     goTop scope (TopAtDecl dec cs':rest) =
-        AtDecl dec cs : goTop scope rest
+        TopAtDecl dec cs : goTop scope rest
       where
         cs = either error mconcat $ mapM (contentToBuilderRT cd render') cs'
     goTop scope (TopBlock b:rest) =
-        map Css (either error ($[]) $ blockRuntime (addScope scope) render' b) ++
+        map TopBlock (either error ($[]) $ blockRuntime (addScope scope) render' b) ++
         goTop scope rest
     goTop scope (TopAtBlock name s' b:rest) =
-        AtBlock name s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
+        TopAtBlock name s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
         goTop scope rest
       where
         s = either error mconcat $ mapM (contentToBuilderRT cd render') s'
@@ -235,52 +290,45 @@ lookupD (DerefIdent (Ident s)) scope =
         Just _ -> Just s
 lookupD _ _ = Nothing
 
-data Block = Block Selector Pairs [Block]
-    deriving Show
-
-data TopLevel = TopBlock Block
-              | TopAtBlock
-                    { _atBlockName :: String
-                    , _atBlockSelector :: Contents
-                    , _atBlockInner :: [Block]
-                    }
-              | TopAtDecl String Contents
-              | TopVar String String
-
-type Pairs = [Pair]
-
-type Pair = (Contents, Contents)
-
-type Selector = [Contents]
-
-compressTopLevel :: TopLevel -> TopLevel
+compressTopLevel :: TopLevel Unresolved
+                 -> TopLevel Unresolved
 compressTopLevel (TopBlock b) = TopBlock $ compressBlock b
 compressTopLevel (TopAtBlock name s b) = TopAtBlock name s $ map compressBlock b
 compressTopLevel x@TopAtDecl{} = x
 compressTopLevel x@TopVar{} = x
 
-compressBlock :: Block -> Block
+compressBlock :: Block Unresolved
+              -> Block Unresolved
 compressBlock (Block x y blocks) =
     Block (map cc x) (map go y) (map compressBlock blocks)
   where
-    go (k, v) = (cc k, cc v)
+    go (Attr k v) = Attr (cc k) (cc v)
     cc [] = []
     cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
     cc (a:b) = a : cc b
 
-blockToCss :: Name -> Scope -> Block -> Q Exp
+blockToCss :: Name
+           -> Scope
+           -> Block Unresolved
+           -> Q Exp
 blockToCss r scope (Block sel props subblocks) =
-    [|(:) (Css' $(selectorToBuilder r scope sel) $(listE $ map go props))
+    [|((Block
+        { blockSelector = $(selectorToBuilder r scope sel)
+        , blockAttrs    = $(listE $ map go props)
+        , blockBlocks   = ()
+        } :: Block Resolved):)
       . foldr (.) id $(listE $ map subGo subblocks)
     |]
   where
-    go (x, y) = tupE [contentsToBuilder r scope x, contentsToBuilder r scope y]
+    go (Attr x y) = conE 'Attr
+        `appE` (contentsToBuilder r scope x)
+        `appE` (contentsToBuilder r scope y)
     subGo (Block sel' b c) =
         blockToCss r scope $ Block sel'' b c
       where
         sel'' = combineSelectors sel sel'
 
-selectorToBuilder :: Name -> Scope -> Selector -> Q Exp
+selectorToBuilder :: Name -> Scope -> [Contents] -> Q Exp
 selectorToBuilder r scope sels =
     contentsToBuilder r scope $ intercalate [ContentRaw ","] sels
 
@@ -305,46 +353,50 @@ contentToBuilder r _ (ContentUrlParam u) =
 
 type Scope = [(String, String)]
 
-topLevelsToCassius :: [TopLevel] -> Q Exp
+topLevelsToCassius :: [TopLevel Unresolved]
+                   -> Q Exp
 topLevelsToCassius a = do
     r <- newName "_render"
     lamE [varP r] $ appE [|CssNoWhitespace . foldr ($) []|] $ fmap ListE $ go r [] a
   where
     go _ _ [] = return []
     go r scope (TopBlock b:rest) = do
-        e <- [|(++) $ map Css ($(blockToCss r scope b) [])|]
+        e <- [|(++) $ map TopBlock ($(blockToCss r scope b) [])|]
         es <- go r scope rest
         return $ e : es
     go r scope (TopAtBlock name s b:rest) = do
         let s' = contentsToBuilder r scope s
-        e <- [|(:) $ AtBlock $(lift name) $(s') $(blocksToCassius r scope b)|]
+        e <- [|(:) $ TopAtBlock $(lift name) $(s') $(blocksToCassius r scope b)|]
         es <- go r scope rest
         return $ e : es
     go r scope (TopAtDecl dec cs:rest) = do
-        e <- [|(:) $ AtDecl $(lift dec) $(contentsToBuilder r scope cs)|]
+        e <- [|(:) $ TopAtDecl $(lift dec) $(contentsToBuilder r scope cs)|]
         es <- go r scope rest
         return $ e : es
     go r scope (TopVar k v:rest) = go r ((k, v) : scope) rest
 
-blocksToCassius :: Name -> Scope -> [Block] -> Q Exp
+blocksToCassius :: Name
+                -> Scope
+                -> [Block Unresolved]
+                -> Q Exp
 blocksToCassius r scope a = do
     appE [|foldr ($) []|] $ listE $ map (blockToCss r scope) a
 
 renderCss :: Css -> TL.Text
 renderCss css =
-    toLazyText $ mconcat $ map go tops-- FIXME use a foldr
+    toLazyText $ mconcat $ map go tops
   where
     (haveWhiteSpace, tops) =
         case css of
             CssWhitespace x -> (True, x)
             CssNoWhitespace x -> (False, x)
-    go (Css x) = renderCss' haveWhiteSpace mempty x
-    go (AtBlock name s x) =
+    go (TopBlock x) = renderBlock haveWhiteSpace mempty x
+    go (TopAtBlock name s x) =
         fromText (pack $ concat ["@", name, " "]) `mappend`
         s `mappend`
         startBlock `mappend`
-        foldr mappend endBlock (map (renderCss' haveWhiteSpace (fromString "    ")) x)
-    go (AtDecl dec cs) = fromText (pack $ concat ["@", dec, " "]) `mappend`
+        foldr mappend endBlock (map (renderBlock haveWhiteSpace (fromString "    ")) x)
+    go (TopAtDecl dec cs) = fromText (pack $ concat ["@", dec, " "]) `mappend`
                       cs `mappend`
                       endDecl
 
@@ -360,16 +412,19 @@ renderCss css =
         | haveWhiteSpace = fromString ";\n"
         | otherwise = singleton ';'
 
-renderCss' :: Bool -> Builder -> Css' -> Builder
-renderCss' _ _ (Css' _x []) = mempty
-renderCss' haveWhiteSpace indent (Css' x y) =
-    startSelect
-    `mappend` x
-    `mappend` startBlock
-    `mappend` mconcat (intersperse endDecl $ map go' y)
-    `mappend` endBlock
+renderBlock :: Bool -- ^ have whitespace?
+            -> Builder -- ^ indentation
+            -> Block Resolved
+            -> Builder
+renderBlock haveWhiteSpace indent (Block sel attrs ())
+    | null attrs = mempty
+    | otherwise = startSelect
+               <> sel
+               <> startBlock
+               <> mconcat (intersperse endDecl $ map renderAttr attrs)
+               <> endBlock
   where
-    go' (k, v) = startDecl `mappend` k `mappend` colon `mappend` v
+    renderAttr (Attr k v) = startDecl <> k <> colon <> v
 
     colon
         | haveWhiteSpace = fromString ": "

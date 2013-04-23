@@ -77,7 +77,7 @@ whiteSpace1 :: Parser ()
 whiteSpace1 =
     ((oneOf " \t\n\r" >> return ()) <|> (parseComment >> return ()))
 
-parseBlock :: Parser Block
+parseBlock :: Parser (Block Unresolved)
 parseBlock = do
     sel <- parseSelector
     _ <- char '{'
@@ -87,7 +87,7 @@ parseBlock = do
     whiteSpace
     return $ Block sel pairs blocks
 
-parseSelector :: Parser Selector
+parseSelector :: Parser (Selector Unresolved)
 parseSelector =
     go id
   where
@@ -108,7 +108,7 @@ trim =
     trimS True = dropWhile isSpace
     trimS False = reverse . dropWhile isSpace . reverse
 
-type PairBlock = Either Pair Block
+type PairBlock = Either (Attr Unresolved) (Block Unresolved)
 parsePairsBlocks :: ([PairBlock] -> [PairBlock]) -> Parser [PairBlock]
 parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
     isBlock <- lookAhead checkIfBlock
@@ -129,7 +129,7 @@ parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
             <|> (anyChar >> checkIfBlock)
             <|> fail "checkIfBlock"
 
-parsePair :: Parser Pair
+parsePair :: Parser (Attr Unresolved)
 parsePair = do
     key <- parseContents ":"
     _ <- char ':'
@@ -137,7 +137,7 @@ parsePair = do
     val <- parseContents ";}"
     (char ';' >> return ()) <|> return ()
     whiteSpace
-    return (key, val)
+    return $ Attr key val
 
 parseContents :: String -> Parser Contents
 parseContents = many1 . parseContent
@@ -189,7 +189,7 @@ luciusFileDebug, luciusFileReload :: FilePath -> Q Exp
 luciusFileDebug = cssFileDebug False [|parseTopLevels|] parseTopLevels
 luciusFileReload = luciusFileDebug
 
-parseTopLevels :: Parser [TopLevel]
+parseTopLevels :: Parser [TopLevel Unresolved]
 parseTopLevels =
     go id
   where
@@ -250,34 +250,39 @@ stringCI :: String -> Parser ()
 stringCI [] = return ()
 stringCI (c:cs) = (char (toLower c) <|> char (toUpper c)) >> stringCI cs
 
-luciusRT' :: TL.Text -> Either String ([(Text, Text)] -> Either String [CssTop])
+luciusRT' :: TL.Text
+          -> Either String ([(Text, Text)] -> Either String [TopLevel Resolved])
 luciusRT' tl =
     case parse parseTopLevels (TL.unpack tl) (TL.unpack tl) of
         Left s -> Left $ show s
         Right tops -> Right $ \scope -> go scope tops
   where
-    go :: [(Text, Text)] -> [TopLevel] -> Either String [CssTop]
+    go :: [(Text, Text)]
+       -> [TopLevel Unresolved]
+       -> Either String [TopLevel Resolved]
     go _ [] = Right []
     go scope (TopAtDecl dec cs':rest) = do
         let scope' = map goScope scope
             render = error "luciusRT has no URLs"
         cs <- mapM (contentToBuilderRT scope' render) cs'
         rest' <- go scope rest
-        Right $ AtDecl dec (mconcat cs) : rest'
+        Right $ TopAtDecl dec (mconcat cs) : rest'
     go scope (TopBlock b:rest) = do
         b' <- goBlock scope b
         rest' <- go scope rest
-        Right $ map Css b' ++ rest'
+        Right $ map TopBlock b' ++ rest'
     go scope (TopAtBlock name m' bs:rest) = do
         let scope' = map goScope scope
             render = error "luciusRT has no URLs"
         m <- mapM (contentToBuilderRT scope' render) m'
         bs' <- mapM (goBlock scope) bs
         rest' <- go scope rest
-        Right $ AtBlock name (mconcat m) (concat bs') : rest'
+        Right $ TopAtBlock name (mconcat m) (concat bs') : rest'
     go scope (TopVar k v:rest) = go ((pack k, pack v):scope) rest
 
-    goBlock :: [(Text, Text)] -> Block -> Either String [Css']
+    goBlock :: [(Text, Text)]
+            -> Block Unresolved
+            -> Either String [Block Resolved]
     goBlock scope =
         either Left (Right . ($[])) . blockRuntime scope' (error "luciusRT has no URLs")
       where
