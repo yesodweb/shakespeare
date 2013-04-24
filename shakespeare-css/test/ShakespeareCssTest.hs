@@ -412,6 +412,23 @@ foo { foo:X#{bar}Y; }
                 ^{bins}
             }
         |]
+    it "more complicated mixins" $ do
+        let transition val =
+                [luciusMixin|
+                    -webkit-transition: #{val};
+                    -moz-transition: #{val};
+                    -ms-transition: #{val};
+                    -o-transition: #{val};
+                    transition: #{val};
+                |]
+
+        celper ".some-class{-webkit-transition:all 4s ease;-moz-transition:all 4s ease;-ms-transition:all 4s ease;-o-transition:all 4s ease;transition:all 4s ease}"
+                [lucius|
+                    .some-class {
+                        ^{transition "all 4s ease"}
+                    }
+                |]
+
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
