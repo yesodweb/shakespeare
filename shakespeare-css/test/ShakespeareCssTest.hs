@@ -396,6 +396,22 @@ foo { foo:X#{bar}Y; }
     }
 }
 |]
+    it "mixins" $ do
+        let bins = [luciusMixin|
+                   bin:bin2;
+                   /* FIXME not currently implementing sublocks in mixins
+                   foo2 {
+                       x: y
+                   }
+                   */
+                   |] :: Mixin
+        -- No sublocks celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
+        celper "foo{bar:baz;bin:bin2}" [lucius|
+            foo {
+                bar: baz;
+                ^{bins}
+            }
+        |]
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl

@@ -11,6 +11,9 @@ module Text.Lucius
     , luciusFile
     , luciusFileDebug
     , luciusFileReload
+      -- ** Mixins
+    , luciusMixin
+    , Mixin
       -- ** Runtime
     , luciusRT
     , luciusRT'
@@ -55,7 +58,6 @@ import Data.Char (isSpace, toLower, toUpper)
 import Numeric (readHex)
 import Control.Applicative ((<$>))
 import Control.Monad (when, unless)
-import Data.Either (partitionEithers)
 import Data.Monoid (mconcat)
 import Data.List (isSuffixOf)
 
@@ -84,9 +86,18 @@ parseBlock = do
     _ <- char '{'
     whiteSpace
     pairsBlocks <- parsePairsBlocks id
-    let (pairs, blocks) = partitionEithers pairsBlocks
+    let (pairs, blocks, mixins) = partitionPBs pairsBlocks
     whiteSpace
-    return $ Block sel pairs blocks
+    return $ Block sel pairs blocks mixins
+
+partitionPBs :: [PairBlock] -> ([Attr Unresolved], [Block Unresolved], [Deref])
+partitionPBs =
+    go id id id
+  where
+    go a b c [] = (a [], b [], c [])
+    go a b c (PBAttr x:xs) = go (a . (x:)) b c xs
+    go a b c (PBBlock x:xs) = go a (b . (x:)) c xs
+    go a b c (PBMixin x:xs) = go a b (c . (x:)) xs
 
 parseSelector :: Parser (Selector Unresolved)
 parseSelector =
@@ -109,18 +120,25 @@ trim =
     trimS True = dropWhile isSpace
     trimS False = reverse . dropWhile isSpace . reverse
 
-type PairBlock = Either (Attr Unresolved) (Block Unresolved)
+data PairBlock = PBAttr (Attr Unresolved)
+               | PBBlock (Block Unresolved)
+               | PBMixin Deref
 parsePairsBlocks :: ([PairBlock] -> [PairBlock]) -> Parser [PairBlock]
 parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
     isBlock <- lookAhead checkIfBlock
-    x <- if isBlock
-            then (do
-                b <- parseBlock
-                whiteSpace
-                return $ Right b)
-            else Left <$> parsePair
+    x <- grabMixin <|> (if isBlock then grabBlock else grabPair)
     parsePairsBlocks $ front . (:) x)
   where
+    grabBlock = do
+        b <- parseBlock
+        whiteSpace
+        return $ PBBlock b
+    grabPair = PBAttr <$> parsePair
+    grabMixin = try $ do
+        whiteSpace
+        Right x <- parseCaret
+        whiteSpace
+        return $ PBMixin x
     checkIfBlock = do
         skipMany $ noneOf "#@{};"
         (parseHash >> checkIfBlock)
@@ -304,3 +322,15 @@ luciusRTMinified tl scope = either Left (Right . renderCss . CssNoWhitespace) $ 
 -- creating systems like yesod devel.
 luciusUsedIdentifiers :: String -> [(Deref, VarType)]
 luciusUsedIdentifiers = cssUsedIdentifiers False parseTopLevels
+
+luciusMixin :: QuasiQuoter
+luciusMixin = QuasiQuoter { quoteExp = luciusMixinFromString }
+
+luciusMixinFromString :: String -> Q Exp
+luciusMixinFromString s' = do
+    r <- newName "_render"
+    case fmap compressBlock $ parse parseBlock s s of
+        Left e -> error $ show e
+        Right block -> blockToMixin r [] block
+  where
+    s = concat ["mixin{", s', "}"]

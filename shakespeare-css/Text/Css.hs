@@ -24,6 +24,7 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***))
 import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
+import Control.Monad (unless)
 
 #if MIN_VERSION_base(4,5,0)
 import Data.Monoid ((<>))
@@ -53,10 +54,20 @@ type family Str a
 type instance Str Resolved = Builder
 type instance Str Unresolved = Contents
 
+type family Mixins a
+type instance Mixins Resolved = ()
+type instance Mixins Unresolved = [Deref]
+
 data Block a = Block
     { blockSelector :: !(Selector a)
     , blockAttrs :: ![Attr a]
     , blockBlocks :: !(ChildBlocks a)
+    , blockMixins :: !(Mixins a)
+    }
+
+data Mixin = Mixin
+    { mixinAttrs :: ![Attr Resolved]
+    , mixinBlocks :: ![Block Resolved]
     }
 
 data TopLevel a where
@@ -139,7 +150,7 @@ cssUsedIdentifiers toi2b parseBlocks s' =
       where
         (scope1, rest1) = go (map TopBlock blocks)
         (scope2, rest2) = go rest
-    go (TopBlock (Block x y z):rest) =
+    go (TopBlock (Block x y z _mixins):rest) =
         (scope1 ++ scope2, rest0 ++ rest1 ++ rest2)
       where
         rest0 = intercalate [ContentRaw ","] x ++ concatMap go' y
@@ -178,7 +189,8 @@ blockRuntime :: [(Deref, CDData url)]
              -> Block Unresolved
              -> Either String (DList (Block Resolved))
 -- FIXME share code with blockToCss
-blockRuntime cd render' (Block x attrs z) = do
+blockRuntime cd render' (Block x attrs z mixins) = do
+    unless (null mixins) $ Left "Runtime Lucius does not support mixins"
     x' <- mapM go' $ intercalate [ContentRaw ","] x
     attrs' <- mapM resolveAttr attrs
     z' <- mapM (subGo x) z -- FIXME use difflists again
@@ -186,6 +198,7 @@ blockRuntime cd render' (Block x attrs z) = do
         { blockSelector = mconcat x'
         , blockAttrs    = attrs'
         , blockBlocks   = ()
+        , blockMixins   = ()
         } : foldr ($) rest z'
     {-
     (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
@@ -200,8 +213,8 @@ blockRuntime cd render' (Block x attrs z) = do
     subGo :: [Contents] -- ^ parent selectors
           -> Block Unresolved
           -> Either String (DList (Block Resolved))
-    subGo x' (Block a b c) =
-        blockRuntime cd render' (Block a' b c)
+    subGo x' (Block a b c d) =
+        blockRuntime cd render' (Block a' b c d)
       where
         a' = combineSelectors x' a
 
@@ -298,32 +311,61 @@ compressTopLevel x@TopVar{} = x
 
 compressBlock :: Block Unresolved
               -> Block Unresolved
-compressBlock (Block x y blocks) =
-    Block (map cc x) (map go y) (map compressBlock blocks)
+compressBlock (Block x y blocks mixins) =
+    Block (map cc x) (map go y) (map compressBlock blocks) mixins
   where
     go (Attr k v) = Attr (cc k) (cc v)
     cc [] = []
     cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
     cc (a:b) = a : cc b
 
+blockToMixin :: Name
+             -> Scope
+             -> Block Unresolved
+             -> Q Exp
+blockToMixin r scope (Block _sel props subblocks mixins) =
+    [|Mixin
+        { mixinAttrs    = concat
+                        $ $(listE $ map go props)
+                        : map mixinAttrs $mixinsE
+        -- FIXME too many complications to implement sublocks for now...
+        , mixinBlocks   = [] -- foldr (.) id $(listE $ map subGo subblocks) []
+        }|]
+      {-
+      . foldr (.) id $(listE $ map subGo subblocks)
+      . (concatMap mixinBlocks $mixinsE ++)
+    |]
+    -}
+  where
+    mixinsE = return $ ListE $ map (derefToExp []) mixins
+    go (Attr x y) = conE 'Attr
+        `appE` (contentsToBuilder r scope x)
+        `appE` (contentsToBuilder r scope y)
+    subGo (Block sel' b c d) = blockToCss r scope $ Block sel' b c d
+
 blockToCss :: Name
            -> Scope
            -> Block Unresolved
            -> Q Exp
-blockToCss r scope (Block sel props subblocks) =
+blockToCss r scope (Block sel props subblocks mixins) =
     [|((Block
         { blockSelector = $(selectorToBuilder r scope sel)
-        , blockAttrs    = $(listE $ map go props)
+        , blockAttrs    = concat
+                        $ $(listE $ map go props)
+                        : map mixinAttrs $mixinsE
         , blockBlocks   = ()
+        , blockMixins   = ()
         } :: Block Resolved):)
       . foldr (.) id $(listE $ map subGo subblocks)
+      . (concatMap mixinBlocks $mixinsE ++)
     |]
   where
+    mixinsE = return $ ListE $ map (derefToExp []) mixins
     go (Attr x y) = conE 'Attr
         `appE` (contentsToBuilder r scope x)
         `appE` (contentsToBuilder r scope y)
-    subGo (Block sel' b c) =
-        blockToCss r scope $ Block sel'' b c
+    subGo (Block sel' b c d) =
+        blockToCss r scope $ Block sel'' b c d
       where
         sel'' = combineSelectors sel sel'
 
@@ -415,7 +457,7 @@ renderBlock :: Bool -- ^ have whitespace?
             -> Builder -- ^ indentation
             -> Block Resolved
             -> Builder
-renderBlock haveWhiteSpace indent (Block sel attrs ())
+renderBlock haveWhiteSpace indent (Block sel attrs () ())
     | null attrs = mempty
     | otherwise = startSelect
                <> sel
@@ -448,3 +490,23 @@ renderBlock haveWhiteSpace indent (Block sel attrs ())
     endDecl
         | haveWhiteSpace = fromString ";\n"
         | otherwise = singleton ';'
+
+instance Lift Mixin where
+    lift (Mixin a b) = [|Mixin a b|]
+instance Lift (Attr Unresolved) where
+    lift (Attr k v) = [|Attr k v :: Attr Unresolved |]
+instance Lift (Attr Resolved) where
+    lift (Attr k v) = [|Attr $(liftBuilder k) $(liftBuilder v) :: Attr Resolved |]
+
+liftBuilder :: Builder -> Q Exp
+liftBuilder b = [|fromText $ pack $(lift $ TL.unpack $ toLazyText b)|]
+
+instance Lift Content where
+    lift (ContentRaw s) = [|ContentRaw s|]
+    lift (ContentVar d) = [|ContentVar d|]
+    lift (ContentUrl d) = [|ContentUrl d|]
+    lift (ContentUrlParam d) = [|ContentUrlParam d|]
+instance Lift (Block Unresolved) where
+    lift (Block a b c d) = [|Block a b c d|]
+instance Lift (Block Resolved) where
+    lift (Block a b () ()) = [|Block $(liftBuilder a) b () ()|]
