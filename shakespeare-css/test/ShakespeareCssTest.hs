@@ -429,6 +429,15 @@ foo { foo:X#{bar}Y; }
                     }
                 |]
 
+    it "& subblocks" $
+        celper "foo:bar{baz:bin}"
+        [lucius|
+            foo {
+                &:bar {
+                    baz: bin;
+                }
+            }
+        |]
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl

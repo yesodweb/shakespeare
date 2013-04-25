@@ -21,7 +21,7 @@ import Text.ParserCombinators.Parsec (Parser, parse)
 import Text.Shakespeare.Base hiding (Scope)
 import Language.Haskell.TH
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow ((***))
+import Control.Arrow ((***), second)
 import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
 import Control.Monad (unless)
@@ -48,7 +48,9 @@ type instance Selector Unresolved = [Contents]
 
 type family ChildBlocks a
 type instance ChildBlocks Resolved = ()
-type instance ChildBlocks Unresolved = [Block Unresolved]
+type instance ChildBlocks Unresolved = [(HasLeadingSpace, Block Unresolved)]
+
+type HasLeadingSpace = Bool
 
 type family Str a
 type instance Str Resolved = Builder
@@ -154,7 +156,7 @@ cssUsedIdentifiers toi2b parseBlocks s' =
         (scope1 ++ scope2, rest0 ++ rest1 ++ rest2)
       where
         rest0 = intercalate [ContentRaw ","] x ++ concatMap go' y
-        (scope1, rest1) = go (map TopBlock z)
+        (scope1, rest1) = go (map (TopBlock . snd) z)
         (scope2, rest2) = go rest
     go (TopVar k v:rest) =
         ((k, v):scope, rest')
@@ -178,11 +180,18 @@ cssFileDebug toi2b parseBlocks' parseBlocks fp = do
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
 
-combineSelectors :: [Contents] -> [Contents] -> [Contents]
-combineSelectors a b = do
+combineSelectors :: HasLeadingSpace
+                 -> [Contents]
+                 -> [Contents]
+                 -> [Contents]
+combineSelectors hsl a b = do
     a' <- a
     b' <- b
-    return $ a' ++ ContentRaw " " : b'
+    return $ a' ++ addSpace b'
+  where
+    addSpace
+        | hsl = (ContentRaw " " :)
+        | otherwise = id
 
 blockRuntime :: [(Deref, CDData url)]
              -> (url -> [(Text, Text)] -> Text)
@@ -211,12 +220,12 @@ blockRuntime cd render' (Block x attrs z mixins) = do
     resolveAttr (Attr k v) = Attr <$> (mconcat <$> mapM go' k) <*> (mconcat <$> mapM go' v)
 
     subGo :: [Contents] -- ^ parent selectors
-          -> Block Unresolved
+          -> (HasLeadingSpace, Block Unresolved)
           -> Either String (DList (Block Resolved))
-    subGo x' (Block a b c d) =
+    subGo x' (hls, Block a b c d) =
         blockRuntime cd render' (Block a' b c d)
       where
-        a' = combineSelectors x' a
+        a' = combineSelectors hls x' a
 
 contentToBuilderRT :: [(Deref, CDData url)]
                    -> (url -> [(Text, Text)] -> Text)
@@ -312,7 +321,7 @@ compressTopLevel x@TopVar{} = x
 compressBlock :: Block Unresolved
               -> Block Unresolved
 compressBlock (Block x y blocks mixins) =
-    Block (map cc x) (map go y) (map compressBlock blocks) mixins
+    Block (map cc x) (map go y) (map (second compressBlock) blocks) mixins
   where
     go (Attr k v) = Attr (cc k) (cc v)
     cc [] = []
@@ -364,10 +373,10 @@ blockToCss r scope (Block sel props subblocks mixins) =
     go (Attr x y) = conE 'Attr
         `appE` (contentsToBuilder r scope x)
         `appE` (contentsToBuilder r scope y)
-    subGo (Block sel' b c d) =
+    subGo (hls, Block sel' b c d) =
         blockToCss r scope $ Block sel'' b c d
       where
-        sel'' = combineSelectors sel sel'
+        sel'' = combineSelectors hls sel sel'
 
 selectorToBuilder :: Name -> Scope -> [Contents] -> Q Exp
 selectorToBuilder r scope sels =

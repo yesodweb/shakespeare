@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -88,7 +89,20 @@ parseBlock = do
     pairsBlocks <- parsePairsBlocks id
     let (pairs, blocks, mixins) = partitionPBs pairsBlocks
     whiteSpace
-    return $ Block sel pairs blocks mixins
+    return $ Block sel pairs (map detectAmp blocks) mixins
+
+-- | Looks for an & at the beginning of a selector and, if present, indicates
+-- that we should not have a leading space. Otherwise, we should have the
+-- leading space.
+detectAmp :: Block Unresolved -> (Bool, Block Unresolved)
+detectAmp (Block (sel) b c d) =
+    (hls, Block sel' b c d)
+  where
+    (hls, sel') =
+        case sel of
+            (ContentRaw "&":rest):others -> (False, rest : others)
+            (ContentRaw ('&':s):rest):others -> (False, (ContentRaw s : rest) : others)
+            _ -> (True, sel)
 
 partitionPBs :: [PairBlock] -> ([Attr Unresolved], [Block Unresolved], [Deref])
 partitionPBs =
