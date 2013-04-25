@@ -12,7 +12,7 @@ import Data.List (intersperse, intercalate)
 import Data.Text.Lazy.Builder (Builder, singleton, toLazyText, fromLazyText, fromString)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
-import Data.Monoid (mconcat, mappend, mempty)
+import Data.Monoid (Monoid, mconcat, mappend, mempty)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Language.Haskell.TH.Syntax
@@ -71,6 +71,9 @@ data Mixin = Mixin
     { mixinAttrs :: ![Attr Resolved]
     , mixinBlocks :: ![Block Resolved]
     }
+instance Monoid Mixin where
+    mempty = Mixin mempty mempty
+    mappend (Mixin a x) (Mixin b y) = Mixin (a ++ b) (x ++ y)
 
 data TopLevel a where
     TopBlock   :: !(Block a) -> TopLevel a
