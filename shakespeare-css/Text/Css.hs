@@ -72,8 +72,8 @@ data Mixin = Mixin
 
 data TopLevel a where
     TopBlock   :: !(Block a) -> TopLevel a
-    TopAtBlock :: !String -- ^ name e.g., media
-               -> !(Str a) -- ^ selector
+    TopAtBlock :: !String -- name e.g., media
+               -> !(Str a) -- selector
                -> ![Block a]
                -> TopLevel a
     TopAtDecl  :: !String -> !(Str a) -> TopLevel a
