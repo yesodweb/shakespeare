@@ -312,7 +312,7 @@ loadLang folder file = do
             let lang = pack $ reverse $ drop 4 $ reverse file
             bs <- S.readFile file'
             let s = unpack $ decodeUtf8 bs
-            defs <- fmap catMaybes $ mapM parseDef $ lines s
+            defs <- fmap catMaybes $ mapM (parseDef . T.unpack . T.strip . T.pack) $ lines s
             return $ Just (file', (lang, defs))
         else return Nothing
 
