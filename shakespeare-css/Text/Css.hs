@@ -95,11 +95,12 @@ data Content = ContentRaw String
              | ContentVar Deref
              | ContentUrl Deref
              | ContentUrlParam Deref
+             | ContentMixin Deref
     deriving (Show, Eq)
 
 type Contents = [Content]
 
-data VarType = VTPlain | VTUrl | VTUrlParam
+data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
     deriving Show
 
 data CDData url = CDPlain Builder
@@ -155,12 +156,13 @@ cssUsedIdentifiers toi2b parseBlocks s' =
       where
         (scope1, rest1) = go (map TopBlock blocks)
         (scope2, rest2) = go rest
-    go (TopBlock (Block x y z _mixins):rest) =
-        (scope1 ++ scope2, rest0 ++ rest1 ++ rest2)
+    go (TopBlock (Block x y z mixins):rest) =
+        (scope1 ++ scope2, rest0 ++ rest1 ++ rest2 ++ restm)
       where
         rest0 = intercalate [ContentRaw ","] x ++ concatMap go' y
         (scope1, rest1) = go (map (TopBlock . snd) z)
         (scope2, rest2) = go rest
+        restm = map ContentMixin mixins
     go (TopVar k v:rest) =
         ((k, v):scope, rest')
       where
@@ -254,6 +256,7 @@ contentToBuilderRT cd render' (ContentUrlParam d) =
         Just (CDUrlParam (u, p)) ->
             Right $ fromText $ render' u p
         _ -> Left $ show d ++ ": expected CDUrlParam"
+contentToBuilderRT _ _ ContentMixin{} = Left "contentToBuilderRT ContentMixin"
 
 cssRuntime :: Bool -- ^ i2b?
            -> Parser [TopLevel Unresolved]
@@ -297,6 +300,7 @@ vtToExp (d, vt) = do
     c VTPlain = [|CDPlain . toCss|]
     c VTUrl = [|CDUrl|]
     c VTUrlParam = [|CDUrlParam|]
+    c VTMixin = [|CDMixin|]
 
 getVars :: Monad m => [(String, String)] -> Content -> m [(Deref, VarType)]
 getVars _ ContentRaw{} = return []
@@ -312,6 +316,10 @@ getVars scope (ContentUrlParam d) =
     case lookupD d scope of
         Nothing -> return [(d, VTUrlParam)]
         Just s -> fail $ "Expected URLParam for " ++ s
+getVars scope (ContentMixin d) =
+    case lookupD d scope of
+        Nothing -> return [(d, VTMixin)]
+        Just s -> fail $ "Expected Mixin for " ++ s
 
 lookupD :: Deref -> [(String, b)] -> Maybe String
 lookupD (DerefIdent (Ident s)) scope =
@@ -409,6 +417,7 @@ contentToBuilder r _ (ContentUrl u) =
 contentToBuilder r _ (ContentUrlParam u) =
     [|fromText|] `appE`
         ([|uncurry|] `appE` varE r `appE` return (derefToExp [] u))
+contentToBuilder _ _ ContentMixin{} = error "contentToBuilder on ContentMixin"
 
 type Scope = [(String, String)]
 
@@ -524,6 +533,7 @@ instance Lift Content where
     lift (ContentVar d) = [|ContentVar d|]
     lift (ContentUrl d) = [|ContentUrl d|]
     lift (ContentUrlParam d) = [|ContentUrlParam d|]
+    lift (ContentMixin m) = [|ContentMixin m|]
 instance Lift (Block Unresolved) where
     lift (Block a b c d) = [|Block a b c d|]
 instance Lift (Block Resolved) where

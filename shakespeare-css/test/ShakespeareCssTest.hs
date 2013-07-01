@@ -444,6 +444,12 @@ foo { foo:X#{bar}Y; }
             True
             [(TS.pack "bins", RTVMixin bins)]
 
+    it "luciusFileReload mixin" $ do
+      let mixin = [luciusMixin|foo:bar;baz:bin|]
+      flip celper $(luciusFileReload "test/cassiuses/mixin.lucius") $ concat
+          [ "selector {\n    foo: bar;\n    baz: bin;\n}\n"
+          ]
+
     it "& subblocks" $
         celper "foo:bar{baz:bin}"
         [lucius|

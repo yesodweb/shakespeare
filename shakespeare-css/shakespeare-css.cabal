@@ -1,5 +1,5 @@
 name:            shakespeare-css
-version:         1.0.6
+version:         1.0.6.1
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -25,6 +25,7 @@ extra-source-files:
   test/cassiuses/external2.lucius
   test/cassiuses/external-media.lucius
   test/cassiuses/external-nested.lucius
+  test/cassiuses/mixin.lucius
   test/ShakespeareCssTest.hs
   test.hs
 
