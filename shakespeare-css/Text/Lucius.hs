@@ -19,6 +19,9 @@ module Text.Lucius
     , luciusRT
     , luciusRT'
     , luciusRTMinified
+      -- *** Mixin
+    , luciusRTMixin
+    , RTValue (..)
     , -- * Datatypes
       Css
     , CssUrl
@@ -61,6 +64,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (when, unless)
 import Data.Monoid (mconcat)
 import Data.List (isSuffixOf)
+import Control.Arrow (second)
 
 -- |
 --
@@ -285,12 +289,22 @@ stringCI (c:cs) = (char (toLower c) <|> char (toUpper c)) >> stringCI cs
 
 luciusRT' :: TL.Text
           -> Either String ([(Text, Text)] -> Either String [TopLevel Resolved])
-luciusRT' tl =
+luciusRT' =
+    either Left (Right . go) . luciusRTInternal
+  where
+    go :: ([(Text, RTValue)] -> Either String [TopLevel Resolved])
+       -> ([(Text, Text)] -> Either String [TopLevel Resolved])
+    go f = f . map (second RTVRaw)
+
+luciusRTInternal
+    :: TL.Text
+    -> Either String ([(Text, RTValue)] -> Either String [TopLevel Resolved])
+luciusRTInternal tl =
     case parse parseTopLevels (TL.unpack tl) (TL.unpack tl) of
         Left s -> Left $ show s
         Right tops -> Right $ \scope -> go scope tops
   where
-    go :: [(Text, Text)]
+    go :: [(Text, RTValue)]
        -> [TopLevel Unresolved]
        -> Either String [TopLevel Resolved]
     go _ [] = Right []
@@ -311,9 +325,9 @@ luciusRT' tl =
         bs' <- mapM (goBlock scope) bs
         rest' <- go scope rest
         Right $ TopAtBlock name (mconcat m) (concat bs') : rest'
-    go scope (TopVar k v:rest) = go ((pack k, pack v):scope) rest
+    go scope (TopVar k v:rest) = go ((pack k, RTVRaw $ pack v):scope) rest
 
-    goBlock :: [(Text, Text)]
+    goBlock :: [(Text, RTValue)]
             -> Block Unresolved
             -> Either String [Block Resolved]
     goBlock scope =
@@ -321,10 +335,33 @@ luciusRT' tl =
       where
         scope' = map goScope scope
 
-    goScope (k, v) = (DerefIdent (Ident $ unpack k), CDPlain $ fromText v)
+    goScope (k, rt) =
+        (DerefIdent (Ident $ unpack k), cd)
+      where
+        cd =
+            case rt of
+                RTVRaw t -> CDPlain $ fromText t
+                RTVMixin m -> CDMixin m
 
 luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
 luciusRT tl scope = either Left (Right . renderCss . CssWhitespace) $ either Left ($ scope) (luciusRT' tl)
+
+-- | Runtime Lucius with mixin support.
+--
+-- Since 1.0.6
+luciusRTMixin :: TL.Text -- ^ template
+              -> Bool -- ^ minify?
+              -> [(Text, RTValue)] -- ^ scope
+              -> Either String TL.Text
+luciusRTMixin tl minify scope =
+    either Left (Right . renderCss . cw) $ either Left ($ scope) (luciusRTInternal tl)
+  where
+    cw
+        | minify = CssNoWhitespace
+        | otherwise = CssWhitespace
+
+data RTValue = RTVRaw Text
+             | RTVMixin Mixin
 
 -- | Same as 'luciusRT', but output has no added whitespace.
 --

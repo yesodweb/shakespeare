@@ -24,7 +24,6 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***), second)
 import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
-import Control.Monad (unless)
 
 #if MIN_VERSION_base(4,5,0)
 import Data.Monoid ((<>))
@@ -106,6 +105,7 @@ data VarType = VTPlain | VTUrl | VTUrlParam
 data CDData url = CDPlain Builder
                 | CDUrl url
                 | CDUrlParam (url, [(Text, Text)])
+                | CDMixin Mixin
 
 pack :: String -> Text
 pack = T.pack
@@ -201,14 +201,14 @@ blockRuntime :: [(Deref, CDData url)]
              -> Block Unresolved
              -> Either String (DList (Block Resolved))
 -- FIXME share code with blockToCss
-blockRuntime cd render' (Block x attrs z mixins) = do
-    unless (null mixins) $ Left "Runtime Lucius does not support mixins"
+blockRuntime cd render' (Block x attrs z mixinsDerefs) = do
+    mixins <- mapM getMixin mixinsDerefs
     x' <- mapM go' $ intercalate [ContentRaw ","] x
     attrs' <- mapM resolveAttr attrs
     z' <- mapM (subGo x) z -- FIXME use difflists again
     Right $ \rest -> Block
         { blockSelector = mconcat x'
-        , blockAttrs    = attrs'
+        , blockAttrs    = concat $ attrs' : map mixinAttrs mixins
         , blockBlocks   = ()
         , blockMixins   = ()
         } : foldr ($) rest z'
@@ -218,6 +218,12 @@ blockRuntime cd render' (Block x attrs z mixins) = do
     -}
   where
     go' = contentToBuilderRT cd render'
+
+    getMixin d =
+        case lookup d cd of
+            Nothing -> Left $ "Mixin not found: " ++ show d
+            Just (CDMixin m) -> Right m
+            Just _ -> Left $ "For " ++ show d ++ ", expected Mixin"
 
     resolveAttr :: Attr Unresolved -> Either String (Attr Resolved)
     resolveAttr (Attr k v) = Attr <$> (mconcat <$> mapM go' k) <*> (mconcat <$> mapM go' v)

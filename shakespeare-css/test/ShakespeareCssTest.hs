@@ -429,6 +429,21 @@ foo { foo:X#{bar}Y; }
                     }
                 |]
 
+    it "runtime mixin" $ do
+        let bins = [luciusMixin|
+                   bin:bin2;
+                   /* FIXME not currently implementing sublocks in mixins
+                   foo2 {
+                       x: y
+                   }
+                   */
+                   |] :: Mixin
+        -- No sublocks celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
+        Right (T.pack "foo{bar:baz;bin:bin2}") @=? luciusRTMixin
+            (T.pack "foo { bar: baz; ^{bins} }")
+            True
+            [(TS.pack "bins", RTVMixin bins)]
+
     it "& subblocks" $
         celper "foo:bar{baz:bin}"
         [lucius|
