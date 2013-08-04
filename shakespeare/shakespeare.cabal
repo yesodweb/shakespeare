@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         1.0.5
+version:         1.0.5.1
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -21,6 +21,7 @@ stability:       Stable
 cabal-version:   >= 1.8
 build-type:      Simple
 homepage:        http://www.yesodweb.com/book/shakespearean-templates
+extra-source-files: test/reload.txt
 
 library
     build-depends:   base             >= 4       && < 5

@@ -410,15 +410,15 @@ shakespeareUsedIdentifiers settings = concatMap getVars . contentFromString sett
 type MTime = UTCTime
 
 {-# NOINLINE reloadMapRef #-}
-reloadMapRef :: IORef (M.Map FilePath (MTime, Builder))
+reloadMapRef :: IORef (M.Map FilePath (MTime, [Content]))
 reloadMapRef = unsafePerformIO $ newIORef M.empty
 
-lookupReloadMap :: FilePath -> IO (Maybe (MTime, Builder))
+lookupReloadMap :: FilePath -> IO (Maybe (MTime, [Content]))
 lookupReloadMap fp = do
   reloads <- readIORef reloadMapRef
   return $ M.lookup fp reloads
 
-insertReloadMap :: FilePath -> (MTime, Builder) -> IO Builder
+insertReloadMap :: FilePath -> (MTime, [Content]) -> IO [Content]
 insertReloadMap fp (mt, content) = atomicModifyIORef reloadMapRef
   (\reloadMap -> (M.insert fp (mt, content) reloadMap, content))
 
@@ -453,14 +453,16 @@ shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
     mdata <- lookupReloadMap fp
     case mdata of
       Just (lastMtime, lastContents) ->
-        if mtime == lastMtime then return lastContents
-          else newContent mtime
-      Nothing -> newContent mtime
+        if mtime == lastMtime then return $ go' lastContents
+          else fmap go' $ newContent mtime
+      Nothing -> fmap go' $ newContent mtime
   where
     newContent mtime = do
         str <- readFileUtf8 fp
         s <- preFilter (Just fp) settings str
-        insertReloadMap fp $ (mtime, mconcat $ map go $ contentFromString settings s)
+        insertReloadMap fp $ (mtime, contentFromString settings s)
+
+    go' = mconcat . map go
 
     go :: Content -> Builder
     go (ContentRaw s) = fromText $ TS.pack s
