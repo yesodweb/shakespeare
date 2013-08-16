@@ -8,7 +8,7 @@ import Text.ParserCombinators.Parsec (parse, ParseError, (<|>))
 import Text.Shakespeare.Base (parseVarString, parseUrlString, parseIntString)
 import Text.Shakespeare (preFilter, defaultShakespeareSettings, ShakespeareSettings(..), PreConvert(..), PreConversion(..))
 import Language.Haskell.TH.Syntax (Exp (VarE))
-import Data.Text.Lazy.Builder (fromString, toLazyText)
+import Data.Text.Lazy.Builder (fromString, toLazyText, fromLazyText)
 import Data.Text.Lazy (pack)
 
 -- run :: Text.Parsec.Prim.Parsec Text.Parsec.Pos.SourceName () c -> Text.Parsec.Pos.SourceName -> c
@@ -44,9 +44,9 @@ specs = describe "shakespeare-js" $ do
   it "reload" $ do
     let helper input = $(do
             shakespeareFileReload defaultShakespeareSettings
-                { toBuilder = VarE 'fromString
+                { toBuilder = VarE 'pack
                 , wrap = VarE 'toLazyText
-                , unwrap = VarE 'undefined
+                , unwrap = VarE 'fromLazyText
                 } "test/reload.txt") undefined
     helper "here1" `shouldBe` pack "here1\n"
     helper "here2" `shouldBe` pack "here2\n"

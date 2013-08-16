@@ -77,20 +77,20 @@ asJavascriptUrl = id
 
 -- | A typeclass for types that can be interpolated in CoffeeScript templates.
 class ToJavascript a where
-    toJavascript :: a -> Builder
+    toJavascript :: a -> Javascript
 #if 0
-instance ToJavascript [Char] where toJavascript = fromLazyText . TL.pack
-instance ToJavascript TS.Text where toJavascript = fromText
-instance ToJavascript TL.Text where toJavascript = fromLazyText
-instance ToJavascript Javascript where toJavascript = unJavascript
-instance ToJavascript Builder where toJavascript = id
+instance ToJavascript [Char] where toJavascript = Javascript . fromLazyText . TL.pack
+instance ToJavascript TS.Text where toJavascript = Javascript . fromText
+instance ToJavascript TL.Text where toJavascript = Javascript . fromLazyText
+instance ToJavascript Javascript where toJavascript = Javascript . unJavascript
+instance ToJavascript Builder where toJavascript = Javascript
 #endif
-instance ToJavascript Bool where toJavascript = fromText . TS.toLower . TS.pack . show
-instance ToJavascript Value where toJavascript = fromValue
+instance ToJavascript Bool where toJavascript = Javascript . fromText . TS.toLower . TS.pack . show
+instance ToJavascript Value where toJavascript = Javascript . fromValue
 
 newtype RawJavascript = RawJavascript Builder
 instance ToJavascript RawJavascript where
-    toJavascript (RawJavascript a) = a
+    toJavascript (RawJavascript a) = Javascript a
 
 class RawJS a where
     rawJS :: a -> RawJavascript
@@ -99,7 +99,7 @@ instance RawJS [Char] where rawJS = RawJavascript . fromLazyText . TL.pack
 instance RawJS TS.Text where rawJS = RawJavascript . fromText
 instance RawJS TL.Text where rawJS = RawJavascript . fromLazyText
 instance RawJS Builder where rawJS = RawJavascript
-instance RawJS Bool where rawJS = RawJavascript . toJavascript
+instance RawJS Bool where rawJS = RawJavascript . unJavascript . toJavascript
 
 javascriptSettings :: Q ShakespeareSettings
 javascriptSettings = do

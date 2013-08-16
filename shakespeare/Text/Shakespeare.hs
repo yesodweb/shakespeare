@@ -362,7 +362,7 @@ contentsToShakespeare rs a = do
             ts <- [|fromText . pack'|]
             return $ wrap rs `AppE` (ts `AppE` LitE (StringL s'))
         contentToBuilder _ (ContentVar d) =
-            return $ wrap rs `AppE` (toBuilder rs `AppE` derefToExp [] d)
+            return $ (toBuilder rs `AppE` derefToExp [] d)
         contentToBuilder r (ContentUrl d) = do
             ts <- [|fromText|]
             return $ wrap rs `AppE` (ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE []))
@@ -439,7 +439,8 @@ shakespeareFileReload settings fp = do
         return $ TupE [d', c' `AppE` derefToExp [] d]
       where
         c :: VarType -> Q Exp
-        c VTPlain = [|EPlain . $(return $ toBuilder settings)|]
+        c VTPlain = [|EPlain . $(return $
+          InfixE (Just $ unwrap settings) (VarE '(.)) (Just $ toBuilder settings))|]
         c VTUrl = [|EUrl|]
         c VTUrlParam = [|EUrlParam|]
         c VTMixin = [|\x -> EMixin $ \r -> $(return $ unwrap settings) $ x r|]
