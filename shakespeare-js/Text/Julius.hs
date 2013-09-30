@@ -61,7 +61,7 @@ renderJavascript (Javascript b) = toLazyText b
 -- > renderJavascriptUrl (\_ _ -> undefined) javascriptUrl
 --
 -- When using Yesod, a renderer is generated for you, which can be accessed
--- within the GHandler monad: 'Yesod.Handler.getUrlRenderParams'.
+-- within the GHandler monad: 'Yesod.Core.Handler.getUrlRenderParams'.
 renderJavascriptUrl :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> JavascriptUrl url -> TL.Text
 renderJavascriptUrl r s = renderJavascript $ s r
 
