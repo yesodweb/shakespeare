@@ -378,7 +378,7 @@ shakespeare r = QuasiQuoter { quoteExp = shakespeareFromString r }
 
 shakespeareFromString :: ShakespeareSettings -> String -> Q Exp
 shakespeareFromString r str = do
-    s <- qRunIO $ preFilter Nothing r str
+    s <- qRunIO $ preFilter Nothing r $ filter (/='\r') str
     contentsToShakespeare r $ contentFromString r s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
