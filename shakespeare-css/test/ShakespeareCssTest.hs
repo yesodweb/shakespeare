@@ -21,6 +21,8 @@ spec = do
   describe "shakespeare-css" $ do
     it "cassius" caseCassius
     it "cassiusFile" caseCassiusFile
+    it "cassius single comment" caseCassiusSingleComment
+    it "cassius leading comment" caseCassiusLeadingComment
 
     it "cassiusFileDebug" $ do
       let var = "var"
@@ -540,6 +542,26 @@ caseCassiusFile = do
         , "bar:bar;color:#7F6405;fvarx:someval;unicode-test:שלום;"
         , "urlp:url(url?p=q)}"
         ]
+
+caseCassiusSingleComment :: Assertion
+caseCassiusSingleComment =
+    flip celper [cassius|
+        /*
+        this is a comment
+        */
+        |] ""
+
+caseCassiusLeadingComment :: Assertion
+caseCassiusLeadingComment =
+    flip celper [cassius|
+        /*
+        this is a comment
+        */
+        sel1
+            foo: bar
+        sel2
+            baz: bin
+        |] "sel1{foo:bar}sel2{baz:bin}"
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"

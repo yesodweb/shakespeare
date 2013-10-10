@@ -1,9 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Text.IndentToBrace
     ( i2b
     ) where
 
 import Control.Monad.Trans.Writer (execWriter, tell, Writer)
-import Data.List (isPrefixOf, isInfixOf)
+import Data.List (isInfixOf)
+import qualified Data.Text as T
 
 i2b :: String -> String
 i2b = ($ [])
@@ -12,8 +14,28 @@ i2b = ($ [])
     . map addClosingCount
     . nest
     . map toL
+    . stripComments
     . lines
     . filter (/= '\r')
+
+stripComments :: [String] -> [String]
+stripComments =
+    map T.unpack . go False . map T.pack
+  where
+    go _ [] = []
+
+    go False (l:ls) =
+        let (before, after') = T.breakOn "/*" l
+         in case T.stripPrefix "/*" after' of
+                Nothing -> l : go False ls
+                Just after ->
+                    let (x:xs) = go True $ after : ls
+                     in before `T.append` x : xs
+    go True (l:ls) =
+        let (_, after') = T.breakOn "*/" l
+         in case T.stripPrefix "*/" after' of
+                Nothing -> T.empty : go True ls
+                Just after -> go False $ after : ls
 
 data Line = Line
     { lineIndent  :: Int
@@ -47,7 +69,7 @@ addClosingCount (Nest l c children) =
 
 toL :: String -> Either String Line
 toL s
-    | null y || "/*" `isPrefixOf` y = Left s
+    | null y = Left s
     | otherwise = Right $ Line (length x) y
   where
     (x, y) = span (== ' ') s
