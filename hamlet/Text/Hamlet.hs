@@ -40,6 +40,11 @@ module Text.Hamlet
     , ihamletRules
     , htmlRules
     , CloseStyle (..)
+      -- * Used by generated code
+    , condH
+    , maybeH
+    , asHtmlUrl
+    , attrsToHtml
     ) where
 
 import Text.Shakespeare.Base
