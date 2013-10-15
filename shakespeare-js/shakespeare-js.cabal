@@ -1,5 +1,5 @@
 name:            shakespeare-js
-version:         1.2.0.1
+version:         1.2.0.2
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -54,6 +54,8 @@ library
     if flag(test_export)
         cpp-options: -DTEST_EXPORT
 
+    extensions: TemplateHaskell
+
 flag test_export
     default: False
 
@@ -88,6 +90,8 @@ test-suite test
         cpp-options: -DTEST_COFFEE
     if flag(test_roy)
         cpp-options: -DTEST_ROY
+
+    extensions: TemplateHaskell
 
 
 source-repository head

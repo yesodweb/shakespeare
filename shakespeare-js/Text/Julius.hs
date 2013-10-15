@@ -40,6 +40,7 @@ module Text.Julius
     , javascriptSettings
       -- ** internal
     , juliusUsedIdentifiers
+    , asJavascriptUrl
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))

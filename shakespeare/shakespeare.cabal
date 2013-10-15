@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         1.2.0
+version:         1.2.0.1
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -42,6 +42,8 @@ library
     if flag(test_export)
       cpp-options: -DTEST_EXPORT
 
+    extensions: TemplateHaskell
+
 Flag test_export
   default: False
 
@@ -65,6 +67,8 @@ test-suite test
                  , text             >= 0.7     && < 0.12
                  , process
                  , template-haskell
+
+    extensions: TemplateHaskell
 
 
 source-repository head

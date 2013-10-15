@@ -29,11 +29,8 @@ import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
 import Data.Int (Int32, Int64)
 
-renderText :: Builder -> TL.Text
-renderText = toLazyText
-
 renderTextUrl :: RenderUrl url -> TextUrl url -> TL.Text
-renderTextUrl r s = renderText $ s r
+renderTextUrl r s = toLazyText $ s r
 
 type TextUrl url = RenderUrl url -> Builder
 
@@ -61,7 +58,7 @@ stext, lt, st, text :: QuasiQuoter
 stext = 
   QuasiQuoter { quoteExp = \s -> do
     rs <- settings
-    render <- [|renderText|]
+    render <- [|toLazyText|]
     rendered <- shakespeareFromString rs { justVarInterpolation = True } s
     return (render `AppE` rendered)
     }
@@ -70,7 +67,7 @@ lt = stext
 st = 
   QuasiQuoter { quoteExp = \s -> do
     rs <- settings
-    render <- [|TL.toStrict . renderText|]
+    render <- [|TL.toStrict . toLazyText|]
     rendered <- shakespeareFromString rs { justVarInterpolation = True } s
     return (render `AppE` rendered)
     }
@@ -119,7 +116,7 @@ codegen :: QuasiQuoter
 codegen =
   QuasiQuoter { quoteExp = \s -> do
     rs <- codegenSettings
-    render <- [|renderText|]
+    render <- [|toLazyText|]
     rendered <- shakespeareFromString rs { justVarInterpolation = True } s
     return (render `AppE` rendered)
     }
@@ -131,7 +128,7 @@ codegenSt :: QuasiQuoter
 codegenSt =
   QuasiQuoter { quoteExp = \s -> do
     rs <- codegenSettings
-    render <- [|TL.toStrict . renderText|]
+    render <- [|TL.toStrict . toLazyText|]
     rendered <- shakespeareFromString rs { justVarInterpolation = True } s
     return (render `AppE` rendered)
     }
@@ -139,13 +136,13 @@ codegenSt =
 codegenFileReload :: FilePath -> Q Exp
 codegenFileReload fp = do
     rs <- codegenSettings
-    render <- [|TL.toStrict . renderText|]
+    render <- [|TL.toStrict . toLazyText|]
     rendered <- shakespeareFileReload rs{ justVarInterpolation = True } fp
     return (render `AppE` rendered)
 
 codegenFile :: FilePath -> Q Exp
 codegenFile fp = do
     rs <- codegenSettings
-    render <- [|TL.toStrict . renderText|]
+    render <- [|TL.toStrict . toLazyText|]
     rendered <- shakespeareFile rs{ justVarInterpolation = True } fp
     return (render `AppE` rendered)

@@ -26,6 +26,9 @@ module Text.Shakespeare
 #ifdef TEST_EXPORT
     , preFilter
 #endif
+      -- Internal
+    , shakespeareRuntime
+    , pack'
     ) where
 
 import Data.List (intersperse)
