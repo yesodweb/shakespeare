@@ -276,4 +276,9 @@ readUtf8File fp = do
     h <- SIO.openFile fp SIO.ReadMode
     SIO.hSetEncoding h SIO.utf8_bom
     ret <- TIO.hGetContents h 
-    return $ TL.filter ('\r'/=) ret
+    return $
+#ifdef WINDOWS
+      TL.filter ('\r'/=) ret
+#else
+      ret
+#endif
