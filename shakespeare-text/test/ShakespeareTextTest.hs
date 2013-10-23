@@ -25,13 +25,13 @@ spec = do
 @{Home}
 @?{urlp}
 ^{jmixin}
-|] $ intercalate "\r\n"
+|] $ intercalate "\n"
         [ "שלום"
         , var
         , "url"
         , "url?p=q"
         , "var x;"
-        ] ++ "\r\n"
+        ] ++ "\n"
 
 
     it "textFile" $ do

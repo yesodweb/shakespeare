@@ -74,7 +74,7 @@ st =
 
 text = QuasiQuoter { quoteExp = \s -> do
     rs <- settings
-    quoteExp (shakespeare rs) s
+    quoteExp (shakespeare rs) $ filter (/='\r') s
     }
 
 
