@@ -49,7 +49,11 @@ module Text.Hamlet
 
 import Text.Shakespeare.Base
 import Text.Hamlet.Parse
+#if MIN_VERSION_template_haskell(2,9,0)
+import Language.Haskell.TH.Syntax hiding (Module)
+#else
 import Language.Haskell.TH.Syntax
+#endif
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import Data.Maybe (fromMaybe)
