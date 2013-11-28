@@ -25,7 +25,7 @@ module Text.Shakespeare.Base
 
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH (appE)
-import Data.Char (isUpper, isSymbol)
+import Data.Char (isUpper, isSymbol, isPunctuation, isAscii)
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Prim (Parsec)
 import Data.List (intercalate)
@@ -109,10 +109,16 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|>
             x <- many1 $ noneOf " \t\n\r()"
             _ <- char ')'
             return $ DerefIdent $ Ident x
+
+    -- See: http://www.haskell.org/onlinereport/haskell2010/haskellch2.html#x7-160002.2
+    isOperatorChar c
+        | isAscii c = c `elem` "!#$%&*+./<=>?@\\^|-~:"
+        | otherwise = isSymbol c || isPunctuation c
+
     derefInfix x = try $ do
         _ <- delim
         xs <- many $ try $ derefSingle >>= \x' -> delim >> return x'
-        op <- many1 (satisfy $ \c -> isSymbol c || c `elem` "-") <?> "operator"
+        op <- many1 (satisfy isOperatorChar) <?> "operator"
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
         let op' = DerefIdent $ Ident op

@@ -455,6 +455,14 @@ $case num
         helper "<i>foo</i>\n" [hamlet|<i :False:.not-present :False:.also-not-here>foo|]
     it "optional and present classes" $
         helper "<i class=\"present\">foo</i>\n" [hamlet|<i :False:.not-present :True:.present>foo|]
+    it "punctuation operators #115" $
+        helper "foo"
+            [hamlet|
+                $if True && True
+                    foo
+                $else
+                    bar
+            |]
 
 data Pair = Pair String Int
 
