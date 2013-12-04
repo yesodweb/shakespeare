@@ -1,5 +1,5 @@
 name:            shakespeare-test
-version:         0.1
+version:         0.1.0.1
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -30,7 +30,7 @@ library
                    , containers
                    , template-haskell
                    , parsec           >= 2       && < 4
-                   , text             >= 0.7     && < 0.12
+                   , text             >= 0.7
                    , process          >= 1.0     && < 1.2
                    , aeson            >= 0.5
 
@@ -64,7 +64,7 @@ test-suite test
                    , shakespeare-test
                    , hspec
                    , HUnit
-                   , text             >= 0.7     && < 0.12
+                   , text             >= 0.7
                    , template-haskell
                    , parsec           >= 2       && < 4
                    , aeson
