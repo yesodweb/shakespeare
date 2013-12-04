@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
 import Network.Wai.Application.Static (staticApp, defaultFileServerSettings)
 import Network.Wai.Handler.Warp (run)
 import System.Console.CmdArgs hiding (def)
@@ -83,6 +84,10 @@ readFileUtf8 fp = do
     bs <- S8.readFile $ T.unpack fp
     let t = decodeUtf8With lenientDecode bs
     return $ T.unpack t
+
+#if MIN_VERSION_wai(2, 0, 0)
+#define ResponseBuilder responseBuilder
+#endif
 
 hamlet :: Text -> IO Response
 hamlet fp = do
