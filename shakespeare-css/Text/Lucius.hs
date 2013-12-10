@@ -219,6 +219,9 @@ parseComment = do
 
 luciusFile :: FilePath -> Q Exp
 luciusFile fp = do
+#ifdef GHC_7_4
+    qAddDependentFile fp
+#endif
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     luciusFromString contents
 
