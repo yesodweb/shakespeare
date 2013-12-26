@@ -49,6 +49,9 @@ library
     if flag(test_coffee)
         cpp-options: -DTEST_COFFEE
 
+    if flag(test_purescript)
+        cpp-options: -DTEST_PURESCRIPT
+
     if flag(test_roy)
         cpp-options: -DTEST_ROY
 
@@ -63,6 +66,11 @@ flag test_export
 flag test_coffee
     description: render tests through coffeescript render function
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
+flag test_purescript
+    description: render tests through purescript render function
+    -- cabal configure --enable-tests -ftest_purescript && cabal build && dist/build/test/test
     default: False
 
 flag test_roy
