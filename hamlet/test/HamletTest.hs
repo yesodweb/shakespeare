@@ -464,6 +464,24 @@ $case num
                     bar
             |]
 
+    it "list syntax" $
+        helper "123"
+            [hamlet|
+                $forall x <- []
+                    ignored
+                $forall x <- [1, 2, 3]
+                    #{show x}
+            |]
+
+    it "list in attribute" $
+        let myShow :: [Int] -> String
+            myShow = show
+         in helper "<a href=\"[]\">foo</a>\n<a href=\"[1,2]\">bar</a>\n"
+            [hamlet|
+                <a href=#{myShow []}>foo
+                <a href=#{myShow [1, 2]}>bar
+            |]
+
 data Pair = Pair String Int
 
 data Url = Home | Sub SubUrl

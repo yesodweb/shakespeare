@@ -124,7 +124,7 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|>
         let op' = DerefIdent $ Ident op
         ys <- many1 $ delim >> derefSingle
         return $ DerefBranch (DerefBranch op' $ foldl1 DerefBranch $ x : xs) (foldl1 DerefBranch ys)
-    derefSingle = derefTuple <|> derefOp <|> derefParens <|> numeric <|> strLit<|> ident
+    derefSingle = derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> strLit<|> ident
     deref' lhs =
         dollar <|> derefSingle'
                <|> return (foldl1 DerefBranch $ lhs [])
