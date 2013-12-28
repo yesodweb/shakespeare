@@ -33,7 +33,7 @@
 --
 -- 1. Shakespearean templates: <http://www.yesodweb.com/book/templates>
 --
--- 2. Roy: <http://http://roy.brianmckenna.org/>
+-- 2. Roy: <http://roy.brianmckenna.org/>
 module Text.Roy
     ( -- * Functions
       -- ** Template-Reading Functions
