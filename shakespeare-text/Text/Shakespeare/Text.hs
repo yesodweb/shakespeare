@@ -36,6 +36,7 @@ type TextUrl url = RenderUrl url -> Builder
 
 class ToText a where
     toText :: a -> Builder
+instance ToText Builder where toText = id
 instance ToText [Char ] where toText = fromLazyText . TL.pack
 instance ToText TS.Text where toText = fromText
 instance ToText TL.Text where toText = fromLazyText
