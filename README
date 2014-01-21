@@ -1,5 +1,7 @@
 Awesome template languages for Haskell.
 
+DRY HTML with compile-time checked variable insertion.
+
 Please see the documentation site: http://www.yesodweb.com/book/shakespearean-templates
 
 # Install
