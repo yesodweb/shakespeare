@@ -270,7 +270,7 @@ parseLine set = do
     contentReg InContent = (ContentRaw . return) <$> noneOf "#@^\r\n"
     contentReg NotInQuotes = (ContentRaw . return) <$> noneOf "@^#. \t\n\r>"
     contentReg NotInQuotesAttr = (ContentRaw . return) <$> noneOf "@^ \t\n\r>"
-    contentReg InQuotes = (ContentRaw . return) <$> noneOf "#@^\\\"\n\r"
+    contentReg InQuotes = (ContentRaw . return) <$> noneOf "#@^\"\n\r"
     tagAttribValue notInQuotes = do
         cr <- (char '"' >> return InQuotes) <|> return notInQuotes
         fst <$> content cr

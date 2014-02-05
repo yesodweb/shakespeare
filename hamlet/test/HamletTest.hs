@@ -482,6 +482,10 @@ $case num
                 <a href=#{myShow [1, 2]}>bar
             |]
 
+    it "AngularJS attribute values #122" $
+        helper "<li ng-repeat=\"addr in msgForm.new.split(/\\\\s/)\">{{addr}}</li>\n"
+            [hamlet|<li ng-repeat="addr in msgForm.new.split(/\\s/)">{{addr}}|]
+
 data Pair = Pair String Int
 
 data Url = Home | Sub SubUrl
