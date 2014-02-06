@@ -6,7 +6,7 @@ All these projects were born out of the hamlet html templating language.
 Hamlet was made, and there was much rejoicing.
 
     shakespeare-js/
-    shakespeare-csss/
+    shakespeare-css/
 
 So the same techniques for interpolation were used to make a version for css and a version for javascript.
 
