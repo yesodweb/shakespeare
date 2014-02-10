@@ -32,6 +32,7 @@ import Text.Blaze (preEscapedString, preEscapedText, Html)
 import Data.Text (Text)
 
 type HamletMap url = [([String], HamletData url)]
+type UrlRenderer url = (url -> [(Text, Text)] -> Text)
 
 data HamletData url
     = HDHtml Html
@@ -58,6 +59,8 @@ data HamletException = HamletParseException String
                      | HamletRenderException String
     deriving (Show, Typeable)
 instance Exception HamletException
+
+
 
 parseHamletRT :: Failure HamletException m
               => HamletSettings -> String -> m HamletRT
@@ -116,7 +119,7 @@ parseHamletRT set s =
 renderHamletRT :: Failure HamletException m
                => HamletRT
                -> HamletMap url
-               -> (url -> [(Text, Text)] -> Text)
+               -> UrlRenderer url
                -> m Html
 renderHamletRT = renderHamletRT' False
 

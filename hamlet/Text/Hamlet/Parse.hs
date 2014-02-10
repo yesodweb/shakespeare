@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Text.Hamlet.Parse
     ( Result (..)
     , Content (..)
@@ -28,6 +29,7 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (mapMaybe, fromMaybe, isNothing)
+import Language.Haskell.TH.Syntax
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -234,11 +236,11 @@ parseLine set = do
     content cr = do
         x <- many $ content' cr
         case cr of
-            InQuotes -> char '"' >> return ()
+            InQuotes -> void $ char '"'
             NotInQuotes -> return ()
             NotInQuotesAttr -> return ()
             InContent -> eol
-        return (cc $ map fst x, or $ map snd x)
+        return (cc $ map fst x, any snd x)
       where
         cc [] = []
         cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
@@ -613,6 +615,19 @@ data NewlineStyle = NoNewlines -- ^ never add newlines
                   | AlwaysNewlines -- ^ add newlines everywhere
                   | DefaultNewlineStyle
     deriving Show
+
+instance Lift NewlineStyle where
+    lift NoNewlines = [|NoNewlines|]
+    lift NewlinesText = [|NewlinesText|]
+    lift AlwaysNewlines = [|AlwaysNewlines|]
+    lift DefaultNewlineStyle = [|DefaultNewlineStyle|]
+
+instance Lift (String -> CloseStyle) where
+    lift _ = [|\s -> htmlCloseStyle s|]
+
+instance Lift HamletSettings where
+    lift (HamletSettings a b c d) = [|HamletSettings $(lift a) $(lift b) $(lift c) $(lift d)|]
+
 
 htmlEmptyTags :: Set String
 htmlEmptyTags = Set.fromAscList
