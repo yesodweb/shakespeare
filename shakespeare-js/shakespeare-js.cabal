@@ -9,13 +9,13 @@ description:
     Shakespeare is a template family for type-safe, efficient templates with simple variable interpolation. Shakespeare templates can be used inline with a quasi-quoter or in an external file. Shakespeare interpolates variables according to the type being inserted.
     In this case, the variable type needs a ToJavascript instance.
     .
-    shakespeare-javascript is alson known as Julius, and passes through plain javascript
+    shakespeare-javascript is also known as Julius, and passes through plain javascript.
     .
     There is also a shakespeare version for CoffeeScript, TypeScript, and Roy, all languages that compile down to Javascript. They all expect you to have the appropriate compiler in your path.
     .
     shakespeare originated from the hamlet template package.
-    Please see http://www.yesodweb.com/book/shakespearean-templates for a more thorough description and examples
-    .
+    Please see http://www.yesodweb.com/book/shakespearean-templates for a more thorough description and examples.
+
 extra-source-files:
   test/juliuses/external1.coffee
   test/juliuses/external1.julius
