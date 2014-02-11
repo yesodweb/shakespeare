@@ -53,6 +53,9 @@ library
                    , process          >= 1.0
                    , blaze-html       >= 0.5
                    , blaze-markup     >= 0.5.1
+                   , system-filepath  >= 0.4
+                   , system-fileio    >= 0.3
+                   , time             >= 1
 
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
