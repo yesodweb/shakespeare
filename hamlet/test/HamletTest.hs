@@ -243,6 +243,7 @@ $forall x <- set
   <h1>HELLO WORLD
   |]
       helperHtml "<h1>HELLO WORLD</h1>\n" $(shamletFile "test/hamlets/nonpolyhtml.hamlet")
+      helper "<h1>HELLO WORLD</h1>\n" $(hamletFileReload "test/hamlets/nonpolyhtml.hamlet")
 
 
     it "non-poly Hamlet" $ do
@@ -252,6 +253,7 @@ $forall x <- set
   ^{embed}
   |]
       helper "<h1>url</h1>\n" $(hamletFile "test/hamlets/nonpolyhamlet.hamlet")
+      helper "<h1>url</h1>\n" $(hamletFileReload "test/hamlets/nonpolyhamlet.hamlet")
 
     it "non-poly IHamlet" $ do
       let embed = [ihamlet|<p>EMBEDDED|]
@@ -903,6 +905,7 @@ caseExternal :: Assertion
 caseExternal = do
     helper "foo\n<br>\n" $(hamletFile "test/hamlets/external.hamlet")
     helper "foo\n<br/>\n" $(xhamletFile "test/hamlets/external.hamlet")
+    helper "foo\n<br>\n" $(hamletFileReload "test/hamlets/external.hamlet")
   where
     foo = "foo"
 

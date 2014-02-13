@@ -26,7 +26,8 @@ module Text.Shakespeare
 #ifdef TEST_EXPORT
     , preFilter
 #endif
-      -- Internal
+      -- * Internal
+      -- can we remove this?
     , shakespeareRuntime
     , pack'
     ) where
@@ -283,7 +284,7 @@ preFilter mfp ShakespeareSettings {..} template =
       <> removeTrailingSemiColon
       <> (if wrapInsertionAddParens then ")" else "")
       <> "("
-      <> (mconcat $ intersperse ", " vars)
+      <> mconcat (intersperse ", " vars)
       <> ");\n"
         where 
           removeTrailingSemiColon = reverse $
@@ -293,7 +294,7 @@ preFilter mfp ShakespeareSettings {..} template =
     addVars Nothing _ str = str
     addVars (Just WrapInsertion {..}) vars str =
          wrapInsertionStartBegin
-      <> (mconcat $ intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)
+      <> mconcat (intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)
       <> wrapInsertionStartClose
       <> addIndent wrapInsertionIndent str
       <> wrapInsertionEnd
@@ -322,7 +323,7 @@ preFilter mfp ShakespeareSettings {..} template =
             parseChar' preEscapeIgnoreLine preEscapeIgnoreBalanced
 
         recordRight (Left str)  = return str
-        recordRight (Right str) = modifyState (\vars -> str:vars) >> (return $ varConvert str)
+        recordRight (Right str) = modifyState (\vars -> str:vars) >> return (varConvert str)
 
         newLine = "\r\n"
         parseCommentLine cs = do
@@ -355,17 +356,17 @@ contentsToShakespeare rs a = do
         _   -> do
               mc <- [|mconcat|]
               return $ mc `AppE` ListE c
-    fmap (maybe id AppE $ modifyFinalValue rs) $
+    fmap (maybe id AppE $ modifyFinalValue rs) $ return $
         if justVarInterpolation rs
-            then return compiledTemplate
-            else return $ LamE [VarP r] compiledTemplate
+            then compiledTemplate
+            else LamE [VarP r] compiledTemplate
       where
         contentToBuilder :: Name -> Content -> Q Exp
         contentToBuilder _ (ContentRaw s') = do
             ts <- [|fromText . pack'|]
             return $ wrap rs `AppE` (ts `AppE` LitE (StringL s'))
         contentToBuilder _ (ContentVar d) =
-            return $ (toBuilder rs `AppE` derefToExp [] d)
+            return (toBuilder rs `AppE` derefToExp [] d)
         contentToBuilder r (ContentUrl d) = do
             ts <- [|fromText|]
             return $ wrap rs `AppE` (ts `AppE` (VarE r `AppE` derefToExp [] d `AppE` ListE []))
@@ -389,11 +390,11 @@ shakespeareFromString r str = do
     contentsToShakespeare r $ contentFromString r s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
-shakespeareFile r fp = do
+shakespeareFile r fp =
 #ifdef GHC_7_4
-    qAddDependentFile fp
+    qAddDependentFile fp >>
 #endif
-    readFileQ fp >>= shakespeareFromString r
+        readFileQ fp >>= shakespeareFromString r
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
 
@@ -406,7 +407,7 @@ getVars (ContentMix d) = [(d, VTMixin)]
 
 data VarExp url = EPlain Builder
                 | EUrl url
-                | EUrlParam (url, [(TS.Text, TS.Text)])
+                | EUrlParam (url, QueryParameters)
                 | EMixin (Shakespeare url)
 
 -- | Determine which identifiers are used by the given template, useful for
@@ -454,7 +455,6 @@ shakespeareFileReload settings fp = do
 
 
 
-
 shakespeareRuntime :: ShakespeareSettings -> FilePath -> [(Deref, VarExp url)] -> Shakespeare url
 shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
     mtime <- qRunIO $ getModified $ decodeString fp
@@ -468,7 +468,7 @@ shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
     newContent mtime = do
         str <- readFileUtf8 fp
         s <- preFilter (Just fp) settings str
-        insertReloadMap fp $ (mtime, contentFromString settings s)
+        insertReloadMap fp (mtime, contentFromString settings s)
 
     go' = mconcat . map go
 

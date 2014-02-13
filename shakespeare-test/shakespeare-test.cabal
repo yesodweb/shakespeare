@@ -22,6 +22,8 @@ library
                      Text.Julius
                      Text.Coffee
                      Text.Roy
+                     Text.Hamlet
+                     Text.Hamlet.Parse
 
     build-depends:   base             >= 4       && < 5
                    , time             >= 1
@@ -33,8 +35,10 @@ library
                    , text             >= 0.7
                    , process          >= 1.0     && < 1.2
                    , aeson            >= 0.5
+                   , blaze-html       >= 0.5
+                   , blaze-markup     >= 0.5.1
 
-    hs-source-dirs: ., shakespeare, shakespeare-js
+    hs-source-dirs: ., shakespeare, shakespeare-js, hamlet
 
     ghc-options:   -Wall
     cpp-options:   -DTEST -DTEST_EXPORT
@@ -54,7 +58,7 @@ flag test_roy
 test-suite test
     type:          exitcode-stdio-1.0
     main-is:       main.hs
-    hs-source-dirs: ., shakespeare-js/test, shakespeare/test
+    hs-source-dirs: ., shakespeare-js/test, shakespeare/test, hamlet/test
 
     build-depends:   base >= 4 && < 5
                    , time             >= 1
@@ -68,6 +72,8 @@ test-suite test
                    , template-haskell
                    , parsec           >= 2       && < 4
                    , aeson
+                   , blaze-html       >= 0.5
+                   , blaze-markup     >= 0.5.1
 
 
     -- if impl(ghc >= 7.4)
