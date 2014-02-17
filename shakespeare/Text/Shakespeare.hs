@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 -- | For lack of a better name... a parameterized version of Julius.
@@ -54,6 +56,9 @@ import Filesystem.Path.CurrentOS (decodeString)
 import Data.Time (UTCTime)
 import Data.IORef
 import qualified Data.Map as M
+import GHC.Generics (Generic)
+import Data.Typeable (Typeable)
+import Data.Data (Data)
 
 -- for pre conversion
 import System.Process (readProcessWithExitCode)
@@ -397,6 +402,7 @@ shakespeareFile r fp =
         readFileQ fp >>= shakespeareFromString r
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
+    deriving (Show, Eq, Ord, Enum, Bounded, Typeable, Data, Generic)
 
 getVars :: Content -> [(Deref, VarType)]
 getVars ContentRaw{} = []
