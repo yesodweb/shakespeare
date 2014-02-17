@@ -65,6 +65,7 @@ import Control.Monad (when, unless)
 import Data.Monoid (mconcat)
 import Data.List (isSuffixOf)
 import Control.Arrow (second)
+import Text.Shakespeare (VarType)
 
 -- |
 --

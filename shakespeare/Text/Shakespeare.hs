@@ -21,7 +21,7 @@ module Text.Shakespeare
     , shakespeareFromString
     , shakespeareUsedIdentifiers
     , RenderUrl
-    , VarType
+    , VarType (..)
     , Deref
     , Parser
 

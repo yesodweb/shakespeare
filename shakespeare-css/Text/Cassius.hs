@@ -38,6 +38,7 @@ module Text.Cassius
 
 import Text.Css
 import Text.Shakespeare.Base
+import Text.Shakespeare (VarType)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import qualified Data.Text.Lazy as TL

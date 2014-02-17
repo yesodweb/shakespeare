@@ -24,6 +24,7 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***), second)
 import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
+import Text.Shakespeare (VarType (..))
 
 #if MIN_VERSION_base(4,5,0)
 import Data.Monoid ((<>))
@@ -99,9 +100,6 @@ data Content = ContentRaw String
     deriving (Show, Eq)
 
 type Contents = [Content]
-
-data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
-    deriving Show
 
 data CDData url = CDPlain Builder
                 | CDUrl url
