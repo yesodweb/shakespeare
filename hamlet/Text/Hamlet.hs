@@ -379,10 +379,12 @@ hamletFile :: FilePath -> Q Exp
 hamletFile = hamletFileWithSettings hamletRules defaultHamletSettings
 
 hamletFileReload :: FilePath -> Q Exp
-hamletFileReload = hamletFileReloadWithSettings hamletRules defaultHamletSettings
+hamletFileReload = hamletFileReloadWithSettings runtimeRules defaultHamletSettings
+  where runtimeRules = HamletRuntimeRules { hrrI18n = False }
 
 ihamletFileReload :: FilePath -> Q Exp
-ihamletFileReload = hamletFileReloadWithSettings ihamletRules defaultHamletSettings
+ihamletFileReload = hamletFileReloadWithSettings runtimeRules defaultHamletSettings
+  where runtimeRules = HamletRuntimeRules { hrrI18n = True }
 
 xhamletFile :: FilePath -> Q Exp
 xhamletFile = hamletFileWithSettings hamletRules xhtmlHamletSettings
@@ -429,7 +431,7 @@ type Shakespeare url = RenderUrl url -> Html
 data VarExp msg url = EPlain Html
                     | EUrl url
                     | EUrlParam (url, QueryParameters)
-                    | EMixin (Shakespeare url)
+                    | EMixin (HtmlUrlI18n msg url)
                     | EMsg msg
 
 getVars :: Content -> [(Deref, VarType)]
@@ -446,32 +448,17 @@ hamletUsedIdentifiers settings =
     concatMap getVars . contentFromString settings
 
 
-hamletFileReloadWithSettings :: Q HamletRules -- ^ not used right now
+data HamletRuntimeRules = HamletRuntimeRules {
+                            hrrI18n :: Bool
+                          }
+
+hamletFileReloadWithSettings :: HamletRuntimeRules
                              -> HamletSettings -> FilePath -> Q Exp
-hamletFileReloadWithSettings qhr settings fp = do
+hamletFileReloadWithSettings hrr settings fp = do
     s <- readFileQ fp
     let b = hamletUsedIdentifiers settings s
-    hr <- qhr
     c <- mapM vtToExp b
-
-    -- I thought I would need this stuff since it is in normal hamlet
-    {- 
-    translate <- hrWithEnv hr $ \env ->
-        case msgRender env of
-            Just wrender -> wrender $ \render -> do
-                let d = mkName "d"
-                return $ LamE [VarP d] (hrFromHtml hr `AppE` (render `AppE` VarE d))
-            Nothing -> [|error "Message interpolation _{} used, but no message renderer provided"|]
-    rt <- [|hamletRuntimeMsg $(return translate) settings fp|]
-    -}
-    i18n <- qRunIO $ newIORef False
-    _ <- hrWithEnv hr $ \env -> do
-        qRunIO $ writeIORef i18n $ case msgRender env of
-            Just _ -> True
-            Nothing -> False
-        [|return ()|]
-    useTranslate <- qRunIO $ readIORef i18n
-    rt <- if useTranslate
+    rt <- if hrrI18n hrr
       then [|hamletRuntimeMsg settings fp|]
       else [|hamletRuntime settings fp|]
     return $ rt `AppE` ListE c
@@ -544,8 +531,9 @@ hamletRuntime settings fp cd render = unsafePerformIO $ do
         s <- readFileUtf8 fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
-    go' = mconcat . map (runtimeContentToHtml cd render handleMsg)
-    handleMsg _ = error "i18n _{} encountered, but did not use ihamlet"
+    go' = mconcat . map (runtimeContentToHtml cd i18nEx render handleMsgEx)
+    i18nEx = error "ihamlet needed for i18n"
+    handleMsgEx _ = error "i18n _{} encountered, but did not use ihamlet"
 
 type RuntimeVars msg url = [(Deref, VarExp msg url)]
 hamletRuntimeMsg :: HamletSettings
@@ -565,13 +553,13 @@ hamletRuntimeMsg settings fp cd i18nRender render = unsafePerformIO $ do
         s <- readFileUtf8 fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
-    go' = mconcat . map (runtimeContentToHtml cd render handleMsg)
+    go' = mconcat . map (runtimeContentToHtml cd i18nRender render handleMsg)
     handleMsg d = case lookup d cd of
             Just (EMsg s) -> i18nRender s
             _ -> error $ show d ++ ": expected EMsg for ContentMsg"
 
-runtimeContentToHtml :: RuntimeVars msg url -> Render url -> (Deref -> Html) -> Content -> Html
-runtimeContentToHtml cd render handleMsg = go
+runtimeContentToHtml :: RuntimeVars msg url -> Translate msg -> Render url -> (Deref -> Html) -> Content -> Html
+runtimeContentToHtml cd i18nRender render handleMsg = go
   where
     go :: Content -> Html
     go (ContentMsg d) = handleMsg d
@@ -595,5 +583,5 @@ runtimeContentToHtml cd render handleMsg = go
             _ -> error $ show d ++ ": expected EUrlParam"
     go (ContentEmbed d) =
         case lookup d cd of
-            Just (EMixin m) -> m render
+            Just (EMixin m) -> m i18nRender render
             _ -> error $ show d ++ ": expected EMixin"
