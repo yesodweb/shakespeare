@@ -262,6 +262,7 @@ $forall x <- set
   ^{embed}
   |]
       ihelper "<h1>Hola</h1>\n" $(ihamletFile "test/hamlets/nonpolyihamlet.hamlet")
+      ihelper "<h1>Hola</h1>\n" $(ihamletFileReload "test/hamlets/nonpolyihamlet.hamlet")
 
     it "pattern-match tuples: forall" $ do
       let people = [("Michael", 26), ("Miriam", 25)]
