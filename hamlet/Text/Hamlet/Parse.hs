@@ -29,7 +29,7 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (mapMaybe, fromMaybe, isNothing)
-import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Syntax (Lift (..))
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
