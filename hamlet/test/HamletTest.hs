@@ -9,6 +9,7 @@ import Test.Hspec
 
 import Prelude hiding (reverse)
 import Text.Hamlet
+import Text.Hamlet.RT
 import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
@@ -488,6 +489,19 @@ $case num
     it "AngularJS attribute values #122" $
         helper "<li ng-repeat=\"addr in msgForm.new.split(/\\\\s/)\">{{addr}}</li>\n"
             [hamlet|<li ng-repeat="addr in msgForm.new.split(/\\s/)">{{addr}}|]
+
+    it "runtime Hamlet with caret interpolation" $ do
+        let toInclude render = render (5, [("hello", "world")])
+        let renderer x y = pack $ show (x :: Int, y :: [(Text, Text)])
+            template1 = "@?{url}"
+            template2 = "foo^{toInclude}bar"
+        toInclude <- parseHamletRT defaultHamletSettings template1
+        hamletRT <- parseHamletRT defaultHamletSettings template2
+        res <- renderHamletRT hamletRT
+            [ (["toInclude"], HDTemplate toInclude)
+            , (["url"], HDUrlParams 5 [(pack "hello", pack "world")])
+            ] renderer
+        helperHtml "foo(5,[(\"hello\",\"world\")])bar" res
 
 data Pair = Pair String Int
 
