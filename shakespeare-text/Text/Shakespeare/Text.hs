@@ -43,6 +43,7 @@ instance ToText TL.Text where toText = fromLazyText
 
 instance ToText Int32 where toText = toText . show
 instance ToText Int64 where toText = toText . show
+instance ToText Int   where toText = toText . show
 
 settings :: Q ShakespeareSettings
 settings = do
