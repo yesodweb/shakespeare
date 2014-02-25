@@ -1,5 +1,5 @@
 name:            hamlet
-version:         1.1.9.1
+version:         1.1.9.2
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -27,14 +27,7 @@ cabal-version:   >= 1.8
 build-type:      Simple
 homepage:        http://www.yesodweb.com/book/shakespearean-templates
 extra-source-files:
-  test/hamlets/double-foralls.hamlet
-  test/hamlets/external-debug.hamlet
-  test/hamlets/external-debug2.hamlet
-  test/hamlets/external-debug3.hamlet
-  test/hamlets/external.hamlet
-  test/hamlets/nonpolyhamlet.hamlet
-  test/hamlets/nonpolyhtml.hamlet
-  test/hamlets/nonpolyihamlet.hamlet
+  test/hamlets/*.hamlet
   test/HamletTest.hs
   test/HamletTestTypes.hs
   test/tmp.hs
