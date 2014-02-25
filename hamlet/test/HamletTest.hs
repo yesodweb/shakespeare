@@ -617,6 +617,8 @@ caseUrlChain = do
 caseEmbed :: Assertion
 caseEmbed = do
     helper "embed" [hamlet|^{embed theArg}|]
+    helper "embed" $(hamletFileReload "test/hamlets/embed.hamlet")
+    ihelper "embed" $(ihamletFileReload "test/hamlets/embed.hamlet")
 
 caseEmbedChain :: Assertion
 caseEmbedChain = do

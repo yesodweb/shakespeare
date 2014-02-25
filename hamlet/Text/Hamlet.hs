@@ -426,13 +426,14 @@ type MTime = UTCTime
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin | VTMsg | VTAttrs
 
 type QueryParameters = [(Text, Text)]
-type RenderUrl url = (url -> QueryParameters -> Text)
+type RenderUrl url   = (url -> QueryParameters -> Text)
 type Shakespeare url = RenderUrl url -> Html
-data VarExp msg url = EPlain Html
-                    | EUrl url
-                    | EUrlParam (url, QueryParameters)
-                    | EMixin (HtmlUrlI18n msg url)
-                    | EMsg msg
+data VarExp msg url  = EPlain Html
+                     | EUrl url
+                     | EUrlParam (url, QueryParameters)
+                     | EMixin (HtmlUrl url)
+                     | EMixinI18n (HtmlUrlI18n msg url)
+                     | EMsg msg
 
 getVars :: Content -> [(Deref, VarType)]
 getVars ContentRaw{}     = []
@@ -476,7 +477,7 @@ hamletFileReloadWithSettings hrr settings fp = do
             c VTPlain = [|EPlain . toHtml|]
             c VTUrl = [|EUrl|]
             c VTUrlParam = [|EUrlParam|]
-            c VTMixin = [|\x -> EMixin $ \r -> x r|]
+            c VTMixin = [|\r -> EMixin $ \c -> r c|]
             c VTMsg = [|EMsg|]
 
 -- move to Shakespeare.Base?
@@ -531,8 +532,7 @@ hamletRuntime settings fp cd render = unsafePerformIO $ do
         s <- readFileUtf8 fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
-    go' = mconcat . map (runtimeContentToHtml cd i18nEx render handleMsgEx)
-    i18nEx = error "ihamlet needed for i18n"
+    go' = mconcat . map (runtimeContentToHtml cd render (error "I18n embed IMPOSSIBLE") handleMsgEx)
     handleMsgEx _ = error "i18n _{} encountered, but did not use ihamlet"
 
 type RuntimeVars msg url = [(Deref, VarExp msg url)]
@@ -553,13 +553,13 @@ hamletRuntimeMsg settings fp cd i18nRender render = unsafePerformIO $ do
         s <- readFileUtf8 fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
-    go' = mconcat . map (runtimeContentToHtml cd i18nRender render handleMsg)
+    go' = mconcat . map (runtimeContentToHtml cd render i18nRender handleMsg)
     handleMsg d = case lookup d cd of
             Just (EMsg s) -> i18nRender s
             _ -> error $ show d ++ ": expected EMsg for ContentMsg"
 
-runtimeContentToHtml :: RuntimeVars msg url -> Translate msg -> Render url -> (Deref -> Html) -> Content -> Html
-runtimeContentToHtml cd i18nRender render handleMsg = go
+runtimeContentToHtml :: RuntimeVars msg url -> Render url -> Translate msg -> (Deref -> Html) -> Content -> Html
+runtimeContentToHtml cd render i18nRender handleMsg = go
   where
     go :: Content -> Html
     go (ContentMsg d) = handleMsg d
@@ -581,7 +581,7 @@ runtimeContentToHtml cd i18nRender render handleMsg = go
             Just (EUrlParam (u, p)) ->
                 toHtml $ render u p
             _ -> error $ show d ++ ": expected EUrlParam"
-    go (ContentEmbed d) =
-        case lookup d cd of
-            Just (EMixin m) -> m i18nRender render
-            _ -> error $ show d ++ ": expected EMixin"
+    go (ContentEmbed d) = case lookup d cd of
+        Just (EMixin m) -> m render
+        Just (EMixinI18n m) -> m i18nRender render
+        _ -> error $ show d ++ ": expected EMixin"
