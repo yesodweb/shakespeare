@@ -107,7 +107,7 @@ typeScriptFile fp = do
     rs <- typeScriptSettings
     shakespeareFile rs fp
 
--- | Read in a Roy template file. This impure function uses
+-- | Read in a TypeScript template file. This impure function uses
 -- unsafePerformIO to re-read the file on every call, allowing for rapid
 -- iteration.
 typeScriptFileReload :: FilePath -> Q Exp
