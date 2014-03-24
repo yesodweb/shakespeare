@@ -19,13 +19,8 @@ cabal-version:   >= 1.8
 build-type:      Simple
 homepage:        http://www.yesodweb.com/book/shakespearean-templates
 extra-source-files:
-  test/cassiuses/external1.cassius
-  test/cassiuses/external1.lucius
-  test/cassiuses/external2.cassius
-  test/cassiuses/external2.lucius
-  test/cassiuses/external-media.lucius
-  test/cassiuses/external-nested.lucius
-  test/cassiuses/mixin.lucius
+  test/cassiuses/*.cassius
+  test/cassiuses/*.lucius
   test/ShakespeareCssTest.hs
   test.hs
 
