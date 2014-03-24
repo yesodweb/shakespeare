@@ -452,6 +452,11 @@ foo { foo:X#{bar}Y; }
           [ "selector {\n    foo: bar;\n    baz: bin;\n}\n"
           ]
 
+    it "cassiusFileReload with import URL" $ do
+      celper
+        "@import url(url);\n"
+        $(cassiusFileReload "test/cassiuses/reload-import.cassius")
+
     it "& subblocks" $
         celper "foo:bar{baz:bin}"
         [lucius|

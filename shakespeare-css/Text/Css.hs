@@ -139,16 +139,15 @@ cssUsedIdentifiers toi2b parseBlocks s' =
     go :: [TopLevel Unresolved]
        -> (Scope, [Content])
     go [] = ([], [])
-    go (TopAtDecl dec _FIXMEcs:rest) =
+    go (TopAtDecl dec cs:rest) =
         (scope, rest'')
       where
         (scope, rest') = go rest
-        rest'' = ContentRaw (concat
-            [ "@"
-            , dec
-            -- FIXME, cs
-            , ";"
-            ]) : rest'
+        rest'' =
+            ContentRaw ('@' : dec ++ " ")
+          : cs
+         ++ ContentRaw ";"
+          : rest'
     go (TopAtBlock _ _ blocks:rest) =
         (scope1 ++ scope2, rest1 ++ rest2)
       where
