@@ -27,6 +27,8 @@ extra-source-files:
   test/juliuses/*.julius
   test/juliuses/*.coffee
   test-messages/*.msg
+  test/cassiuses/*.cassius
+  test/cassiuses/*.lucius
 
 library
     build-depends:   base             >= 4       && < 5
@@ -92,6 +94,7 @@ test-suite test
                     Text.Shakespeare.I18NSpec
                     Text.Shakespeare.JsSpec
                     Text.Shakespeare.TextSpec
+                    Text.Shakespeare.CssSpec
                     Quoter
 
     cpp-options: -DTEST_EXPORT
@@ -114,6 +117,7 @@ test-suite test
                  , bytestring
                  , directory
                  , aeson
+                 , transformers
 
     extensions: TemplateHaskell
 
