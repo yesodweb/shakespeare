@@ -49,6 +49,7 @@ library
                    , blaze-markup
                    , blaze-html
                    , exceptions
+                   , transformers
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
@@ -57,9 +58,15 @@ library
                      Text.Coffee
                      Text.Hamlet
                      Text.Hamlet.RT
+                     Text.Lucius
+                     Text.Cassius
     other-modules:   Text.Shakespeare
                      Text.Shakespeare.Base
                      Text.Hamlet.Parse
+                     Text.Css
+                     Text.MkSizeType
+                     Text.IndentToBrace
+                     Text.CssCommon
     ghc-options:     -Wall
 
     if flag(test_export)
@@ -94,6 +101,30 @@ flag test_roy
     description: render tests through coffeescript render function
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
     default: False
+
+flag servius
+    description: build the servius web server
+    default: True
+
+Executable servius
+  Main-is:       servius.hs
+  hs-source-dirs: app
+  Build-depends: base            >= 4                  && < 5
+               , warp            >= 1.3                && < 2.2
+               , wai-app-static  >= 1.3                && < 2.1
+               , wai-extra       >= 1.3                && < 2.2
+               , cmdargs         >= 0.6.7
+               , directory       >= 1.0
+               , containers      >= 0.2
+               , bytestring      >= 0.9.1.4
+               , text            >= 0.7
+               , blaze-builder
+               , blaze-html      >= 0.5
+               , http-types
+               , shakespeare
+               , transformers
+               , wai             >= 1.3                && < 2.2
+               , mime-types      >= 0.1                && < 0.2
 
 test-suite test
     hs-source-dirs: ., test
