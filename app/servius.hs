@@ -1,72 +1,35 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
-import Network.Wai.Application.Static (staticApp, defaultFileServerSettings)
-import Network.Wai.Handler.Warp (run)
-import System.Console.CmdArgs hiding (def)
-import Text.Printf (printf)
-import System.Directory (canonicalizePath)
-import Control.Monad (unless)
-import Network.Wai.Middleware.Autohead
-import Network.Wai.Middleware.RequestLogger
-import Network.Wai.Middleware.Gzip
-import qualified Data.Map as Map
-import qualified Data.ByteString.Char8 as S8
-import Control.Arrow ((***))
-import Data.Text (Text, pack)
-import qualified Data.Text as T
-import Network.Wai
-import Control.Monad.IO.Class (liftIO)
-import Data.Text.Encoding (decodeUtf8With)
-import Data.Text.Encoding.Error (lenientDecode)
-import Text.Lucius (luciusRT)
-import Text.Hamlet (defaultHamletSettings)
-import Text.Hamlet.RT (parseHamletRT, renderHamletRT)
-import Network.HTTP.Types (status200)
-import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
-import qualified Data.Text.Lazy as TL
-import Blaze.ByteString.Builder.Char.Utf8 (fromLazyText)
-import Network.Mime (defaultMimeMap, mimeByExt, defaultMimeType)
-import WaiAppStatic.Types (ssIndices, toPiece, ssGetMimeType, fileName, fromPiece)
-import Data.String (fromString)
-import Data.Maybe (mapMaybe)
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+module Main (main) where
 
-data Args = Args
-    { docroot :: FilePath
-    , index :: [FilePath]
-    , port :: Int
-    , noindex :: Bool
-    , quiet :: Bool
-    , verbose :: Bool
-    , mime :: [(String, String)]
-    }
-    deriving (Show, Data, Typeable)
-
-defaultArgs :: Args
-defaultArgs = Args "." ["index.html", "index.htm"] 3000 False False False []
+import           Blaze.ByteString.Builder.Char.Utf8 (fromLazyText)
+import qualified Data.ByteString.Char8              as S8
+import           Data.Text                          (Text)
+import qualified Data.Text                          as T
+import           Data.Text.Encoding                 (decodeUtf8With)
+import           Data.Text.Encoding.Error           (lenientDecode)
+import qualified Data.Text.Lazy                     as TL
+import           Network.HTTP.Types                 (status200)
+import           Network.Wai                        (Middleware, Response,
+                                                     pathInfo, responseBuilder)
+import           Text.Blaze.Html.Renderer.Utf8      (renderHtmlBuilder)
+import           Text.Hamlet                        (defaultHamletSettings)
+import           Text.Hamlet.RT                     (parseHamletRT,
+                                                     renderHamletRT)
+import           Text.Lucius                        (luciusRT)
+import           WaiAppStatic.CmdLine               (docroot, runCommandLine)
 
 main :: IO ()
-main = do
-    Args {..} <- cmdArgs defaultArgs
-    let mime' = map (pack *** S8.pack) mime
-    let mimeMap = Map.fromList mime' `Map.union` defaultMimeMap
-    docroot' <- canonicalizePath docroot
-    unless quiet $ printf "Serving directory %s on port %d with %s index files.\n" docroot' port (if noindex then "no" else show index)
-    let middle = gzip def
-               . (if verbose then logStdoutDev else id)
-               . autohead
-               . shake docroot
-    run port $ middle $ staticApp (defaultFileServerSettings $ fromString docroot)
-        { ssIndices = if noindex then [] else mapMaybe (toPiece . pack) index
-        , ssGetMimeType = return . mimeByExt mimeMap defaultMimeType . fromPiece . fileName
-        }
+main = runCommandLine (shake . docroot)
 
 shake :: FilePath -> Middleware
 shake docroot app req
     | any unsafe p = app req
     | null p = app req
-    | ".hamlet" `T.isSuffixOf` l = liftIO $ hamlet pr
-    | ".lucius" `T.isSuffixOf` l = liftIO $ lucius pr
+    | ".hamlet" `T.isSuffixOf` l = hamlet pr
+    | ".lucius" `T.isSuffixOf` l = lucius pr
     | otherwise = app req
   where
     p = pathInfo req
@@ -85,19 +48,15 @@ readFileUtf8 fp = do
     let t = decodeUtf8With lenientDecode bs
     return $ T.unpack t
 
-#if MIN_VERSION_wai(2, 0, 0)
-#define ResponseBuilder responseBuilder
-#endif
-
 hamlet :: Text -> IO Response
 hamlet fp = do
     str <- readFileUtf8 fp
     hrt <- parseHamletRT defaultHamletSettings str
     html <- renderHamletRT hrt [] (error "No URLs allowed")
-    return $ ResponseBuilder status200 [("Content-Type", "text/html; charset=utf-8")] $ renderHtmlBuilder html
+    return $ responseBuilder status200 [("Content-Type", "text/html; charset=utf-8")] $ renderHtmlBuilder html
 
 lucius :: Text -> IO Response
 lucius fp = do
     str <- readFileUtf8 fp
     let text = either error id $ luciusRT (TL.pack str) []
-    return $ ResponseBuilder status200 [("Content-Type", "text/css; charset=utf-8")] $ fromLazyText text
+    return $ responseBuilder status200 [("Content-Type", "text/css; charset=utf-8")] $ fromLazyText text
