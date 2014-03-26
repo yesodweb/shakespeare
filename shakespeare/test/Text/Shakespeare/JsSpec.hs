@@ -1,7 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE CPP #-}
-module ShakespeareJsTest (specs) where
+module Text.Shakespeare.JsSpec (spec) where
 
 import Test.HUnit hiding (Test)
 import Test.Hspec
@@ -27,8 +27,8 @@ join l = (intercalate ";\n" l)
 join = intercalate "\n"
 #endif
 
-specs :: Spec
-specs = describe "shakespeare-js" $ do
+spec :: Spec
+spec = describe "shakespeare-js" $ do
 #if !(defined TEST_COFFEE || defined TEST_ROY)
   it "julius" $ do
     let var = "x=2"

@@ -21,11 +21,11 @@ stability:       Stable
 cabal-version:   >= 1.8
 build-type:      Simple
 homepage:        http://www.yesodweb.com/book/shakespearean-templates
-extra-source-files: test/reload.txt
 extra-source-files:
   test/reload.txt
   test/texts/*.text
-  test/ShakespeareTextTest.hs
+  test/juliuses/*.julius
+  test/juliuses/*.coffee
   test-messages/*.msg
 
 library
@@ -41,9 +41,13 @@ library
                    , ghc-prim
                    , bytestring
                    , directory
+                   , aeson
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
+                     Text.Roy
+                     Text.Julius
+                     Text.Coffee
     other-modules:   Text.Shakespeare
                      Text.Shakespeare.Base
     ghc-options:     -Wall
@@ -59,15 +63,36 @@ library
     if os(windows)
       CPP-Options: "-DWINDOWS"
 
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
+
+    if flag(test_roy)
+        cpp-options: -DTEST_ROY
+
+    if flag(test_export)
+        cpp-options: -DTEST_EXPORT
+
 Flag test_export
   default: False
+
+flag test_coffee
+    description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
+
+flag test_roy
+    description: render tests through coffeescript render function
+    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    default: False
 
 test-suite test
     hs-source-dirs: ., test
     main-is: Spec.hs
     other-modules:  Text.Shakespeare.BaseSpec
                     Text.Shakespeare.I18NSpec
+                    Text.Shakespeare.JsSpec
                     Text.Shakespeare.TextSpec
+                    Quoter
 
     cpp-options: -DTEST_EXPORT
 
@@ -88,6 +113,7 @@ test-suite test
                  , HUnit
                  , bytestring
                  , directory
+                 , aeson
 
     extensions: TemplateHaskell
 

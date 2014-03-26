@@ -1,6 +1,4 @@
 ./shakespeare
 ./shakespeare-css
-./shakespeare-js
-./shakespeare-i18n
 ./hamlet
 ./servius
