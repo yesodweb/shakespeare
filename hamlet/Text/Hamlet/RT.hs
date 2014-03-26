@@ -20,7 +20,6 @@ import Data.Monoid (mconcat)
 import Control.Monad (liftM, forM)
 import Control.Exception (Exception)
 import Data.Typeable (Typeable)
-import Control.Failure
 import Text.Hamlet.Parse
 import Data.List (intercalate)
 #if MIN_VERSION_blaze_html(0,5,0)
@@ -30,6 +29,7 @@ import Text.Blaze.Internal (preEscapedString, preEscapedText)
 import Text.Blaze (preEscapedString, preEscapedText, Html)
 #endif
 import Data.Text (Text)
+import Control.Monad.Catch (MonadThrow, throwM)
 
 type HamletMap url = [([String], HamletData url)]
 type UrlRenderer url = (url -> [(Text, Text)] -> Text)
@@ -62,11 +62,11 @@ instance Exception HamletException
 
 
 
-parseHamletRT :: Failure HamletException m
+parseHamletRT :: MonadThrow m
               => HamletSettings -> String -> m HamletRT
 parseHamletRT set s =
     case parseDoc set s of
-        Error s' -> failure $ HamletParseException s'
+        Error s' -> throwM $ HamletParseException s'
         Ok (_, x) -> liftM HamletRT $ mapM convert x
   where
     convert x@(DocForall deref (BindAs _ _) docs) =
@@ -116,14 +116,14 @@ parseHamletRT set s =
     convert DocWith{} = error "Runtime hamlet does not currently support $with"
     convert DocCase{} = error "Runtime hamlet does not currently support $case"
 
-renderHamletRT :: Failure HamletException m
+renderHamletRT :: MonadThrow m
                => HamletRT
                -> HamletMap url
                -> UrlRenderer url
                -> m Html
 renderHamletRT = renderHamletRT' False
 
-renderHamletRT' :: Failure HamletException m
+renderHamletRT' :: MonadThrow m
                 => Bool
                 -> HamletRT
                 -> HamletMap url
@@ -180,7 +180,7 @@ renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
                 renderHamletRT' tempAsHtml (HamletRT docs') scope renderUrl
             HDBool False -> go scope (SDCond cs els)
             _ -> fa $ showName b ++ ": expected HDBool"
-    lookup' :: Failure HamletException m
+    lookup' :: MonadThrow m
             => [String] -> [String] -> HamletMap url -> m (HamletData url)
     lookup' orig k m =
         case lookup k m of
@@ -188,14 +188,14 @@ renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
             Nothing -> fa $ showName orig ++ ": not found"
             Just x -> return x
 
-fa :: Failure HamletException m => String -> m a
-fa = failure . HamletRenderException
+fa :: MonadThrow m => String -> m a
+fa = throwM . HamletRenderException
 
 showName :: [String] -> String
 showName = intercalate "." . reverse
 
-flattenDeref' :: Failure HamletException f => Doc -> Deref -> f [String]
+flattenDeref' :: MonadThrow f => Doc -> Deref -> f [String]
 flattenDeref' orig deref =
     case flattenDeref deref of
-        Nothing -> failure $ HamletUnsupportedDocException orig
+        Nothing -> throwM $ HamletUnsupportedDocException orig
         Just x -> return x
