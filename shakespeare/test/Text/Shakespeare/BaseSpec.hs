@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module ShakespeareBaseTest (specs) where
+module Text.Shakespeare.BaseSpec (spec) where
 
 import Test.Hspec
 import Text.Shakespeare
@@ -13,8 +13,8 @@ import Data.Text.Lazy (pack)
 
 -- run :: Text.Parsec.Prim.Parsec Text.Parsec.Pos.SourceName () c -> Text.Parsec.Pos.SourceName -> c
 
-specs :: Spec
-specs = describe "shakespeare-js" $ do
+spec :: Spec
+spec = describe "shakespeare-js" $ do
   let preFilterN = preFilter Nothing
   {-
   it "parseStrings" $ do

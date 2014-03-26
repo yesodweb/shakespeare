@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-module ShakespeareTextTest (spec) where
+module Text.Shakespeare.TextSpec (spec) where
 
 import Test.HUnit hiding (Test)
 import Test.Hspec
