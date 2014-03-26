@@ -26,6 +26,7 @@ extra-source-files:
   test/reload.txt
   test/texts/*.text
   test/ShakespeareTextTest.hs
+  test-messages/*.msg
 
 library
     build-depends:   base             >= 4       && < 5
@@ -38,8 +39,11 @@ library
                    , text             >= 0.7
                    , process          >= 1.0
                    , ghc-prim
+                   , bytestring
+                   , directory
 
-    exposed-modules: Text.Shakespeare.Text
+    exposed-modules: Text.Shakespeare.I18N
+                     Text.Shakespeare.Text
     other-modules:   Text.Shakespeare
                      Text.Shakespeare.Base
     ghc-options:     -Wall
@@ -62,6 +66,7 @@ test-suite test
     hs-source-dirs: ., test
     main-is: Spec.hs
     other-modules:  Text.Shakespeare.BaseSpec
+                    Text.Shakespeare.I18NSpec
                     Text.Shakespeare.TextSpec
 
     cpp-options: -DTEST_EXPORT
@@ -81,6 +86,8 @@ test-suite test
                  , template-haskell
                  , ghc-prim
                  , HUnit
+                 , bytestring
+                 , directory
 
     extensions: TemplateHaskell
 
