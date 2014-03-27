@@ -60,9 +60,9 @@ library
                      Text.Hamlet.RT
                      Text.Lucius
                      Text.Cassius
-    other-modules:   Text.Shakespeare
                      Text.Shakespeare.Base
-                     Text.Hamlet.Parse
+                     Text.Shakespeare
+    other-modules:   Text.Hamlet.Parse
                      Text.Css
                      Text.MkSizeType
                      Text.IndentToBrace
