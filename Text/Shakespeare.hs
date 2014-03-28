@@ -7,7 +7,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
--- | For lack of a better name... a parameterized version of Julius.
+-- | NOTE: This module should be considered internal, and will be hidden in
+-- future releases.
 module Text.Shakespeare
     ( ShakespeareSettings (..)
     , PreConvert (..)
@@ -25,9 +26,7 @@ module Text.Shakespeare
     , Deref
     , Parser
 
-#ifdef TEST_EXPORT
     , preFilter
-#endif
       -- * Internal
       -- can we remove this?
     , shakespeareRuntime

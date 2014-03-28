@@ -109,6 +109,10 @@ flag servius
 Executable servius
   Main-is:       servius.hs
   hs-source-dirs: app
+  if flag(servius)
+      buildable: True
+  else
+      buildable: False
   Build-depends: base            >= 4                  && < 5
                , wai-app-static  >= 2.0.1              && < 2.1
                , bytestring      >= 0.9.1.4
@@ -120,7 +124,7 @@ Executable servius
                , blaze-builder
 
 test-suite test
-    hs-source-dirs: ., test
+    hs-source-dirs: test
     main-is: Spec.hs
     other-modules:  Text.Shakespeare.BaseSpec
                     Text.Shakespeare.I18NSpec
@@ -137,6 +141,7 @@ test-suite test
 
     ghc-options:   -Wall
     build-depends: base             >= 4       && < 5
+                 , shakespeare
                  , time             >= 1
                  , system-filepath  >= 0.4
                  , system-fileio    >= 0.3
