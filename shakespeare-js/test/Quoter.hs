@@ -13,7 +13,11 @@ import Text.Shakespeare (shakespeare)
 #  ifdef TEST_ROY
 import Text.Roy
 #  else
+#    ifdef TEST_PURESCRIPT
+import Text.PureScript
+#    else
 import Text.Julius
+#    endif
 #  endif
 #endif
 
@@ -38,8 +42,14 @@ quote = roy
 quoteFile = royFile
 quoteFileReload = royFileReload
 #  else
+#    ifdef TEST_PURESCRIPT
+quote = psc
+quoteFile = pscFile
+quoteFileReload = pscFileReload
+#    else
 quote = julius
 quoteFile = juliusFile
 quoteFileReload = juliusFileReload
+#    endif
 #  endif
 #endif

@@ -29,7 +29,7 @@ join = intercalate "\n"
 
 specs :: Spec
 specs = describe "shakespeare-js" $ do
-#if !(defined TEST_COFFEE || defined TEST_ROY)
+#if !(defined TEST_COFFEE || defined TEST_ROY || defined TEST_PURESCRIPT)
   it "julius" $ do
     let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
@@ -88,14 +88,22 @@ specs = describe "shakespeare-js" $ do
 #  ifdef TEST_ROY
     in jelper "(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n    return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5);\n"
 #  else
+#    ifdef TEST_PURESCRIPT
+    in jelper "var main = [ \"oof\", \"oof\", \"3.14\", \"-5\" ];"
+#    else
     in jelper "[oof, oof, 3.14, -5]"
+#    endif
 #  endif
 #endif
-         [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
 
+#ifdef TEST_PURESCRIPT
+         [quote|var main = [#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
+#else
+         [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
+#endif
 
 -- not valid coffeescript
-#if !(defined TEST_COFFEE || defined TEST_ROY)
+#if !(defined TEST_COFFEE || defined TEST_ROY || defined TEST_PURESCRIPT)
   it "single dollar at and caret" $ do
     jelper "$@^" [quote|$@^|]
     jelper "#{@{^{" [quote|#\{@\{^\{|]

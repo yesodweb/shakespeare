@@ -11,7 +11,7 @@ description:
     .
     shakespeare-javascript is also known as Julius, and passes through plain javascript.
     .
-    There is also a shakespeare version for CoffeeScript, TypeScript, and Roy, all languages that compile down to Javascript. They all expect you to have the appropriate compiler in your path.
+    There is also a shakespeare version for CoffeeScript, PureScript, TypeScript, and Roy, all languages that compile down to Javascript. They all expect you to have the appropriate compiler in your path.
     .
     shakespeare originated from the hamlet template package.
     Please see http://www.yesodweb.com/book/shakespearean-templates for a more thorough description and examples.
@@ -39,6 +39,7 @@ library
     exposed-modules:
                      Text.Julius
                      Text.Coffee
+                     Text.PureScript
                      Text.Roy
                      Text.TypeScript
     ghc-options:     -Wall
@@ -47,6 +48,9 @@ library
 
     if flag(test_coffee)
         cpp-options: -DTEST_COFFEE
+
+    if flag(test_purescript)
+        cpp-options: -DTEST_PURESCRIPT
 
     if flag(test_roy)
         cpp-options: -DTEST_ROY
@@ -64,9 +68,14 @@ flag test_coffee
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
     default: False
 
+flag test_purescript
+    description: render tests through purescript render function
+    -- cabal configure --enable-tests -ftest_purescript && cabal build && dist/build/test/test
+    default: False
+
 flag test_roy
-    description: render tests through coffeescript render function
-    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    description: render tests through roy render function
+    -- cabal configure --enable-tests -ftest_roy && cabal build && dist/build/test/test
     default: False
 
 test-suite test
