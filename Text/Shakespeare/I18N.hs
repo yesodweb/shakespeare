@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -362,5 +363,5 @@ data SomeMessage master = forall msg. RenderMessage master msg => SomeMessage ms
 instance IsString (SomeMessage master) where
     fromString = SomeMessage . T.pack
 
-instance RenderMessage master (SomeMessage master) where
+instance master ~ master' => RenderMessage master (SomeMessage master') where
     renderMessage a b (SomeMessage msg) = renderMessage a b msg
