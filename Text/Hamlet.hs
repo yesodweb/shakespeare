@@ -435,6 +435,14 @@ data VarExp msg url  = EPlain Html
                      | EMixinI18n (HtmlUrlI18n msg url)
                      | EMsg msg
 
+instance Show (VarExp msg url) where
+  show (EPlain html) = "EPlain"
+  show (EUrl url) = "EUrl"
+  show (EUrlParam url) = "EUrlParam"
+  show (EMixin url) = "EMixin"
+  show (EMixinI18n msg_url) = "EMixinI18n"
+  show (EMsg msg) = "EMsg"
+
 getVars :: Content -> [(Deref, VarType)]
 getVars ContentRaw{}     = []
 getVars (ContentVar d)   = [(d, VTPlain)]
@@ -575,7 +583,8 @@ runtimeContentToHtml cd render i18nRender handleMsg = go
     go (ContentUrl False d) =
         case lookup d cd of
             Just (EUrl u) -> toHtml $ render u []
-            _ -> error $ show d ++ ": expected EUrl"
+            Just wrong -> error $  "expected EUrl but got: " ++ show wrong ++ "\nfor: " ++ show d
+            _ -> error $ "expected EUrl but got Nothing for: " ++ show d
     go (ContentUrl True d) =
         case lookup d cd of
             Just (EUrlParam (u, p)) ->
