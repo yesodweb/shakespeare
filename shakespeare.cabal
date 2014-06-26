@@ -62,6 +62,7 @@ library
                      Text.Cassius
                      Text.Shakespeare.Base
                      Text.Shakespeare
+                     Text.TypeScript
     other-modules:   Text.Hamlet.Parse
                      Text.Css
                      Text.MkSizeType
