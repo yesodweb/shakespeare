@@ -97,7 +97,7 @@ unnest (Nest l count inside) = do
     tell' $
         case () of
             ()
-                | not $ all isBlank inside -> "{"
+                | not $ all isBlank inside -> " {"
                 | ";" `isInfixOf` lineContent l -> ""
                 | otherwise -> ";"
     tell' $ replicate count '}'

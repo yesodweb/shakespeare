@@ -468,6 +468,23 @@ foo { foo:X#{bar}Y; }
             }
         |]
 
+    describe "font-face #139" $ do
+        it "lucius" $
+            celper "@font-face{font-family:myFirstFont;src:url(sansation_light.woff)}"
+            [lucius|
+                @font-face {
+                    font-family: myFirstFont;
+                    src: url(sansation_light.woff);
+                }
+            |]
+        it "cassius" $
+            celper "@font-face{font-family:myFirstFont;src:url(sansation_light.woff)}"
+            [cassius|
+                @font-face
+                    font-family: myFirstFont
+                    src: url(sansation_light.woff)
+            |]
+
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
 render :: Url -> [(Text, Text)] -> Text
