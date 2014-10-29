@@ -564,7 +564,10 @@ hamletRuntimeMsg settings fp cd i18nRender render = unsafePerformIO $ do
     go' = mconcat . map (runtimeContentToHtml cd render i18nRender handleMsg)
     handleMsg d = case lookup d cd of
             Just (EMsg s) -> i18nRender s
-            _ -> error $ show d ++ ": expected EMsg for ContentMsg"
+            _ -> nothingError "EMsg for ContentMsg" d
+
+nothingError :: Show a => String -> a -> b
+nothingError expected d = error $ "expected " ++ expected ++ " but got Nothing for: " ++ show d
 
 runtimeContentToHtml :: RuntimeVars msg url -> Render url -> Translate msg -> (Deref -> Html) -> Content -> Html
 runtimeContentToHtml cd render i18nRender handleMsg = go
@@ -584,7 +587,7 @@ runtimeContentToHtml cd render i18nRender handleMsg = go
         case lookup d cd of
             Just (EUrl u) -> toHtml $ render u []
             Just wrong -> error $  "expected EUrl but got: " ++ show wrong ++ "\nfor: " ++ show d
-            _ -> error $ "expected EUrl but got Nothing for: " ++ show d
+            _ -> nothingError "EUrl" d
     go (ContentUrl True d) =
         case lookup d cd of
             Just (EUrlParam (u, p)) ->

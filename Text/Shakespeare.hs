@@ -460,6 +460,9 @@ shakespeareFileReload settings fp = do
 
 
 
+nothingError :: Show a => String -> a -> b
+nothingError expected d = error $ "expected " ++ expected ++ " but got Nothing for: " ++ show d
+
 shakespeareRuntime :: ShakespeareSettings -> FilePath -> [(Deref, VarExp url)] -> Shakespeare url
 shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
     mtime <- qRunIO $ getModified $ decodeString fp
@@ -482,17 +485,17 @@ shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
     go (ContentVar d) =
         case lookup d cd of
             Just (EPlain s) -> s
-            _ -> error $ show d ++ ": expected EPlain"
+            _ -> nothingError "EPlain" d
     go (ContentUrl d) =
         case lookup d cd of
             Just (EUrl u) -> fromText $ render' u []
-            _ -> error $ show d ++ ": expected EUrl"
+            _ -> nothingError "EUrl" d
     go (ContentUrlParam d) =
         case lookup d cd of
             Just (EUrlParam (u, p)) ->
                 fromText $ render' u p
-            _ -> error $ show d ++ ": expected EUrlParam"
+            _ -> nothingError "EUrlParam" d
     go (ContentMix d) =
         case lookup d cd of
             Just (EMixin m) -> m render'
-            _ -> error $ show d ++ ": expected EMixin"
+            _ -> nothingError "EMixin" d
