@@ -10,8 +10,8 @@ import Text.Coffee
 import Text.Coffee (coffeeSettings)
 import Text.Shakespeare (shakespeare)
 #else
-#  ifdef TEST_ROY
-import Text.Roy
+#  ifdef TEST_PURE
+import Text.PureScript
 #  else
 import Text.Julius
 #  endif
@@ -33,10 +33,10 @@ quote = QuasiQuoter { quoteExp = \s -> do
 quoteFile = coffeeFile
 quoteFileReload = coffeeFileReload
 #else
-#  ifdef TEST_ROY
-quote = roy
-quoteFile = royFile
-quoteFileReload = royFileReload
+#  ifdef TEST_PURE
+quote = psc
+quoteFile = pscFile
+quoteFileReload = pscFileReload
 #  else
 quote = julius
 quoteFile = juliusFile
