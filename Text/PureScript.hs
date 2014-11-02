@@ -44,7 +44,7 @@ pscSettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '#'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "/usr/local/purescript/bin/psc" ["--stdin", "--verbose-errors", "--no-prelude", "--no-prefix"]
+      preConvert = ReadProcess "psc" ["--stdin", "--verbose-errors", "--no-prelude", "--no-prefix"]
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = ""
     , wrapInsertion = Just WrapInsertion {
