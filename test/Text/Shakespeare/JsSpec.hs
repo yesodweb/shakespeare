@@ -34,10 +34,9 @@ jsUnlines = intercalate "\n"
 spec :: Spec
 spec = describe "shakespeare-js" $ do
   it "psc" $ do
-    let res = "var PS = PS || {};\nPS.JSSpec = (function () {\n    \"use strict\";\n    var test = \"test\";\n    return {\n        test: test\n    };\n})();\n\n"
+    let res = "var PS = PS || {};\nPS.Shakespeare = (function () {\n    \"use strict\";\n    var test = \"test\";\n    return {\n        test: test\n    };\n})();\n\n"
     jelper res [psc|
-module JSSpec where
-  test = "test"
+test = "test"
       |]
 
 #if !(defined TEST_COFFEE || defined TEST_PURE)
@@ -89,7 +88,6 @@ module JSSpec where
     -}
 
 
-#ifndef TEST_PURE
   it "julius module names" $
     let foo = "foo"
         double = 3.14 :: Double
@@ -97,14 +95,13 @@ module JSSpec where
 # ifdef TEST_COFFEE
     in jelper "var _this = this;\n\n(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5);\n"
 # else
-#  ifdef TEST_ROY
+#  ifdef TEST_PURE
     in jelper "(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n    return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5);\n"
 #  else
     in jelper "[oof, oof, 3.14, -5]"
 #  endif
 # endif
-         [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
-#endif
+         [quote|foo = [#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
 
 -- not valid coffeescript
 #if !(defined TEST_COFFEE || defined TEST_PURE)
@@ -113,30 +110,28 @@ module JSSpec where
     jelper "#{@{^{" [quote|#\{@\{^\{|]
 #endif
 
-#ifndef TEST_PURE
   it "dollar operator" $ do
     let val = (1 :: Int, (2 :: Int, 3 :: Int))
-# if (defined TEST_COFFEE)
+#if (defined TEST_COFFEE)
     jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
     jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
 # else
 
-#  if (defined TEST_ROY)
-    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
-    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
+#  if (defined TEST_PURE)
+    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|foo = #{ rawJS $ show $ fst $ snd val }|]
+    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|foo = #{ rawJS $ show $ fst $ snd val }|]
 
 #  else
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd val }|]
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd $ val}|]
 #  endif
-# endif
 #endif
 
-#if (defined TEST_ROY)
+#if (defined TEST_PURE)
   it "purescript function wrapper" $ do
     let pureInsert = rawJS "\"pureInsert\""
     jelper "(function(shakespeare_var_pureInsert) {\n    var roy = {\n        \"royInsert\": shakespeare_var_royInsert\n    };\n    return console.log(roy);\n})(\"royInsert\");\n" [quote|
-{ pureInsert: #{pureInsert} }
+pureInsert = {pureInsert: #{pureInsert}}
 |]
 #endif
   it "empty file" $ jelper "" [quote||]

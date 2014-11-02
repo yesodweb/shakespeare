@@ -113,19 +113,24 @@ data PreConvert = PreConvert
     , preEscapeIgnoreLine :: [Char]
     , wrapInsertion :: Maybe WrapInsertion
     }
+    deriving Show
 
-data WrapInsertion = WrapInsertion {
-      wrapInsertionIndent     :: Maybe String
+data WrapInsertion = WrapInsertion
+    { wrapInsertionIndent     :: Maybe String
     , wrapInsertionStartBegin :: String
     , wrapInsertionSeparator  :: String
     , wrapInsertionStartClose :: String
-    , wrapInsertionEnd :: String
-    , wrapInsertionAddParens :: Bool
+    , wrapInsertionEnd        :: String
+    , wrapInsertionAddParens  :: Bool
+    } | WrapModule
+    { wrapModuleDataDeclaration :: String
+    , wrapModuleMain            :: String
     }
+    deriving Show
 
 data PreConversion = ReadProcess String [String]
                    | Id
-  
+                   deriving Show
 
 
 data ShakespeareSettings = ShakespeareSettings
@@ -160,6 +165,8 @@ instance Lift PreConvert where
 instance Lift WrapInsertion where
     lift (WrapInsertion indent sb sep sc e wp) =
         [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift wp)|]
+    lift (WrapModule datadec main) =
+        [|WrapModule $(lift datadec) $(lift main)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -241,7 +248,8 @@ readProcessError cmd args input mfp = do
        [] -> return output
        msg -> error $ "stderr received during readProcess:" ++ displayCmd ++ "\n\n" ++ msg
    ExitFailure r ->
-    error $ "exit code " ++ show r ++ " from readProcess: " ++ displayCmd ++ "\n\n"
+    error $ "input:\n" ++ input
+      ++ "\n\nexit code " ++ show r ++ " from readProcess: " ++ displayCmd ++ "\n\n"
       ++ "stderr:\n" ++ err
   where
     displayCmd = cmd ++ ' ':unwords (map show args) ++
@@ -264,7 +272,7 @@ preFilter mfp ShakespeareSettings {..} template =
                                   template
               vars = reverse rvars
               parsed = mconcat groups
-              withVars = (addVars mWrapI vars parsed)
+              withVars = addVars mWrapI vars parsed
           in  applyVars mWrapI vars `fmap` case convert of
                   Id -> return withVars
                   ReadProcess command args ->
@@ -283,6 +291,7 @@ preFilter mfp ShakespeareSettings {..} template =
 
     applyVars _      [] str = str
     applyVars Nothing _ str = str
+    applyVars (Just WrapModule{}) _ str = str
     applyVars (Just WrapInsertion {..}) vars str =
          (if wrapInsertionAddParens then "(" else "")
       <> removeTrailingSemiColon
@@ -294,8 +303,15 @@ preFilter mfp ShakespeareSettings {..} template =
           removeTrailingSemiColon = reverse $
              dropWhile (\c -> c == ';' || isSpace c) (reverse str)
 
-    addVars _      [] str = str
     addVars Nothing _ str = str
+    addVars (Just WrapModule{..}) vars str =
+         wrapModuleDataDeclaration <> "\n"
+      <> mconcat (intersperse "\n" $ map (foreignDec "String" . shakespeare_var_conversion) vars)
+      <> "\n" <> wrapModuleMain <> "\n" <> str
+      where
+        foreignDec typ v = "foreign import " <> v <> " :: " <> typ
+
+    addVars _      [] str = str
     addVars (Just WrapInsertion {..}) vars str =
          wrapInsertionStartBegin
       <> mconcat (intersperse wrapInsertionSeparator $ map shakespeare_var_conversion vars)

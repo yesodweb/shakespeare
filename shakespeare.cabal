@@ -50,7 +50,6 @@ library
                    , blaze-html
                    , exceptions
                    , transformers
-                   , file-location
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text

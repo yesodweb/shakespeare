@@ -10,7 +10,7 @@
 -- accomplish this by either running @cabal install purescript@, or specifying
 -- it in the cabal file of your project.
 --
--- Unfortunately, variable interpolation is completely broken and does not work!
+-- Unfortunately, variable interpolation is completely broken and assumes everything inserted is a String
 --
 -- Further reading:
 --
@@ -47,13 +47,9 @@ pscSettings = do
       preConvert = ReadProcess "psc" ["--stdin", "--verbose-errors", "--no-prelude", "--no-prefix"]
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = ""
-    , wrapInsertion = Just WrapInsertion {
-        wrapInsertionIndent = Just "  "
-      , wrapInsertionStartBegin = "" -- "module Foo where\nfoo = \\"
-      , wrapInsertionSeparator = " "
-      , wrapInsertionStartClose = " -> "
-      , wrapInsertionEnd = ""
-      , wrapInsertionAddParens = False
+    , wrapInsertion = Just WrapModule
+      { wrapModuleDataDeclaration = "module Shakespeare.Data where"
+      , wrapModuleMain = "module Shakespeare where\nimport Shakespeare.Data"
       }
     }
   }
