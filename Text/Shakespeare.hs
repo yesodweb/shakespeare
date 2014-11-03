@@ -123,8 +123,8 @@ data WrapInsertion = WrapInsertion
     , wrapInsertionEnd        :: String
     , wrapInsertionAddParens  :: Bool
     } | WrapModule
-    { wrapModuleDataDeclaration :: String
-    , wrapModuleMain            :: String
+    { wrapModuleImport :: String
+    , wrapModuleMain   :: String
     }
     deriving Show
 
@@ -165,8 +165,8 @@ instance Lift PreConvert where
 instance Lift WrapInsertion where
     lift (WrapInsertion indent sb sep sc e wp) =
         [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift wp)|]
-    lift (WrapModule datadec main) =
-        [|WrapModule $(lift datadec) $(lift main)|]
+    lift (WrapModule imp main) =
+        [|WrapModule $(lift imp) $(lift main)|]
 
 instance Lift PreConversion where
     lift (ReadProcess command args) =
@@ -305,11 +305,11 @@ preFilter mfp ShakespeareSettings {..} template =
 
     addVars Nothing _ str = str
     addVars (Just WrapModule{..}) vars str =
-         wrapModuleDataDeclaration <> "\n"
+         wrapModuleMain <> "\n"
       <> mconcat (intersperse "\n" $ map (foreignDec "String" . shakespeare_var_conversion) vars)
-      <> "\n" <> wrapModuleMain <> "\n" <> str
+      <> "\n" <> str
       where
-        foreignDec typ v = "foreign import " <> v <> " :: " <> typ
+        foreignDec typ v = wrapModuleImport <> " " <> v <> " :: " <> typ
 
     addVars _      [] str = str
     addVars (Just WrapInsertion {..}) vars str =

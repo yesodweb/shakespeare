@@ -48,8 +48,8 @@ pscSettings = do
     , preEscapeIgnoreBalanced = "'\""
     , preEscapeIgnoreLine = ""
     , wrapInsertion = Just WrapModule
-      { wrapModuleDataDeclaration = "module Shakespeare.Data where"
-      , wrapModuleMain = "module Shakespeare where\nimport Shakespeare.Data"
+      { wrapModuleImport = "foreign import"
+      , wrapModuleMain = "module Shakespeare where"
       }
     }
   }
