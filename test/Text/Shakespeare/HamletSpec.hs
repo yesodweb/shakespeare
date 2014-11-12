@@ -5,7 +5,7 @@ module Text.Shakespeare.HamletSpec (spec) where
 import HamletTestTypes (ARecord(..))
 
 import Test.HUnit hiding (Test)
-import Test.Hspec
+import Test.Hspec hiding (Arg)
 
 import Prelude hiding (reverse)
 import Text.Hamlet
