@@ -150,7 +150,7 @@ test-suite test
                  , system-fileio    >= 0.3
                  , containers
                  , parsec           >= 2       && < 4
-                 , hspec            >= 1.3
+                 , hspec            == 2.*
                  , text             >= 0.7
                  , process
                  , template-haskell
