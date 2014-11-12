@@ -24,6 +24,7 @@ module Text.Shakespeare.Text
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
+import Data.Text.Lazy.Builder.Int (decimal)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
@@ -41,9 +42,9 @@ instance ToText [Char ] where toText = fromLazyText . TL.pack
 instance ToText TS.Text where toText = fromText
 instance ToText TL.Text where toText = fromLazyText
 
-instance ToText Int32 where toText = toText . show
-instance ToText Int64 where toText = toText . show
-instance ToText Int   where toText = toText . show
+instance ToText Int32 where toText = decimal
+instance ToText Int64 where toText = decimal
+instance ToText Int   where toText = decimal
 
 settings :: Q ShakespeareSettings
 settings = do
