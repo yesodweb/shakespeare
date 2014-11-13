@@ -62,10 +62,13 @@ module Text.Shakespeare.I18N
     ) where
 
 import Language.Haskell.TH.Syntax
+import Control.Applicative ((<$>))
+import Control.Monad (filterM, forM)
 import Data.Text (Text, pack, unpack)
 import System.Directory
 import Data.Maybe (catMaybes)
 import Data.List (isSuffixOf, sortBy, foldl')
+import qualified Data.Map as Map
 import qualified Data.ByteString as S
 import Data.Text.Encoding (decodeUtf8)
 import Data.Char (isSpace, toLower, toUpper)
@@ -153,15 +156,16 @@ mkMessageCommon genType prefix postfix master dt folder lang = do
     files <- qRunIO $ getDirectoryContents folder
     (_files', contents) <- qRunIO $ fmap (unzip . catMaybes) $ mapM (loadLang folder) files
 #ifdef GHC_7_4
-    mapM_ qAddDependentFile _files'
+    mapM_ qAddDependentFile $ concat _files'
 #endif
+    let contents' = Map.toList $ Map.fromListWith (++) contents
     sdef <-
-        case lookup lang contents of
+        case lookup lang contents' of
             Nothing -> error $ "Did not find main language file: " ++ unpack lang
             Just def -> toSDefs def
-    mapM_ (checkDef sdef) $ map snd contents
+    mapM_ (checkDef sdef) $ map snd contents'
     let mname = mkName $ dt ++ postfix
-    c1 <- fmap concat $ mapM (toClauses prefix dt) contents
+    c1 <- fmap concat $ mapM (toClauses prefix dt) contents'
     c2 <- mapM (sToClause prefix dt) sdef
     c3 <- defClause
     return $
@@ -304,18 +308,50 @@ data Def = Def
     , content :: [Content]
     }
 
-loadLang :: FilePath -> FilePath -> IO (Maybe (FilePath, (Lang, [Def])))
+(</>) :: FilePath -> FilePath -> FilePath
+path </> file = path ++ '/' : file
+
+loadLang :: FilePath -> FilePath -> IO (Maybe ([FilePath], (Lang, [Def])))
 loadLang folder file = do
-    let file' = folder ++ '/' : file
-    e <- doesFileExist file'
-    if e && ".msg" `isSuffixOf` file
+    let file' = folder </> file
+    isFile <- doesFileExist file'
+    if isFile && ".msg" `isSuffixOf` file
         then do
             let lang = pack $ reverse $ drop 4 $ reverse file
-            bs <- S.readFile file'
-            let s = unpack $ decodeUtf8 bs
-            defs <- fmap catMaybes $ mapM (parseDef . T.unpack . T.strip . T.pack) $ lines s
-            return $ Just (file', (lang, defs))
-        else return Nothing
+            defs <- loadLangFile file'
+            return $ Just ([file'], (lang, defs))
+        else do
+            isDir <- doesDirectoryExist file'
+            if isDir
+                then do
+                    let lang = pack file
+                    (files, defs) <- unzip <$> loadLangDir file'
+                    return $ Just (files, (lang, concat defs))
+                else
+                    return Nothing
+
+loadLangDir :: FilePath -> IO [(FilePath, [Def])]
+loadLangDir folder = do
+    paths <- map (folder </>) . filter (`notElem` [".", ".."]) <$> getDirectoryContents folder
+    files <- filterM doesFileExist paths
+    dirs  <- filterM doesDirectoryExist paths
+    langFiles <-
+        forM files $ \file -> do
+            if ".msg" `isSuffixOf` file
+                then do
+                  defs <- loadLangFile file
+                  return $ Just (file, defs)
+                else do
+                  return Nothing
+    langDirs <- mapM loadLangDir dirs
+    return $ catMaybes langFiles ++ concat langDirs
+
+loadLangFile :: FilePath -> IO [Def]
+loadLangFile file = do
+    bs <- S.readFile file
+    let s = unpack $ decodeUtf8 bs
+    defs <- fmap catMaybes $ mapM (parseDef . T.unpack . T.strip . T.pack) $ lines s
+    return defs
 
 parseDef :: String -> IO (Maybe Def)
 parseDef "" = return Nothing
