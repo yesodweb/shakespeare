@@ -1,3 +1,7 @@
+### shakesepare 2.0.2
+
+shakespeare-i18n supports message directories.
+
 ### Hamlet 0.5.0 (August 29, 2010)
 
 * Use can use parantheses when referencing variables. This allows you to have
