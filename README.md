@@ -8,4 +8,5 @@ Hamlet, shakespeare-css (Lucius and Cassius), shakespeare-js, and shakespeare-in
 
 * [Emacs](https://github.com/CodyReichert/shakespeare-mode)
 * [Vim](https://github.com/pbrisbin/vim-syntax-shakespeare)
+* [Sublime](https://packagecontrol.io/packages/Yesod)
 
