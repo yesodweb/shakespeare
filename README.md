@@ -1,8 +1,11 @@
 # About
 
-Base code for Hamlet, shakespeare-css (Lucius and Cassius), shakespeare-js, and shakespeare-interpolated
+Type-safe web templates for Haskell.
+Insert your Haskell variables directly into your templates: HTML, CSS, JS, and Text.
+Hamlet, shakespeare-css (Lucius and Cassius), shakespeare-js, and shakespeare-interpolated
 
-# Testing
+# Editor support
 
-There is a curious lack of tests for this project.
-Currently this code should be well exercised by the other shakespeare-* projects, which have test suites
+* [Emacs](https://github.com/CodyReichert/shakespeare-mode)
+* [Vim](https://github.com/pbrisbin/vim-syntax-shakespeare)
+
