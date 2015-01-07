@@ -1,3 +1,7 @@
+### 2.0.2.2
+
+GHC 7.10 support
+
 ### shakesepare 2.0.2
 
 shakespeare-i18n supports message directories.
