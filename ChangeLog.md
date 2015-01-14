@@ -1,3 +1,7 @@
+### 2.0.3
+
+* `cassiusMixin` added
+
 ### 2.0.2.2
 
 GHC 7.10 support

@@ -399,7 +399,7 @@ foo { foo:X#{bar}Y; }
     }
 }
 |]
-    it "mixins" $ do
+    it "lucius mixins" $ do
         let bins = [luciusMixin|
                    bin:bin2;
                    /* FIXME not currently implementing sublocks in mixins
@@ -410,6 +410,18 @@ foo { foo:X#{bar}Y; }
                    |] :: Mixin
         -- No sublocks celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
         celper "foo{bar:baz;bin:bin2}" [lucius|
+            foo {
+                bar: baz;
+                ^{bins}
+            }
+        |]
+    it "cassius mixins" $ do
+        let bins = [cassiusMixin|
+                   bin:bin2
+                   bin3:bin4
+                   |] :: Mixin
+        -- No sublocks celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
+        celper "foo{bar:baz;bin:bin2;bin3:bin4}" [lucius|
             foo {
                 bar: baz;
                 ^{bins}

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -17,6 +18,9 @@ module Text.Cassius
     , cassiusFile
     , cassiusFileDebug
     , cassiusFileReload
+      -- ** Mixims
+    , cassiusMixin
+    , Mixin
       -- * ToCss instances
       -- ** Color
     , Color (..)
@@ -66,3 +70,31 @@ cassiusFileReload = cassiusFileDebug
 -- creating systems like yesod devel.
 cassiusUsedIdentifiers :: String -> [(Deref, VarType)]
 cassiusUsedIdentifiers = cssUsedIdentifiers True Text.Lucius.parseTopLevels
+
+-- | Create a mixin with Cassius syntax.
+--
+-- Since 2.0.3
+cassiusMixin :: QuasiQuoter
+cassiusMixin = QuasiQuoter
+    { quoteExp = quoteExp Text.Lucius.luciusMixin . i2bMixin
+    }
+
+i2bMixin :: String -> String
+i2bMixin s' =
+    TL.unpack
+        $ stripEnd "}"
+        $ stripFront "mixin {"
+        $ TL.strip
+        $ TL.pack
+        $ i2b
+        $ unlines
+        $ "mixin" : (map ("    " ++) $ lines s')
+  where
+    stripFront x y =
+        case TL.stripPrefix x y of
+            Nothing -> y
+            Just z -> z
+    stripEnd x y =
+        case TL.stripSuffix x y of
+            Nothing -> y
+            Just z -> z
