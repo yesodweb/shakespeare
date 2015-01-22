@@ -101,6 +101,17 @@ spec = do
       simpT "2" [stext|#{ show $ fst $ snd val }|]
       simpT "2" [stext|#{ show $ fst $ snd $ val}|]
 
+    it "aligned text with bar" $ do
+      let val = 3 :: Int
+      simpT "hoge\r\n3\r\n1\r\n" (TL.fromStrict [sbt|hoge
+                                                    |#{val}
+                                                    |1
+                                                    |])
+      simpT "hoge\r\n3\r\n1\r\n" [lbt|hoge
+                                     |#{val}
+                                     |1
+                                     |]
+
 simpT :: String -> TL.Text -> Assertion
 simpT a b = pack a @=? TL.toStrict b
 
