@@ -1,3 +1,7 @@
+### 2.0.4
+
+* [Add multiline literal aligned with bar #148](https://github.com/yesodweb/shakespeare/pull/148)
+
 ### 2.0.3
 
 * `cassiusMixin` added
