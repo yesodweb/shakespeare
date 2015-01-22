@@ -14,6 +14,8 @@ module Text.Shakespeare.Text
     , textFileReload
     , st -- | strict text
     , lt -- | lazy text, same as stext :)
+    , sbt -- | strict text whose left edge is aligned with bar ('|')
+    , lbt -- | lazy text, whose left edge is aligned with bar ('|')
     -- * Yesod code generation
     , codegen
     , codegenSt
@@ -57,7 +59,7 @@ settings = do
   }
 
 
-stext, lt, st, text :: QuasiQuoter
+stext, lt, st, text, lbt, sbt :: QuasiQuoter
 stext = 
   QuasiQuoter { quoteExp = \s -> do
     rs <- settings
@@ -80,6 +82,27 @@ text = QuasiQuoter { quoteExp = \s -> do
     quoteExp (shakespeare rs) $ filter (/='\r') s
     }
 
+dropBar :: [TL.Text] -> [TL.Text]
+dropBar [] = []
+dropBar (c:cx) = c:dropBar' cx
+  where
+    dropBar' txt = reverse $ drop 1 $ map (TL.drop 1 . TL.dropWhile (/= '|')) $ reverse txt
+
+lbt = 
+  QuasiQuoter { quoteExp = \s -> do
+    rs <- settings
+    render <- [|TL.unlines . dropBar . TL.lines . toLazyText|]
+    rendered <- shakespeareFromString rs { justVarInterpolation = True } s
+    return (render `AppE` rendered)
+    }
+
+sbt = 
+  QuasiQuoter { quoteExp = \s -> do
+    rs <- settings
+    render <- [|TL.toStrict . TL.unlines . dropBar . TL.lines . toLazyText|]
+    rendered <- shakespeareFromString rs { justVarInterpolation = True } s
+    return (render `AppE` rendered)
+    }
 
 textFile :: FilePath -> Q Exp
 textFile fp = do
