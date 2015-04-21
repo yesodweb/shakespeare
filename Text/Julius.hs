@@ -8,7 +8,7 @@
 --
 -- You might consider trying 'Text.Typescript' or 'Text.Coffee' which compile down to Javascript.
 --
--- Further reading: <http://www.yesodweb.com/book/templates>
+-- Further reading: <http://www.yesodweb.com/book/shakespearean-templates>
 module Text.Julius
     ( -- * Functions
       -- ** Template-Reading Functions
