@@ -43,7 +43,7 @@ library
                    , process          >= 1.0
                    , ghc-prim
                    , bytestring
-                   , directory
+                   , directory        >= 1.1
                    , aeson
                    , blaze-markup
                    , blaze-html
