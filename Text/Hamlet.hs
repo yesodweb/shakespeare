@@ -72,9 +72,8 @@ import Data.List (intercalate)
 import Data.IORef
 import qualified Data.Map as M
 import System.IO.Unsafe (unsafePerformIO)
-import Filesystem (getModified)
+import System.Directory (getModificationTime)
 import Data.Time (UTCTime)
-import Filesystem.Path.CurrentOS (decodeString)
 import Text.Blaze.Html (preEscapedToHtml)
 
 -- | Convert some value to a list of attribute pairs.
@@ -529,7 +528,7 @@ hamletRuntime :: HamletSettings
               -> [(Deref, VarExp msg url)]
               -> Shakespeare url
 hamletRuntime settings fp cd render = unsafePerformIO $ do
-    mtime <- qRunIO $ getModified $ decodeString fp
+    mtime <- qRunIO $ getModificationTime fp
     mdata <- lookupReloadMap fp
     case mdata of
       Just (lastMtime, lastContents) ->
@@ -550,7 +549,7 @@ hamletRuntimeMsg :: HamletSettings
               -> RuntimeVars msg url
               -> HtmlUrlI18n msg url
 hamletRuntimeMsg settings fp cd i18nRender render = unsafePerformIO $ do
-    mtime <- qRunIO $ getModified $ decodeString fp
+    mtime <- qRunIO $ getModificationTime fp
     mdata <- lookupReloadMap fp
     case mdata of
       Just (lastMtime, lastContents) ->

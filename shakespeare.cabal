@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         2.0.4.1
+version:         2.0.5
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -36,8 +36,6 @@ extra-source-files:
 library
     build-depends:   base             >= 4       && < 5
                    , time             >= 1
-                   , system-filepath  >= 0.4
-                   , system-fileio    >= 0.3
                    , containers
                    , template-haskell
                    , parsec           >= 2       && < 4
@@ -147,8 +145,6 @@ test-suite test
     build-depends: base             >= 4       && < 5
                  , shakespeare
                  , time             >= 1
-                 , system-filepath  >= 0.4
-                 , system-fileio    >= 0.3
                  , containers
                  , parsec           >= 2       && < 4
                  , hspec            == 2.*

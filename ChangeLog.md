@@ -1,3 +1,7 @@
+### 2.0.5
+
+* Drop system-filepath
+
 ### 2.0.4.1
 
 Fix build for GHC 7.10 [#151](https://github.com/yesodweb/shakespeare/pull/151)

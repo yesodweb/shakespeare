@@ -51,8 +51,7 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
 
-import Filesystem (getModified)
-import Filesystem.Path.CurrentOS (decodeString)
+import System.Directory (getModificationTime)
 import Data.Time (UTCTime)
 import Data.IORef
 import qualified Data.Map as M
@@ -466,7 +465,7 @@ nothingError expected d = error $ "expected " ++ expected ++ " but got Nothing f
 
 shakespeareRuntime :: ShakespeareSettings -> FilePath -> [(Deref, VarExp url)] -> Shakespeare url
 shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
-    mtime <- qRunIO $ getModified $ decodeString fp
+    mtime <- qRunIO $ getModificationTime fp
     mdata <- lookupReloadMap fp
     case mdata of
       Just (lastMtime, lastContents) ->
