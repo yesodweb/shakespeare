@@ -51,7 +51,7 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
 import Data.Aeson (Value)
-import Data.Aeson.Encode (fromValue)
+import Data.Aeson.Encode (encodeToTextBuilder)
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -87,7 +87,7 @@ instance ToJavascript Javascript where toJavascript = Javascript . unJavascript
 instance ToJavascript Builder where toJavascript = Javascript
 #endif
 instance ToJavascript Bool where toJavascript = Javascript . fromText . TS.toLower . TS.pack . show
-instance ToJavascript Value where toJavascript = Javascript . fromValue
+instance ToJavascript Value where toJavascript = Javascript . encodeToTextBuilder
 
 newtype RawJavascript = RawJavascript Builder
 instance ToJavascript RawJavascript where

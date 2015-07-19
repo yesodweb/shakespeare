@@ -52,13 +52,13 @@ library
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
-                     Text.Roy
                      Text.Julius
                      Text.Coffee
                      Text.Hamlet
                      Text.Hamlet.RT
                      Text.Lucius
                      Text.Cassius
+                     Text.PureScript
                      Text.Shakespeare.Base
                      Text.Shakespeare
                      Text.TypeScript
@@ -69,9 +69,6 @@ library
                      Text.CssCommon
     ghc-options:     -Wall
 
-    if flag(test_export)
-      cpp-options: -DTEST_EXPORT
-
     extensions: TemplateHaskell
 
     if impl(ghc >= 7.4)
@@ -79,15 +76,6 @@ library
 
     if os(windows)
       CPP-Options: "-DWINDOWS"
-
-    if flag(test_coffee)
-        cpp-options: -DTEST_COFFEE
-
-    if flag(test_roy)
-        cpp-options: -DTEST_ROY
-
-    if flag(test_export)
-        cpp-options: -DTEST_EXPORT
 
 Flag test_export
   default: False
@@ -97,9 +85,9 @@ flag test_coffee
     -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
     default: False
 
-flag test_roy
-    description: render tests through coffeescript render function
-    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+flag test_pure
+    description: render tests through purescript render function
+    -- cabal configure --enable-tests -ftest_pure && cabal build && dist/build/test/test
     default: False
 
 -- Commented out due to concerns that the Hackage page looks too intimidating.
@@ -138,6 +126,10 @@ test-suite test
                     HamletTestTypes
 
     cpp-options: -DTEST_EXPORT
+    if flag(test_coffee)
+        cpp-options: -DTEST_COFFEE
+    if flag(test_pure)
+        cpp-options: -DTEST_PURE
 
     type: exitcode-stdio-1.0
 

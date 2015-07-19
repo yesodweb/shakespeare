@@ -9,6 +9,10 @@ import Test.Hspec
 import Prelude hiding (reverse)
 #ifdef TEST_COFFEE
 import Text.Coffee
+#else
+#  ifdef TEST_PURE
+import Text.PureScript
+#  endif
 #endif
 import Text.Julius
 import Quoter (quote, quoteFile, quoteFileReload)
@@ -20,16 +24,22 @@ import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
 import Data.Aeson (toJSON)
 
-join :: [String] -> String
+jsUnlines :: [String] -> String
 #ifdef TEST_COFFEE
-join l = (intercalate ";\n" l)
+jsUnlines l = (intercalate ";\n" l)
 #else
-join = intercalate "\n"
+jsUnlines = intercalate "\n"
 #endif
 
 spec :: Spec
 spec = describe "shakespeare-js" $ do
-#if !(defined TEST_COFFEE || defined TEST_ROY)
+  it "psc" $ do
+    let res = "var PS = PS || {};\nPS.Shakespeare = (function () {\n    \"use strict\";\n    var test = \"test\";\n    return {\n        test: test\n    };\n})();\n\n"
+    jelper res [psc|
+test = "test"
+      |]
+
+#if !(defined TEST_COFFEE || defined TEST_PURE)
   it "julius" $ do
     let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
@@ -45,7 +55,7 @@ spec = describe "shakespeare-js" $ do
   it "juliusFile" $ do
     let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(quoteFile "test/juliuses/external1.julius") $ join
+    flip jelper $(quoteFile "test/juliuses/external1.julius") $ jsUnlines
         [ "שלום"
         , var
         , "url"
@@ -57,7 +67,7 @@ spec = describe "shakespeare-js" $ do
   it "juliusFileReload" $ do
     let var = "x=2"
     let urlp = (Home, [(pack "p", pack "q")])
-    flip jelper $(quoteFileReload "test/juliuses/external1.julius") $ join
+    flip jelper $(quoteFileReload "test/juliuses/external1.julius") $ jsUnlines
         [ "שלום"
         , var
         , "url"
@@ -82,20 +92,19 @@ spec = describe "shakespeare-js" $ do
     let foo = "foo"
         double = 3.14 :: Double
         int = -5 :: Int
-#ifdef TEST_COFFEE
+# ifdef TEST_COFFEE
     in jelper "var _this = this;\n\n(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n  return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5);\n"
-#else
-#  ifdef TEST_ROY
+# else
+#  ifdef TEST_PURE
     in jelper "(function(shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint) {\n    return [shakespeare_var_rawJSDataListreversefoo, shakespeare_var_rawJSLreversefoo, shakespeare_var_rawJSshowdouble, shakespeare_var_rawJSshowint];\n})(oof, oof, 3.14, -5);\n"
 #  else
     in jelper "[oof, oof, 3.14, -5]"
 #  endif
-#endif
-         [quote|[#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
-
+# endif
+         [quote|foo = [#{rawJS $ Data.List.reverse foo}, #{rawJS $ L.reverse foo}, #{rawJS $ show double}, #{rawJS $ show int}]|]
 
 -- not valid coffeescript
-#if !(defined TEST_COFFEE || defined TEST_ROY)
+#if !(defined TEST_COFFEE || defined TEST_PURE)
   it "single dollar at and caret" $ do
     jelper "$@^" [quote|$@^|]
     jelper "#{@{^{" [quote|#\{@\{^\{|]
@@ -106,11 +115,11 @@ spec = describe "shakespeare-js" $ do
 #if (defined TEST_COFFEE)
     jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
     jelper "var _this = this;\n\n(function(shakespeare_var_rawJSshowfstsndval) {\n  return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
-#else
+# else
 
-#  if (defined TEST_ROY)
-    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
-    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|#{ rawJS $ show $ fst $ snd val }|]
+#  if (defined TEST_PURE)
+    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|foo = #{ rawJS $ show $ fst $ snd val }|]
+    jelper "(function(shakespeare_var_rawJSshowfstsndval) {\n    return shakespeare_var_rawJSshowfstsndval;\n})(2);\n" [quote|foo = #{ rawJS $ show $ fst $ snd val }|]
 
 #  else
     jelper "2" [quote|#{ rawJS $ show $ fst $ snd val }|]
@@ -118,12 +127,11 @@ spec = describe "shakespeare-js" $ do
 #  endif
 #endif
 
-#if (defined TEST_ROY)
-  it "roy function wrapper" $ do
-    let royInsert = rawJS "\"royInsert\""
-    jelper "(function(shakespeare_var_royInsert) {\n    var roy = {\n        \"royInsert\": shakespeare_var_royInsert\n    };\n    return console.log(roy);\n})(\"royInsert\");\n" [quote|
-let roy = { royInsert: #{royInsert} }
-console.log roy
+#if (defined TEST_PURE)
+  it "purescript function wrapper" $ do
+    let pureInsert = rawJS "\"pureInsert\""
+    jelper "(function(shakespeare_var_pureInsert) {\n    var roy = {\n        \"royInsert\": shakespeare_var_royInsert\n    };\n    return console.log(roy);\n})(\"royInsert\");\n" [quote|
+pureInsert = {pureInsert: #{pureInsert}}
 |]
 #endif
   it "empty file" $ jelper "" [quote||]
@@ -183,14 +191,14 @@ encodeUrlChar y =
 
 
 
-#ifndef TEST_ROY
+#ifndef TEST_PURE
 jmixin :: JavascriptUrl u
 jmixin = [quote|f(2)|]
 #endif
 
 jelper :: String -> JavascriptUrl Url -> Assertion
 jelper res h = do
-  T.pack res @=? renderJavascriptUrl render h
+  T.pack (res) @=? renderJavascriptUrl render h
 
 instance Show Url where
     show _ = "FIXME remove this instance show Url"
