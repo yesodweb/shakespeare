@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 -- | A Shakespearean module for Javascript templates, introducing type-safe,
 -- compile-time variable and url interpolation.--
@@ -79,13 +78,7 @@ asJavascriptUrl = id
 -- | A typeclass for types that can be interpolated in CoffeeScript templates.
 class ToJavascript a where
     toJavascript :: a -> Javascript
-#if 0
-instance ToJavascript [Char] where toJavascript = Javascript . fromLazyText . TL.pack
-instance ToJavascript TS.Text where toJavascript = Javascript . fromText
-instance ToJavascript TL.Text where toJavascript = Javascript . fromLazyText
-instance ToJavascript Javascript where toJavascript = Javascript . unJavascript
-instance ToJavascript Builder where toJavascript = Javascript
-#endif
+
 instance ToJavascript Bool where toJavascript = Javascript . fromText . TS.toLower . TS.pack . show
 instance ToJavascript Value where toJavascript = Javascript . fromValue
 
