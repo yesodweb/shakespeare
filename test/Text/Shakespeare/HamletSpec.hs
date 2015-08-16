@@ -14,7 +14,6 @@ import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
 import qualified Data.List as L
-import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend,mconcat)
 import qualified Data.Set as Set
