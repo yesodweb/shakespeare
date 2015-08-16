@@ -14,9 +14,8 @@ import Data.List (intercalate)
 import qualified Data.Text.Lazy as T
 import qualified Data.List
 import qualified Data.List as L
-import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
-import Data.Monoid (mappend,mconcat)
+import Data.Monoid (mappend)
 import qualified Data.Set as Set
 import qualified Text.Blaze.Html.Renderer.Text
 import Text.Blaze.Html (toHtml)

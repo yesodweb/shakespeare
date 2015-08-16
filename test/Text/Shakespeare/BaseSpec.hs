@@ -3,12 +3,10 @@ module Text.Shakespeare.BaseSpec (spec) where
 
 import Test.Hspec
 import Text.Shakespeare
-
 import Text.ParserCombinators.Parsec (parse, ParseError, (<|>))
 import Text.Shakespeare.Base (parseVarString, parseUrlString, parseIntString)
-import Text.Shakespeare (preFilter, defaultShakespeareSettings, ShakespeareSettings(..), PreConvert(..), PreConversion(..))
 import Language.Haskell.TH.Syntax (Exp (VarE))
-import Data.Text.Lazy.Builder (fromString, toLazyText, fromLazyText)
+import Data.Text.Lazy.Builder (toLazyText, fromLazyText)
 import Data.Text.Lazy (pack)
 
 -- run :: Text.Parsec.Prim.Parsec Text.Parsec.Pos.SourceName () c -> Text.Parsec.Pos.SourceName -> c
