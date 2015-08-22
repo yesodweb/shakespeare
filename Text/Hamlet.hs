@@ -1,12 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Hamlet
     ( -- * Plain HTML
