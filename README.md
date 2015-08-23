@@ -1,4 +1,6 @@
-# About
+# Shakespeare
+
+[![Build Status](https://travis-ci.org/yesodweb/shakespeare.svg?branch=master)](https://travis-ci.org/yesodweb/shakespeare)
 
 Type-safe web templates for Haskell.
 Insert your Haskell variables directly into your templates: HTML, CSS, JS, and Text.
