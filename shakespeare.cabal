@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         2.0.5
+version:         2.0.6
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -57,6 +57,7 @@ library
                      Text.Coffee
                      Text.Hamlet
                      Text.Hamlet.RT
+                     Text.Hamlet.Runtime
                      Text.Lucius
                      Text.Cassius
                      Text.Shakespeare.Base

@@ -1,3 +1,7 @@
+### 2.0.6
+
+* Provide the `Text.Hamlet.Runtime` module
+
 ### 2.0.5
 
 * Drop system-filepath

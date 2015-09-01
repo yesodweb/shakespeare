@@ -1,8 +1,10 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveDataTypeable #-}
--- | Most everything exported here is exported also by "Text.Hamlet". The
--- exceptions to that rule should not be necessary for normal usage.
+-- | Provides functionality for runtime Hamlet templates. Please use
+-- "Text.Hamlet.Runtime" instead.
 module Text.Hamlet.RT
     ( -- * Public API
       HamletRT (..)
@@ -134,7 +136,7 @@ renderHamletRT' :: MonadThrow m
 #else
 renderHamletRT' :: MonadCatch m
 #endif
-                => Bool
+                => Bool -- ^ should embeded template (via ^{..}) be plain Html or actual templates?
                 -> HamletRT
                 -> HamletMap url
                 -> (url -> [(Text, Text)] -> Text)
