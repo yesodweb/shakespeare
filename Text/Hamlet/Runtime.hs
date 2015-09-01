@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -54,7 +55,6 @@ import Control.Arrow ((***))
 import Control.Monad.Catch (MonadThrow)
 import Text.Hamlet (HamletSettings, defaultHamletSettings)
 import qualified Text.Hamlet.RT as RT
-import Data.Void (Void, absurd)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Text (Text)
@@ -66,6 +66,11 @@ import Data.Text.Encoding (decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import qualified Data.ByteString as S
 import qualified Data.Text as T
+
+-- Just to skip a dependency for GHC < 7.10
+data Void
+absurd :: Void -> a
+absurd _ = error "absurd"
 
 -- | A parsed Hamlet template. See 'parseHamletTemplate' and
 -- 'readHamletTemplateFile'.
