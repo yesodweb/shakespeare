@@ -11,7 +11,6 @@ import Text.Printf (printf)
 import Language.Haskell.TH
 import Data.Word (Word8)
 import Data.Bits
-import Data.Text.Lazy.Builder (fromLazyText)
 import qualified Data.Text.Lazy as TL
 
 renderCssUrl :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> CssUrl url -> TL.Text
