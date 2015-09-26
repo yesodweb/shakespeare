@@ -58,11 +58,15 @@ module Text.TypeScript
       -- | These QuasiQuoter and Template Haskell methods return values of
       -- type @'JavascriptUrl' url@. See the Yesod book for details.
       tsc
+    , tscJSX
     , typeScriptFile
+    , typeScriptJSXFile
     , typeScriptFileReload
+    , typeScriptJSXFileReload
 
 #ifdef TEST_EXPORT
     , typeScriptSettings
+    , typeScriptJSXSettings
 #endif
     ) where
 
@@ -93,10 +97,28 @@ typeScriptSettings = do
     }
   }
 
+
+-- | Identical to 'typeScriptSettings' but uses jsx when compiling TypeScript
+typeScriptJSXSettings :: Q ShakespeareSettings
+typeScriptJSXSettings = do
+    tsSettings <- typeScriptSettings
+    let rp = ReadProcess "sh" ["-c", "TMP_IN=$(mktemp XXXXXXXXXX.tsx); TMP_OUT=$(mktemp XXXXXXXXXX.js); cat /dev/stdin > ${TMP_IN} && tsc --jsx react --out ${TMP_OUT} ${TMP_IN} && cat ${TMP_OUT}; rm ${TMP_IN} && rm ${TMP_OUT}"]
+    return $ tsSettings {
+        preConversion = fmap (\pc -> pc { preConvert = rp }) (preConversion tsSettings)
+    }
+
+
 -- | Read inline, quasiquoted TypeScript
 tsc :: QuasiQuoter
 tsc = QuasiQuoter { quoteExp = \s -> do
     rs <- typeScriptSettings
+    quoteExp (shakespeare rs) s
+    }
+
+-- | Read inline, quasiquoted TypeScript with jsx
+tscJSX :: QuasiQuoter
+tscJSX = QuasiQuoter { quoteExp = \s -> do
+    rs <- typeScriptJSXSettings
     quoteExp (shakespeare rs) s
     }
 
@@ -107,10 +129,28 @@ typeScriptFile fp = do
     rs <- typeScriptSettings
     shakespeareFile rs fp
 
+-- | Read in a TypeScript template file with jsx. This function reads the file
+-- once, at compile time.
+typeScriptJSXFile :: FilePath -> Q Exp
+typeScriptJSXFile fp = do
+    rs <- typeScriptJSXSettings
+    shakespeareFile rs fp
+
+
+
 -- | Read in a TypeScript template file. This impure function uses
 -- unsafePerformIO to re-read the file on every call, allowing for rapid
 -- iteration.
 typeScriptFileReload :: FilePath -> Q Exp
 typeScriptFileReload fp = do
     rs <- typeScriptSettings
+    shakespeareFileReload rs fp
+
+
+-- | Read in a TypeScript with jsx template file. This impure function uses
+-- unsafePerformIO to re-read the file on every call, allowing for rapid
+-- iteration.
+typeScriptJSXFileReload :: FilePath -> Q Exp
+typeScriptJSXFileReload fp = do
+    rs <- typeScriptJSXSettings
     shakespeareFileReload rs fp
