@@ -1,6 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 -- | A Shakespearean module for Javascript templates, introducing type-safe,
 -- compile-time variable and url interpolation.--
@@ -50,7 +52,14 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
 import Data.Aeson (Value)
-import Data.Aeson.Encode (fromValue)
+import Data.Aeson.Types (Value(..))
+import Numeric (showHex)
+import qualified Data.HashMap.Strict as H
+import qualified Data.Vector as V
+import Data.Text.Lazy.Builder (singleton, fromString)
+import qualified Data.Text as T
+import Data.Scientific (FPFormat(..), Scientific, base10Exponent)
+import Data.Text.Lazy.Builder.Scientific (formatScientificBuilder)
 
 renderJavascript :: Javascript -> TL.Text
 renderJavascript (Javascript b) = toLazyText b
@@ -80,7 +89,63 @@ class ToJavascript a where
     toJavascript :: a -> Javascript
 
 instance ToJavascript Bool where toJavascript = Javascript . fromText . TS.toLower . TS.pack . show
-instance ToJavascript Value where toJavascript = Javascript . fromValue
+instance ToJavascript Value where toJavascript = Javascript . encodeToTextBuilder
+
+-- | Encode a JSON 'Value' to a "Data.Text" 'Builder', which can be
+-- embedded efficiently in a text-based protocol.
+--
+-- If you are going to immediately encode straight to a
+-- 'L.ByteString', it is more efficient to use 'encodeToBuilder'
+-- instead.
+encodeToTextBuilder :: Value -> Builder
+encodeToTextBuilder =
+    go
+  where
+    go Null       = {-# SCC "go/Null" #-} "null"
+    go (Bool b)   = {-# SCC "go/Bool" #-} if b then "true" else "false"
+    go (Number s) = {-# SCC "go/Number" #-} fromScientific s
+    go (String s) = {-# SCC "go/String" #-} string s
+    go (Array v)
+        | V.null v = {-# SCC "go/Array" #-} "[]"
+        | otherwise = {-# SCC "go/Array" #-}
+                      singleton '[' <>
+                      go (V.unsafeHead v) <>
+                      V.foldr f (singleton ']') (V.unsafeTail v)
+      where f a z = singleton ',' <> go a <> z
+    go (Object m) = {-# SCC "go/Object" #-}
+        case H.toList m of
+          (x:xs) -> singleton '{' <> one x <> foldr f (singleton '}') xs
+          _      -> "{}"
+      where f a z     = singleton ',' <> one a <> z
+            one (k,v) = string k <> singleton ':' <> go v
+
+string :: T.Text -> Builder
+string s = {-# SCC "string" #-} singleton '"' <> quote s <> singleton '"'
+  where
+    quote q = case T.uncons t of
+                Nothing      -> fromText h
+                Just (!c,t') -> fromText h <> escape c <> quote t'
+        where (h,t) = {-# SCC "break" #-} T.break isEscape q
+    isEscape c = c == '\"' ||
+                 c == '\\' ||
+                 c < '\x20'
+    escape '\"' = "\\\""
+    escape '\\' = "\\\\"
+    escape '\n' = "\\n"
+    escape '\r' = "\\r"
+    escape '\t' = "\\t"
+
+    escape c
+        | c < '\x20' = fromString $ "\\u" ++ replicate (4 - length h) '0' ++ h
+        | otherwise  = singleton c
+        where h = showHex (fromEnum c) ""
+
+fromScientific :: Scientific -> Builder
+fromScientific s = formatScientificBuilder format prec s
+  where
+    (format, prec)
+      | base10Exponent s < 0 = (Generic, Nothing)
+      | otherwise            = (Fixed,   Just 0)
 
 newtype RawJavascript = RawJavascript Builder
 instance ToJavascript RawJavascript where
