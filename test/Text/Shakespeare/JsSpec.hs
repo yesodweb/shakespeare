@@ -134,6 +134,8 @@ console.log roy
 
   it "> escaping" $ jelper "\"\\u003e\"" [julius|#{toJSON ">"}|]
 
+  it "& escaping" $ jelper "\"\\u0026\"" [julius|#{toJSON "&"}|]
+
   it "boolean interpolation" $ jelper
     "true false true false true false"
     [julius|#{True} #{False} #{toJSON True} #{toJSON False} #{rawJS True} #{rawJS False}|]

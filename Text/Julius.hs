@@ -130,6 +130,7 @@ string s = {-# SCC "string" #-} singleton '"' <> quote s <> singleton '"'
                  c == '\\' ||
                  c == '<'  ||
                  c == '>'  ||
+                 c == '&'  ||
                  c < '\x20'
     escape '\"' = "\\\""
     escape '\\' = "\\\\"
@@ -138,6 +139,7 @@ string s = {-# SCC "string" #-} singleton '"' <> quote s <> singleton '"'
     escape '\t' = "\\t"
     escape '<' = "\\u003c"
     escape '>' = "\\u003e"
+    escape '&' = "\\u0026"
 
     escape c
         | c < '\x20' = fromString $ "\\u" ++ replicate (4 - length h) '0' ++ h
