@@ -130,6 +130,12 @@ console.log roy
 
   it "JSON data" $ jelper "\"Hello \\\"World!\\\"\"" [julius|#{toJSON "Hello \"World!\""}|]
 
+  it "< escaping" $ jelper "\"\\u003c\"" [julius|#{toJSON "<"}|]
+
+  it "> escaping" $ jelper "\"\\u003e\"" [julius|#{toJSON ">"}|]
+
+  it "& escaping" $ jelper "\"\\u0026\"" [julius|#{toJSON "&"}|]
+
   it "boolean interpolation" $ jelper
     "true false true false true false"
     [julius|#{True} #{False} #{toJSON True} #{toJSON False} #{rawJS True} #{rawJS False}|]

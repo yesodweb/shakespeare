@@ -49,6 +49,9 @@ library
                    , blaze-html
                    , exceptions
                    , transformers
+                   , vector
+                   , unordered-containers
+                   , scientific
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
