@@ -1,3 +1,7 @@
+### 2.0.7
+
+* Include aeson's JSON encoding and escape `<`, `>` and `&` to avoid XSS attacks
+
 ### 2.0.6
 
 * Provide the `Text.Hamlet.Runtime` module
