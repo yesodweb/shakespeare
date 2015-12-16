@@ -51,7 +51,7 @@ library
                    , transformers
                    , vector
                    , unordered-containers
-                   , scientific
+                   , scientific       >= 0.3.0.0
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
