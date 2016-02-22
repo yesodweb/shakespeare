@@ -12,7 +12,7 @@ description:
     .
     Note there is no dependency on haskell-src-extras. Instead Shakespeare believes logic should stay out of templates and has its own minimal Haskell parser.
     .
-    Packages that use this: shakespeare-js, shakespeare-css, hamlet, and xml-hamlet
+    Packages that use this: xml-hamlet
     .
     Please see the documentation at <http://www.yesodweb.com/book/shakespearean-templates> for more details.
 
