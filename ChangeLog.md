@@ -1,3 +1,7 @@
+### 2.0.8
+
+* Improve docs in Text.Hamlet [#180](https://github.com/yesodweb/shakespeare/pull/180)
+
 ### 2.0.7
 
 * Include aeson's JSON encoding and escape `<`, `>` and `&` to avoid XSS attacks
