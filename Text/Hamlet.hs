@@ -12,16 +12,18 @@ module Text.Hamlet
     , xshamletFile
       -- * Hamlet
     , HtmlUrl
+    , Render
     , hamlet
     , hamletFile
     , hamletFileReload
-    , ihamletFileReload
     , xhamlet
     , xhamletFile
       -- * I18N Hamlet
     , HtmlUrlI18n
+    , Translate
     , ihamlet
     , ihamletFile
+    , ihamletFileReload
       -- * Type classes
     , ToAttributes (..)
       -- * Internal, for making more
@@ -275,9 +277,18 @@ contentToExp _ hr scope (ContentAttrs d) = do
     html <- [|attrsToHtml . toAttributes|]
     return $ hrFromHtml hr `AppE` (html `AppE` derefToExp scope d)
 
+-- | "Simple Hamlet" quasi-quoter. May only be used to generate expressions.
+--
+-- Generated expressions have type 'Html'.
+--
+-- @
+-- >>> 'putStrLn' ('Text.Blaze.Html.Renderer.renderHtml' ['shamlet'|\<div\>Hello, world!|])
+-- \<div\>Hello, world!\</div\>
+-- @
 shamlet :: QuasiQuoter
 shamlet = hamletWithSettings htmlRules defaultHamletSettings
 
+-- | Like 'shamlet', but produces XHTML.
 xshamlet :: QuasiQuoter
 xshamlet = hamletWithSettings htmlRules xhtmlHamletSettings
 
@@ -286,9 +297,23 @@ htmlRules = do
     i <- [|id|]
     return $ HamletRules i ($ (Env Nothing Nothing)) (\_ b -> return b)
 
+-- | Hamlet quasi-quoter. May only be used to generate expressions.
+--
+-- Generated expression have type @'HtmlUrl' url@, for some @url@.
+--
+-- @
+-- data MyRoute = Home
+--
+-- render :: 'Render' MyRoute
+-- render Home _ = \"/home\"
+--
+-- >>> 'putStrLn' ('Text.Blaze.Html.Renderer.String.renderHtml' (['hamlet'|\<a href=@{Home}\>Home|] render))
+-- \<a href="\/home"\>Home\<\/a\>
+-- @
 hamlet :: QuasiQuoter
 hamlet = hamletWithSettings hamletRules defaultHamletSettings
 
+-- | Like 'hamlet', but produces XHTML.
 xhamlet :: QuasiQuoter
 xhamlet = hamletWithSettings hamletRules xhtmlHamletSettings
 
@@ -313,6 +338,27 @@ hamletRules = do
         urender $ \ur' -> return ((asHtmlUrl' `AppE` e) `AppE` ur')
     em _ _ = error "bad Env"
 
+-- | Hamlet quasi-quoter with internationalization. May only be used to generate
+-- expressions.
+--
+-- Generated expressions have type @'HtmlUrlI18n' msg url@, for some @msg@ and
+-- @url@.
+--
+-- @
+-- data MyMsg = Hi | Bye
+--
+-- data MyRoute = Home
+--
+-- renderEnglish :: 'Translate' MyMsg
+-- renderEnglish Hi  = \"hi\"
+-- renderEnglish Bye = \"bye\"
+--
+-- renderUrl :: 'Render' MyRoute
+-- renderUrl Home _ = \"/home\"
+--
+-- >>> 'putStrLn' ('Text.Blaze.Html.Renderer.renderHtml' (['ihamlet'|@{Home} _{Hi} _{Bye}|] renderEnglish renderUrl))
+-- \<div\>/home hi bye \<div\>
+-- @
 ihamlet :: QuasiQuoter
 ihamlet = hamletWithSettings ihamletRules defaultHamletSettings
 
@@ -370,26 +416,47 @@ hamletFileWithSettings qhr set fp = do
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     hamletFromString qhr set contents
 
+-- | Like 'hamlet', but reads an external file at compile time.
+--
+-- @
+-- $('hamletFile' \"foo.hamlet\") :: 'HtmlUrl' MyRoute
+-- @
 hamletFile :: FilePath -> Q Exp
 hamletFile = hamletFileWithSettings hamletRules defaultHamletSettings
 
+-- | Like 'hamletFile', but the external file is parsed at runtime. Allows for
+-- more rapid development, but should not be used in production.
 hamletFileReload :: FilePath -> Q Exp
 hamletFileReload = hamletFileReloadWithSettings runtimeRules defaultHamletSettings
   where runtimeRules = HamletRuntimeRules { hrrI18n = False }
 
+-- | Like 'ihamletFile', but the external file is parsed at runtime. Allows for
+-- more rapid development, but should not be used in production.
 ihamletFileReload :: FilePath -> Q Exp
 ihamletFileReload = hamletFileReloadWithSettings runtimeRules defaultHamletSettings
   where runtimeRules = HamletRuntimeRules { hrrI18n = True }
 
+-- | Like 'hamletFile', but produces XHTML.
 xhamletFile :: FilePath -> Q Exp
 xhamletFile = hamletFileWithSettings hamletRules xhtmlHamletSettings
 
+-- | Like 'shamlet', but reads an external file at compile time.
+--
+-- @
+-- $('shamletFile' \"foo.hamlet\") :: 'Html'
+-- @
 shamletFile :: FilePath -> Q Exp
 shamletFile = hamletFileWithSettings htmlRules defaultHamletSettings
 
+-- | Like 'shamletFile', but produces XHTML.
 xshamletFile :: FilePath -> Q Exp
 xshamletFile = hamletFileWithSettings htmlRules xhtmlHamletSettings
 
+-- | Like 'ihamlet', but reads an external file at compile time.
+--
+-- @
+-- $('ihamletFile' \"foo.hamlet\") :: 'HtmlUrlI18n' MyMsg MyRoute
+-- @
 ihamletFile :: FilePath -> Q Exp
 ihamletFile = hamletFileWithSettings ihamletRules defaultHamletSettings
 
