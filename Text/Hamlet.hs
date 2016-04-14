@@ -181,8 +181,13 @@ recordToFieldNames conStr = do
   -- use 'lookupValueName' instead of just using 'mkName' so we reify the
   -- data constructor and not the type constructor if their names match.
   Just conName                <- lookupValueName $ conToStr conStr
+#if MIN_VERSION_template_haskell(2,11,0)
+  DataConI _ _ typeName         <- reify conName
+  TyConI (DataD _ _ _ _ cons _) <- reify typeName
+#else
   DataConI _ _ typeName _     <- reify conName
   TyConI (DataD _ _ _ cons _) <- reify typeName
+#endif
   [fields] <- return [fields | RecC name fields <- cons, name == conName]
   return [fieldName | (fieldName, _, _) <- fields]
 

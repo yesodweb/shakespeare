@@ -170,8 +170,12 @@ mkMessageCommon genType prefix postfix master dt folder lang = do
     c2 <- mapM (sToClause prefix dt) sdef
     c3 <- defClause
     return $
-     ( if genType 
-       then ((DataD [] mname [] (map (toCon dt) sdef) []) :)
+     ( if genType
+       then ((DataD [] mname []
+#if MIN_VERSION_template_haskell(2,11,0)
+                    Nothing
+#endif
+                    (map (toCon dt) sdef) []) :)
        else id)
         [ InstanceD
             []
@@ -252,7 +256,7 @@ toCon :: String -> SDef -> Con
 toCon dt (SDef c vs _) =
     RecC (mkName $ "Msg" ++ c) $ map go vs
   where
-    go (n, t) = (varName dt n, NotStrict, ConT $ mkName t)
+    go (n, t) = (varName dt n, notStrict, ConT $ mkName t)
 
 varName :: String -> String -> Name
 varName a y =
@@ -402,3 +406,11 @@ instance IsString (SomeMessage master) where
 
 instance master ~ master' => RenderMessage master (SomeMessage master') where
     renderMessage a b (SomeMessage msg) = renderMessage a b msg
+
+#if MIN_VERSION_template_haskell(2,11,0)
+notStrict :: Bang
+notStrict = Bang NoSourceUnpackedness NoSourceStrictness
+#else
+notStrict :: Strict
+notStrict = NotStrict
+#endif
