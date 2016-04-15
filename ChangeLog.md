@@ -1,3 +1,7 @@
+### 2.0.8.1
+
+* Make it work with ghc-8.0 [#181](https://github.com/yesodweb/shakespeare/pull/181)
+
 ### 2.0.8
 
 * Improve docs in Text.Hamlet [#180](https://github.com/yesodweb/shakespeare/pull/180)
