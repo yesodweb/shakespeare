@@ -1,21 +1,33 @@
+{-# LANGUAGE CPP #-}
+
 -- | Internal functions to generate CSS size wrapper types.
 module Text.MkSizeType (mkSizeType) where
 
+#if MIN_VERSION_template_haskell(2,11,0)
+import Language.Haskell.TH (conT)
+#endif
 import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (fromLazyText)
 import qualified Data.Text.Lazy as TL
 
 mkSizeType :: String -> String -> Q [Dec]
-mkSizeType name' unit = return [ dataDec name
-                               , showInstanceDec name unit
-                               , numInstanceDec name
-                               , fractionalInstanceDec name
-                               , toCssInstanceDec name ]
+mkSizeType name' unit = do
+    ddn <- dataDec name
+    return  [ ddn
+            , showInstanceDec name unit
+            , numInstanceDec name
+            , fractionalInstanceDec name
+            , toCssInstanceDec name ]
   where name = mkName $ name'
 
-dataDec :: Name -> Dec
-dataDec name = DataD [] name [] [constructor] derives
-  where constructor = NormalC name [(NotStrict, ConT $ mkName "Rational")]
+dataDec :: Name -> Q Dec
+dataDec name =
+#if MIN_VERSION_template_haskell(2,11,0)
+     DataD [] name [] Nothing [constructor] <$> mapM conT derives
+#else
+    return $ DataD [] name [] [constructor] derives
+#endif
+  where constructor = NormalC name [(notStrict, ConT $ mkName "Rational")]
         derives = map mkName ["Eq", "Ord"]
 
 showInstanceDec :: Name -> String -> Dec
@@ -72,3 +84,11 @@ unariFunDec2 name fun' = FunD fun [Clause [pat] body []]
         body = NormalB $ AppE (ConE name) (AppE (VarE fun) (VarE x))
         fun = mkName fun'
         x = mkName "x"
+
+#if MIN_VERSION_template_haskell(2,11,0)
+notStrict :: Bang
+notStrict = Bang NoSourceUnpackedness NoSourceStrictness
+#else
+notStrict :: Strict
+notStrict = NotStrict
+#endif
