@@ -177,7 +177,7 @@ mkMessageCommon genType prefix postfix master dt folder lang = do
 #endif
                     (map (toCon dt) sdef) []) :)
        else id)
-        [ InstanceD
+        [ instanceD
             []
             (ConT ''RenderMessage `AppT` (ConT $ mkName master) `AppT` ConT mname)
             [ FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
@@ -413,4 +413,11 @@ notStrict = Bang NoSourceUnpackedness NoSourceStrictness
 #else
 notStrict :: Strict
 notStrict = NotStrict
+#endif
+
+instanceD :: Cxt -> Type -> [Dec] -> Dec
+#if MIN_VERSION_template_haskell(2,11,0)
+instanceD = InstanceD Nothing
+#else
+instanceD = InstanceD
 #endif
