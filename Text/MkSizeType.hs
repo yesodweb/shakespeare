@@ -31,7 +31,7 @@ dataDec name =
         derives = map mkName ["Eq", "Ord"]
 
 showInstanceDec :: Name -> String -> Dec
-showInstanceDec name unit' = InstanceD [] (instanceType "Show" name) [showDec]
+showInstanceDec name unit' = instanceD [] (instanceType "Show" name) [showDec]
   where showSize = VarE $ mkName "showSize"
         x = mkName "x"
         unit = LitE $ StringL unit'
@@ -40,17 +40,17 @@ showInstanceDec name unit' = InstanceD [] (instanceType "Show" name) [showDec]
         showBody = NormalB $ AppE (AppE showSize $ VarE x) unit
 
 numInstanceDec :: Name -> Dec
-numInstanceDec name = InstanceD [] (instanceType "Num" name) decs
+numInstanceDec name = instanceD [] (instanceType "Num" name) decs
   where decs = map (binaryFunDec name) ["+", "*", "-"] ++
                map (unariFunDec1 name) ["abs", "signum"] ++
                [unariFunDec2 name "fromInteger"]
 
 fractionalInstanceDec :: Name -> Dec
-fractionalInstanceDec name = InstanceD [] (instanceType "Fractional" name) decs
+fractionalInstanceDec name = instanceD [] (instanceType "Fractional" name) decs
   where decs = [binaryFunDec name "/", unariFunDec2 name "fromRational"]
 
 toCssInstanceDec :: Name -> Dec
-toCssInstanceDec name = InstanceD [] (instanceType "ToCss" name) [toCssDec]
+toCssInstanceDec name = instanceD [] (instanceType "ToCss" name) [toCssDec]
   where toCssDec = FunD (mkName "toCss") [Clause [] showBody []]
         showBody = NormalB $ (AppE dot from) `AppE` ((AppE dot pack) `AppE` show')
         from = VarE 'fromLazyText
@@ -91,4 +91,11 @@ notStrict = Bang NoSourceUnpackedness NoSourceStrictness
 #else
 notStrict :: Strict
 notStrict = NotStrict
+#endif
+
+instanceD :: Cxt -> Type -> [Dec] -> Dec
+#if MIN_VERSION_template_haskell(2,11,0)
+instanceD = InstanceD Nothing
+#else
+instanceD = InstanceD
 #endif
