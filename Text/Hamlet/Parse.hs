@@ -639,7 +639,6 @@ htmlEmptyTags = Set.fromAscList
     , "basefont" -- not html 5
     , "br"
     , "col"
-    , "command"
     , "embed"
     , "frame"    -- not html 5
     , "hr"
