@@ -634,17 +634,23 @@ htmlEmptyTags :: Set String
 htmlEmptyTags = Set.fromAscList
     [ "area"
     , "base"
-    , "basefont"
+    , "basefont" -- not html 5
     , "br"
     , "col"
-    , "frame"
+    , "command"
+    , "embed"
+    , "frame"    -- not html 5
     , "hr"
     , "img"
     , "input"
-    , "isindex"
+    , "isindex"  -- not html 5
+    , "keygen"
     , "link"
     , "meta"
     , "param"
+    , "source"
+    , "track"
+    , "wbr"
     ]
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
