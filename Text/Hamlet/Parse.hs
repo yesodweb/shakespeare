@@ -630,21 +630,28 @@ instance Lift HamletSettings where
     lift (HamletSettings a b c d) = [|HamletSettings $(lift a) $(lift b) $(lift c) $(lift d)|]
 
 
+-- See the html specification for a list of all void elements:
+-- https://www.w3.org/TR/html/syntax.html#void-elements
 htmlEmptyTags :: Set String
 htmlEmptyTags = Set.fromAscList
     [ "area"
     , "base"
-    , "basefont"
+    , "basefont" -- not html 5
     , "br"
     , "col"
-    , "frame"
+    , "embed"
+    , "frame"    -- not html 5
     , "hr"
     , "img"
     , "input"
-    , "isindex"
+    , "isindex"  -- not html 5
+    , "keygen"
     , "link"
     , "meta"
     , "param"
+    , "source"
+    , "track"
+    , "wbr"
     ]
 
 -- | Defaults settings: HTML5 doctype and HTML-style empty tags.
