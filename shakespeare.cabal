@@ -147,4 +147,4 @@ test-suite test
 
 source-repository head
   type:     git
-  location: git://github.com/yesodweb/shakespeare.git
+  location: https://github.com/yesodweb/shakespeare.git
