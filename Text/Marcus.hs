@@ -2,76 +2,44 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
--- | A Shakespearean module for CoffeeScript, introducing type-safe,
--- compile-time variable and url interpolation. It is exactly the same as
--- "Text.Julius", except that the template is first compiled to Javascript with
--- the system tool @coffee@.
+-- | A Shakespearean module for Markdown, introducing type-safe,
+-- compile-time variable and url interpolation.
 --
--- To use this module, @coffee@ must be installed on your system.
+-- This module is similar to "Text.Coffee" in that the only "Shakespearean"
+-- thing it does is variable interpolation. It does not have the
+-- programmability of Hamlet, or the sorts of enhancements provided by
+-- Lucius. It simply converts your Markdown into Html while interpolating
+-- routes and variables.
 --
--- @#{...}@ is the Shakespearean standard for variable interpolation, but
--- CoffeeScript already uses that sequence for string interpolation. Therefore,
--- Shakespearean interpolation is introduced with @%{...}@.
+-- This module uses the Markdown processing from "Text.Markdown".
 --
--- If you interpolate variables,
--- the template is first wrapped with a function containing javascript variables representing shakespeare variables,
--- then compiled with @coffee@,
--- and then the value of the variables are applied to the function.
--- This means that in production the template can be compiled
--- once at compile time and there will be no dependency in your production
--- system on @coffee@. 
---
--- Your code:
---
--- >   b = 1
--- >   console.log(#{a} + b)
---
--- Function wrapper added to your coffeescript code:
---
--- > ((shakespeare_var_a) =>
--- >   b = 1
--- >   console.log(shakespeare_var_a + b)
--- > )
---
--- This is then compiled down to javascript, and the variables are applied:
---
--- > ;(function(shakespeare_var_a){
--- >   var b = 1;
--- >   console.log(shakespeare_var_a + b);
--- > })(#{a});
---
---
--- Further reading:
---
--- 1. Shakespearean templates: <http://www.yesodweb.com/book/templates>
---
--- 2. CoffeeScript: <http://coffeescript.org/>
-module Text.Coffee
+-- Be aware that if you want to start a new line with a variable
+-- interpolation, Markdown will read the "#" as a heading indicator. To
+-- avoid this, put a backslash in front of the #.
+module Text.Marcus
     ( -- * Functions
       -- ** Template-Reading Functions
       -- | These QuasiQuoter and Template Haskell methods return values of
-      -- type @'JavascriptUrl' url@. See the Yesod book for details.
-      coffee
-    , coffeeFile
-    , coffeeFileReload
-    , coffeeFileDebug
+      -- type @'HtmlUrl' url@. See the Yesod book for details.
+      marcus
+    , marcusFile
+    , marcusFileReload
 
 #ifdef TEST_EXPORT
-    , coffeeSettings
+    , marcusSettings
 #endif
     ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Text.Shakespeare
-import Text.Julius
 
-coffeeSettings :: Q ShakespeareSettings
-coffeeSettings = do
+marcusSettings :: Q ShakespeareSettings
+marcusSettings = do
   jsettings <- javascriptSettings
   return $ jsettings { varChar = '%'
   , preConversion = Just PreConvert {
-      preConvert = ReadProcess "coffee" ["-spb"]
+      preConvert = ReadProcess "marcus" ["-spb"]
     , preEscapeIgnoreBalanced = "'\"`"     -- don't insert backtacks for variable already inside strings or backticks.
     , preEscapeIgnoreLine = "#"            -- ignore commented lines
     , wrapInsertion = Just WrapInsertion { 
@@ -85,29 +53,24 @@ coffeeSettings = do
     }
   }
 
--- | Read inline, quasiquoted CoffeeScript.
-coffee :: QuasiQuoter
-coffee = QuasiQuoter { quoteExp = \s -> do
-    rs <- coffeeSettings
+-- | Read inline, quasiquoted Markdown
+marcus :: QuasiQuoter
+marcus = QuasiQuoter { quoteExp = \s -> do
+    rs <- marcusSettings
     quoteExp (shakespeare rs) s
     }
 
--- | Read in a CoffeeScript template file. This function reads the file once, at
+-- | Read in a Markdown template file. This function reads the file once, at
 -- compile time.
-coffeeFile :: FilePath -> Q Exp
-coffeeFile fp = do
-    rs <- coffeeSettings
+marcusFile :: FilePath -> Q Exp
+marcusFile fp = do
+    rs <- marcusSettings
     shakespeareFile rs fp
 
--- | Read in a CoffeeScript template file. This impure function uses
+-- | Read in a Markdown template file. This impure function uses
 -- unsafePerformIO to re-read the file on every call, allowing for rapid
 -- iteration.
-coffeeFileReload :: FilePath -> Q Exp
-coffeeFileReload fp = do
-    rs <- coffeeSettings
+marcusFileReload :: FilePath -> Q Exp
+marcusFileReload fp = do
+    rs <- marcusSettings
     shakespeareFileReload rs fp
-
--- | Deprecated synonym for 'coffeeFileReload'
-coffeeFileDebug :: FilePath -> Q Exp
-coffeeFileDebug = coffeeFileReload
-{-# DEPRECATED coffeeFileDebug "Please use coffeeFileReload instead." #-}
