@@ -66,6 +66,7 @@ library
                      Text.Shakespeare.Base
                      Text.Shakespeare
                      Text.TypeScript
+                     Text.Marcus
     other-modules:   Text.Hamlet.Parse
                      Text.Css
                      Text.MkSizeType
