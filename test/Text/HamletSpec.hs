@@ -23,7 +23,6 @@ import Text.Blaze.Internal (preEscapedString)
 import Text.Blaze
 
 spec = do
-  describe "hamlet" $ do
     it "empty" caseEmpty
     it "static" caseStatic
     it "tag" caseTag

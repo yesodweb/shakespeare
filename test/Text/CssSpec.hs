@@ -19,7 +19,6 @@ import Data.Monoid (mappend)
 
 spec :: Spec
 spec = do
-  describe "shakespeare-css" $ do
     it "cassius" caseCassius
     it "cassiusFile" caseCassiusFile
     it "cassius single comment" caseCassiusSingleComment

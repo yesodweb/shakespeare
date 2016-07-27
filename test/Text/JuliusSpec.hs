@@ -28,7 +28,7 @@ join = intercalate "\n"
 #endif
 
 spec :: Spec
-spec = describe "shakespeare-js" $ do
+spec = do
 #if !(defined TEST_COFFEE || defined TEST_ROY)
   it "julius" $ do
     let var = "x=2"
