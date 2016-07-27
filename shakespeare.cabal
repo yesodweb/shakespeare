@@ -111,10 +111,10 @@ test-suite test
     main-is: Spec.hs
     other-modules:  Text.Shakespeare.BaseSpec
                     Text.Shakespeare.I18NSpec
-                    Text.Shakespeare.JsSpec
                     Text.Shakespeare.TextSpec
-                    Text.Shakespeare.CssSpec
-                    Text.Shakespeare.HamletSpec
+                    Text.CssSpec
+                    Text.HamletSpec
+                    Text.JuliusSpec
                     Quoter
                     HamletTestTypes
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Text.Shakespeare.HamletSpec (spec) where
+module Text.HamletSpec (spec) where
 
 import HamletTestTypes (ARecord(..))
 
