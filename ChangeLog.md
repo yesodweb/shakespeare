@@ -1,3 +1,7 @@
+### 2.0.10
+
+* Added `ixhamlet` [#177](https://github.com/yesodweb/shakespeare/pull/177)
+
 ### 2.0.9
 
 * Better empty HTML tag list

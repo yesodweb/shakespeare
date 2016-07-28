@@ -387,7 +387,7 @@ ihamletRules = do
 
 -- | Quasiquoter that follows XHTML serialization rules and supports i18n.
 --
--- @see 2.0.8
+-- @since 2.0.10
 ixhamlet :: QuasiQuoter
 ixhamlet = hamletWithSettings ihamletRules xhtmlHamletSettings
 
