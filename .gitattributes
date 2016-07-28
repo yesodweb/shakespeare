@@ -1,0 +1,2 @@
+; Keep crlf for testing purposes
+test/Text/*Spec.hs eol=crlf

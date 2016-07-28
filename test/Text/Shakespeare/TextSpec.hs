@@ -16,7 +16,6 @@ import Data.Monoid (mappend)
 
 spec :: Spec
 spec = do
-  describe "shakespeare-text" $ do
     it "text" $ do
       let var = "var"
       let urlp = (Home, [(pack "p", pack "q")])

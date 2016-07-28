@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Text.Shakespeare.HamletSpec (spec) where
+module Text.HamletSpec (spec) where
 
 import HamletTestTypes (ARecord(..))
 
@@ -23,7 +23,6 @@ import Text.Blaze.Internal (preEscapedString)
 import Text.Blaze
 
 spec = do
-  describe "hamlet" $ do
     it "empty" caseEmpty
     it "static" caseStatic
     it "tag" caseTag

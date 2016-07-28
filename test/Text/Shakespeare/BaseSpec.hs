@@ -12,7 +12,7 @@ import Data.Text.Lazy (pack)
 -- run :: Text.Parsec.Prim.Parsec Text.Parsec.Pos.SourceName () c -> Text.Parsec.Pos.SourceName -> c
 
 spec :: Spec
-spec = describe "shakespeare-js" $ do
+spec = do
   let preFilterN = preFilter Nothing
   {-
   it "parseStrings" $ do
