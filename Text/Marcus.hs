@@ -26,32 +26,32 @@ module Text.Marcus
     , marcusFileReload
 
 #ifdef TEST_EXPORT
-    , marcusSettings
+  , marcusSettings
 #endif
-    ) where
+  ) where
 
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
+import Text.Blaze.Html (toHtml)
+import Text.Blaze.Html.Renderer.String (renderHtml)
+import Text.Blaze.Html.Renderer.Text (renderHtmlBuilder)
+import Text.Markdown
 import Text.Shakespeare
+import qualified Data.Text.Lazy as LT
 
 marcusSettings :: Q ShakespeareSettings
 marcusSettings = do
-  jsettings <- javascriptSettings
-  return $ jsettings { varChar = '%'
-  , preConversion = Just PreConvert {
-      preConvert = ReadProcess "marcus" ["-spb"]
-    , preEscapeIgnoreBalanced = "'\"`"     -- don't insert backtacks for variable already inside strings or backticks.
-    , preEscapeIgnoreLine = "#"            -- ignore commented lines
-    , wrapInsertion = Just WrapInsertion { 
-        wrapInsertionIndent = Just "  "
-      , wrapInsertionStartBegin = "("
-      , wrapInsertionSeparator = ", "
-      , wrapInsertionStartClose = ") =>"
-      , wrapInsertionEnd = ""
-      , wrapInsertionAddParens = False
-      }
-    }
-  }
+    tobuild <- [|renderHtmlBuilder . toHtml|]
+    id' <- [|id|]
+    pure $ (defaultShakespeareSettings tobuild id' id')
+        { preConversion = Just PreConvert { preConvert = ConvertAction runMarkdown
+                                          , preEscapeIgnoreBalanced = ""
+                                          , preEscapeIgnoreLine = ""
+                                          , wrapInsertion = Nothing
+                                          }}
+  where
+    runMarkdown = renderHtml . markdown mdSettings . LT.pack
+    mdSettings = def -- Hmmmm FIXME?
 
 -- | Read inline, quasiquoted Markdown
 marcus :: QuasiQuoter

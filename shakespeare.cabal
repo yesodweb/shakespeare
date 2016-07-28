@@ -52,6 +52,7 @@ library
                    , vector
                    , unordered-containers
                    , scientific       >= 0.3.0.0
+                   , markdown
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
