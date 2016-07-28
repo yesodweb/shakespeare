@@ -143,11 +143,18 @@ data ShakespeareSettings = ShakespeareSettings
     -- meaningful error messages.
     }
 
-defaultShakespeareSettings :: ShakespeareSettings
-defaultShakespeareSettings = ShakespeareSettings {
+defaultShakespeareSettings
+    :: Exp -- ^ An Exp that will convert variables to 'Builder'
+    -> Exp -- ^ An Exp that converts 'Builder' to the type being generated
+    -> Exp -- ^ The reversal of the previous conversion argument
+    -> ShakespeareSettings
+defaultShakespeareSettings tobuild wrapexp unwrapexp = ShakespeareSettings {
     varChar = '#'
   , urlChar = '@'
   , intChar = '^'
+  , toBuilder = tobuild
+  , wrap = wrapexp
+  , unwrap = unwrapexp
   , justVarInterpolation = False
   , preConversion = Nothing
   , modifyFinalValue = Nothing
