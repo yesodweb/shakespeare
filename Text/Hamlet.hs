@@ -465,17 +465,6 @@ xshamletFile = hamletFileWithSettings htmlRules xhtmlHamletSettings
 ihamletFile :: FilePath -> Q Exp
 ihamletFile = hamletFileWithSettings ihamletRules defaultHamletSettings
 
-varName :: Scope -> String -> Exp
-varName _ "" = error "Illegal empty varName"
-varName scope v@(_:_) = fromMaybe (strToExp v) $ lookup (Ident v) scope
-
-strToExp :: String -> Exp
-strToExp s@(c:_)
-    | all isDigit s = LitE $ IntegerL $ read s
-    | isUpper c = ConE $ mkName s
-    | otherwise = VarE $ mkName s
-strToExp "" = error "strToExp on empty string"
-
 -- | Checks for truth in the left value in each pair in the first argument. If
 -- a true exists, then the corresponding right action is performed. Only the
 -- first is performed. In there are no true values, then the second argument is
@@ -503,12 +492,12 @@ data VarExp msg url  = EPlain Html
                      | EMsg msg
 
 instance Show (VarExp msg url) where
-  show (EPlain html) = "EPlain"
-  show (EUrl url) = "EUrl"
-  show (EUrlParam url) = "EUrlParam"
-  show (EMixin url) = "EMixin"
-  show (EMixinI18n msg_url) = "EMixinI18n"
-  show (EMsg msg) = "EMsg"
+  show (EPlain _html) = "EPlain"
+  show (EUrl _url) = "EUrl"
+  show (EUrlParam _url) = "EUrlParam"
+  show (EMixin _url) = "EMixin"
+  show (EMixinI18n _msg_url) = "EMixinI18n"
+  show (EMsg _msg) = "EMsg"
 
 getVars :: Content -> [(Deref, VarType)]
 getVars ContentRaw{}     = []
@@ -552,7 +541,7 @@ hamletFileReloadWithSettings hrr settings fp = do
             c VTPlain = [|EPlain . toHtml|]
             c VTUrl = [|EUrl|]
             c VTUrlParam = [|EUrlParam|]
-            c VTMixin = [|\r -> EMixin $ \c -> r c|]
+            c VTMixin = [|\r -> EMixin $ \c' -> r c'|]
             c VTMsg = [|EMsg|]
 
 -- move to Shakespeare.Base?
