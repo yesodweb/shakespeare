@@ -385,6 +385,12 @@ ihamletRules = do
           urender $ \ur' -> mrender $ \mr -> return (e `AppE` mr `AppE` ur')
     em _ _ = error "bad Env"
 
+-- | Quasiquoter that follows XHTML serialization rules and supports i18n.
+--
+-- @see 2.0.8
+ixhamlet :: QuasiQuoter
+ixhamlet = hamletWithSettings ihamletRules xhtmlHamletSettings
+
 hamletWithSettings :: Q HamletRules -> HamletSettings -> QuasiQuoter
 hamletWithSettings hr set =
     QuasiQuoter
