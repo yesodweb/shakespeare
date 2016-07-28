@@ -117,8 +117,10 @@ test-suite test
                     Text.CssSpec
                     Text.HamletSpec
                     Text.JuliusSpec
+                    Text.MarcusSpec
                     Quoter
                     HamletTestTypes
+                    TestUrl
 
     cpp-options: -DTEST_EXPORT
 
