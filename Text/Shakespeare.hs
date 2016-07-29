@@ -125,8 +125,7 @@ data WrapInsertion = WrapInsertion {
 
 data PreConversion = ReadProcess String [String]
                    | Id
-  
-
+                   | ConvertAction (String -> IO String)
 
 data ShakespeareSettings = ShakespeareSettings
     { varChar :: Char
@@ -274,6 +273,7 @@ preFilter mfp ShakespeareSettings {..} template =
               withVars = (addVars mWrapI vars parsed)
           in  applyVars mWrapI vars `fmap` case convert of
                   Id -> return withVars
+                  ConvertAction act -> act template
                   ReadProcess command args ->
                     readProcessError command args withVars mfp
   where
