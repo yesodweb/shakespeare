@@ -44,6 +44,8 @@ module Text.Hamlet
     , maybeH
     , asHtmlUrl
     , attrsToHtml
+     -- * low-level
+    , hamletFromString
     ) where
 
 import Text.Shakespeare.Base
