@@ -1,3 +1,7 @@
+### 2.0.11
+
+* Export hamletFromString [#191](https://github.com/yesodweb/shakespeare/pull/191)
+
 ### 2.0.10
 
 * Added `ixhamlet` [#177](https://github.com/yesodweb/shakespeare/pull/177)
