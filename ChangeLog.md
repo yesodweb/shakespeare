@@ -1,3 +1,7 @@
+### 2.0.11.1
+
+* Handle parsing of trailing semicolon after mixins [#194](https://github.com/yesodweb/shakespeare/issues/194)
+
 ### 2.0.11
 
 * Export hamletFromString [#191](https://github.com/yesodweb/shakespeare/pull/191)

@@ -496,6 +496,21 @@ foo { foo:X#{bar}Y; }
                     src: url(sansation_light.woff)
             |]
 
+    describe "trailing semicolon in mixin" $ do
+        let someMixin = [luciusMixin|foo:bar|]
+        it "direct in lucius" $
+            celper "baz{foo:bar}" [lucius|
+                baz {
+                    ^{someMixin};
+                }
+            |]
+
+        it "implicit in cassius #194" $
+            celper "baz{foo:bar}" [cassius|
+                baz
+                    ^{someMixin}
+            |]
+
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
 render :: Url -> [(Text, Text)] -> Text

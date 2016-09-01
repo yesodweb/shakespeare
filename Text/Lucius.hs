@@ -158,6 +158,8 @@ parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
         whiteSpace
         Right x <- parseCaret
         whiteSpace
+        (char ';' >> return ()) <|> return ()
+        whiteSpace
         return $ PBMixin x
     checkIfBlock = do
         skipMany $ noneOf "#@{};"
