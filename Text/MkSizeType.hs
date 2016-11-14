@@ -22,10 +22,13 @@ mkSizeType name' unit = do
 
 dataDec :: Name -> Q Dec
 dataDec name =
-#if MIN_VERSION_template_haskell(2,11,0)
-     DataD [] name [] Nothing [constructor] <$> mapM conT derives
+#if MIN_VERSION_template_haskell(2,12,0)
+  return $
+    DataD [] name [] Nothing [constructor] [DerivClause Nothing (map ConT derives)]
+#elif MIN_VERSION_template_haskell(2,11,0)
+  DataD [] name [] Nothing [constructor] <$> mapM conT derives
 #else
-    return $ DataD [] name [] [constructor] derives
+  return $ DataD [] name [] [constructor] derives
 #endif
   where constructor = NormalC name [(notStrict, ConT $ mkName "Rational")]
         derives = map mkName ["Eq", "Ord"]
