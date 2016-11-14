@@ -1,3 +1,7 @@
+### 2.0.11.2
+
+* Support for template-haskell 2.12.0 [#196](https://github.com/yesodweb/shakespeare/pull/196)
+
 ### 2.0.11.1
 
 * Handle parsing of trailing semicolon after mixins [#194](https://github.com/yesodweb/shakespeare/issues/194)
