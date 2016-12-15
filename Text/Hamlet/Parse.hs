@@ -246,14 +246,18 @@ parseLine set = do
         cc [] = []
         cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
         cc (a:b) = a : cc b
-    content' cr = try (lookAhead (string "#{") >> contentHash)
-                              <|> contentAt
-                              <|> contentCaret
-                              <|> contentUnder
-                              <|> contentReg' cr
-    contentHash = do
+
+    content' cr =     contentHash cr
+                  <|> contentAt
+                  <|> contentCaret
+                  <|> contentUnder
+                  <|> contentReg' cr
+    contentHash cr = do
         x <- parseHash
         case x of
+            Left "#" -> case cr of
+                          InContent -> return (ContentRaw "#", False)
+                          _ -> fail "Expected hash at end of line, got Id"
             Left str -> return (ContentRaw str, null str)
             Right deref -> return (ContentVar deref, False)
     contentAt = do
