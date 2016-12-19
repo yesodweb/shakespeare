@@ -246,12 +246,18 @@ parseLine set = do
         cc [] = []
         cc (ContentRaw a:ContentRaw b:c) = cc $ ContentRaw (a ++ b) : c
         cc (a:b) = a : cc b
-    content' cr = contentHash <|> contentAt <|> contentCaret
-                              <|> contentUnder
-                              <|> contentReg' cr
-    contentHash = do
+
+    content' cr =     contentHash cr
+                  <|> contentAt
+                  <|> contentCaret
+                  <|> contentUnder
+                  <|> contentReg' cr
+    contentHash cr = do
         x <- parseHash
         case x of
+            Left "#" -> case cr of
+                          InContent -> return (ContentRaw "#", False)
+                          _ -> fail "Expected hash at end of line, got Id"
             Left str -> return (ContentRaw str, null str)
             Right deref -> return (ContentVar deref, False)
     contentAt = do
@@ -281,13 +287,7 @@ parseLine set = do
     tagCond = do
         d <- between (char ':') (char ':') parseDeref
         tagClass (Just d) <|> tagAttrib (Just d)
-    tagClass x = do
-        clazz <- char '.' >> tagAttribValue NotInQuotes
-        let hasHash (ContentRaw s) = any (== '#') s
-            hasHash _ = False
-        if any hasHash clazz
-            then fail $ "Invalid class: " ++ show clazz ++ ". Did you want a space between a class and an ID?"
-            else return (TagClass (x, clazz))
+    tagClass x = char '.' >> (TagClass . ((,)x)) <$> tagAttribValue NotInQuotes
     tagAttrib cond = do
         s <- many1 $ noneOf " \t=\r\n><"
         v <- (char '=' >> Just <$> tagAttribValue NotInQuotesAttr) <|> return Nothing
