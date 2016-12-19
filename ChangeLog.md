@@ -1,3 +1,7 @@
+### 2.0.12
+
+* Parser fails without space between class and ID (Hamlet) [#197](https://github.com/yesodweb/shakespeare/issues/197)
+
 ### 2.0.11.2
 
 * Support for template-haskell 2.12.0 [#196](https://github.com/yesodweb/shakespeare/pull/196)
