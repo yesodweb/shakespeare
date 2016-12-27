@@ -256,7 +256,7 @@ parseLine set = do
         x <- parseHash
         case x of
             Left "#" -> case cr of
-                          NotInQuotes -> fail "Expected hash at end of lin, got Id"
+                          NotInQuotes -> fail "Expected hash at end of line, got Id"
                           _ -> return (ContentRaw "#", False)
             Left str -> return (ContentRaw str, null str)
             Right deref -> return (ContentVar deref, False)
