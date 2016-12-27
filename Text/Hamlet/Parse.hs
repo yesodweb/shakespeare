@@ -257,6 +257,7 @@ parseLine set = do
         case x of
             Left "#" -> case cr of
                           InContent -> return (ContentRaw "#", False)
+                          NotInQuotesAttr -> return (ContentRaw "#", False)
                           _ -> fail "Expected hash at end of line, got Id"
             Left str -> return (ContentRaw str, null str)
             Right deref -> return (ContentVar deref, False)
