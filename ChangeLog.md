@@ -1,3 +1,7 @@
+### 2.0.12.1
+
+* New contentHash parser breaks hash hrefs [#200](https://github.com/yesodweb/shakespeare/issues/200)
+
 ### 2.0.12
 
 * Parser fails without space between class and ID (Hamlet) [#197](https://github.com/yesodweb/shakespeare/issues/197)
