@@ -501,6 +501,14 @@ $case num
             ] renderer
         helperHtml "foo(5,[(\"hello\",\"world\")])bar" res
 
+    it "Hash in attribute value" $
+        helper "<a id=\"logoutbutton\" href=\"#\"></a>\n"
+        [hamlet|<a #logoutbutton href=#>|]
+
+    it "Hash in attribute value" $
+        helper "<a id=\"logoutbutton\" href=\"#\"></a>\n"
+        [hamlet|<a #logoutbutton href="#">|]
+
 data Pair = Pair String Int
 
 data Url = Home | Sub SubUrl
