@@ -40,13 +40,13 @@ module Text.Cassius
     , cassiusUsedIdentifiers
     ) where
 
-import Text.Css
+import Text.Internal.Css
 import Text.Shakespeare.Base
 import Text.Shakespeare (VarType)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import qualified Data.Text.Lazy as TL
-import Text.CssCommon
+import Text.Internal.CssCommon
 import Text.Lucius (lucius)
 import qualified Text.Lucius
 import Text.IndentToBrace (i2b)

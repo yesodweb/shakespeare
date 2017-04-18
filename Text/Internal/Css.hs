@@ -1,3 +1,6 @@
+{-# OPTIONS_HADDOCK hide #-}
+-- | This module is only being exposed to work around a GHC bug, its API is not stable
+
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -6,7 +9,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE EmptyDataDecls #-}
-module Text.Css where
+module Text.Internal.Css where
 
 import Data.List (intersperse, intercalate)
 import Data.Text.Lazy.Builder (Builder, singleton, toLazyText, fromLazyText, fromString)
