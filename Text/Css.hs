@@ -346,7 +346,7 @@ blockToMixin :: Name
              -> Scope
              -> Block Unresolved
              -> Q Exp
-blockToMixin r scope (Block _sel props subblocks mixins) =
+blockToMixin r scope (Block _sel props _subblocks mixins) =
     [|Mixin
         { mixinAttrs    = concat
                         $ $(listE $ map go props)
@@ -364,7 +364,7 @@ blockToMixin r scope (Block _sel props subblocks mixins) =
     go (Attr x y) = conE 'Attr
         `appE` (contentsToBuilder r scope x)
         `appE` (contentsToBuilder r scope y)
-    subGo (Block sel' b c d) = blockToCss r scope $ Block sel' b c d
+    -- subGo (Block sel' b c d) = blockToCss r scope $ Block sel' b c d
 
 blockToCss :: Name
            -> Scope

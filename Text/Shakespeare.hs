@@ -85,9 +85,9 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
 -- | Coffeescript, TypeScript, and other languages compiles down to Javascript.
 -- Previously we waited until the very end, at the rendering stage to perform this compilation.
--- Lets call is a post-conversion
+-- Lets call this a post-conversion.
 -- This had the advantage that all Haskell values were inserted first:
--- for example a value could be inserted that Coffeescript would compile into Javascript.
+-- For example a value could be inserted that Coffeescript would compile into Javascript.
 -- While that is perhaps a safer approach, the advantage is not used in practice:
 -- it was that way mainly for ease of implementation.
 -- The down-side is the template must be compiled down to Javascript during every request.
@@ -96,8 +96,8 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 --
 -- The problem then is the insertion of Haskell values: we need a hole for
 -- them. This can be done with variables known to the language.
--- During the pre-conversion we first modify all Haskell insertions
--- So #{a} is change to shakespeare_var_a
+-- During the pre-conversion we first modify all Haskell insertions,
+-- so #{a} is changed to shakespeare_var_a
 -- Then we can place the Haskell values in a function wrapper that exposes
 -- those variables: (function(shakespeare_var_a){ ... shakespeare_var_a ...})
 -- TypeScript can compile that, and then we tack an application of the
@@ -125,8 +125,7 @@ data WrapInsertion = WrapInsertion {
 
 data PreConversion = ReadProcess String [String]
                    | Id
-  
-
+                   | ConvertAction (String -> String)
 
 data ShakespeareSettings = ShakespeareSettings
     { varChar :: Char
@@ -143,11 +142,18 @@ data ShakespeareSettings = ShakespeareSettings
     -- meaningful error messages.
     }
 
-defaultShakespeareSettings :: ShakespeareSettings
-defaultShakespeareSettings = ShakespeareSettings {
+defaultShakespeareSettings
+    :: Exp -- ^ An Exp that will convert variables to 'Builder'
+    -> Exp -- ^ An Exp that converts 'Builder' to the type being generated
+    -> Exp -- ^ The reversal of the previous conversion argument
+    -> ShakespeareSettings
+defaultShakespeareSettings tobuild wrapexp unwrapexp = ShakespeareSettings {
     varChar = '#'
   , urlChar = '@'
   , intChar = '^'
+  , toBuilder = tobuild
+  , wrap = wrapexp
+  , unwrap = unwrapexp
   , justVarInterpolation = False
   , preConversion = Nothing
   , modifyFinalValue = Nothing
@@ -267,6 +273,7 @@ preFilter mfp ShakespeareSettings {..} template =
               withVars = (addVars mWrapI vars parsed)
           in  applyVars mWrapI vars `fmap` case convert of
                   Id -> return withVars
+                  ConvertAction act -> pure (act template)
                   ReadProcess command args ->
                     readProcessError command args withVars mfp
   where

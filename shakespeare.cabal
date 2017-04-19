@@ -52,6 +52,7 @@ library
                    , vector
                    , unordered-containers
                    , scientific       >= 0.3.0.0
+                   , markdown
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
@@ -66,6 +67,7 @@ library
                      Text.Shakespeare.Base
                      Text.Shakespeare
                      Text.TypeScript
+                     Text.Marcus
     other-modules:   Text.Hamlet.Parse
                      Text.Css
                      Text.MkSizeType
@@ -115,8 +117,10 @@ test-suite test
                     Text.CssSpec
                     Text.HamletSpec
                     Text.JuliusSpec
+                    Text.MarcusSpec
                     Quoter
                     HamletTestTypes
+                    TestUrl
 
     cpp-options: -DTEST_EXPORT
 

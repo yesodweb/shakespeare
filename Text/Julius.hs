@@ -172,11 +172,8 @@ javascriptSettings = do
   wrapExp <- [|Javascript|]
   unWrapExp <- [|unJavascript|]
   asJavascriptUrl' <- [|asJavascriptUrl|]
-  return $ defaultShakespeareSettings { toBuilder = toJExp
-  , wrap = wrapExp
-  , unwrap = unWrapExp
-  , modifyFinalValue = Just asJavascriptUrl'
-  }
+  return $ (defaultShakespeareSettings toJExp wrapExp unWrapExp)
+    { modifyFinalValue = Just asJavascriptUrl' }
 
 js, julius :: QuasiQuoter
 js = QuasiQuoter { quoteExp = \s -> do
@@ -210,4 +207,7 @@ jsFileDebug = jsFileReload
 -- | Determine which identifiers are used by the given template, useful for
 -- creating systems like yesod devel.
 juliusUsedIdentifiers :: String -> [(Deref, VarType)]
-juliusUsedIdentifiers = shakespeareUsedIdentifiers defaultShakespeareSettings
+juliusUsedIdentifiers = shakespeareUsedIdentifiers partialSettings
+  where
+    unused = error "Unused setting"
+    partialSettings = defaultShakespeareSettings unused unused unused

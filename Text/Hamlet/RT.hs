@@ -77,14 +77,14 @@ parseHamletRT set s =
         Error s' -> throwM $ HamletParseException s'
         Ok (_, x) -> liftM HamletRT $ mapM convert x
   where
-    convert x@(DocForall deref (BindAs _ _) docs) =
+    convert (DocForall _deref (BindAs _ _) _docs) =
        error "Runtime Hamlet does not currently support 'as' patterns"
     convert x@(DocForall deref (BindVar (Ident ident)) docs) = do
         deref' <- flattenDeref' x deref
         docs' <- mapM convert docs
         return $ SDForall deref' ident docs'
     convert DocForall{} = error "Runtime Hamlet does not currently support tuple patterns"
-    convert x@(DocMaybe deref (BindAs _ _) jdocs ndocs) =
+    convert (DocMaybe _deref (BindAs _ _) _jdocs _ndocs) =
        error "Runtime Hamlet does not currently support 'as' patterns"
     convert x@(DocMaybe deref (BindVar (Ident ident)) jdocs ndocs) = do
         deref' <- flattenDeref' x deref
@@ -114,7 +114,7 @@ parseHamletRT set s =
       where
         -- | See the comments in Text.Hamlet.Parse.testIncludeClazzes. The conditional
         -- added there doesn't work for runtime Hamlet, so we remove it here.
-        go (DerefBranch (DerefIdent x) _, docs') | x == specialOrIdent = do
+        go (DerefBranch (DerefIdent y) _, docs') | y == specialOrIdent = do
             docs'' <- mapM convert docs'
             return (["True"], docs'')
         go (deref, docs') = do
