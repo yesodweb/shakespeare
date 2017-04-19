@@ -66,11 +66,12 @@ library
                      Text.Shakespeare.Base
                      Text.Shakespeare
                      Text.TypeScript
+                     Text.Internal.Css
+                     Text.Internal.CssCommon
     other-modules:   Text.Hamlet.Parse
-                     Text.Css
                      Text.MkSizeType
                      Text.IndentToBrace
-                     Text.CssCommon
+
     ghc-options:     -Wall
 
     if flag(test_export)

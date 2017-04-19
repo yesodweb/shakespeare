@@ -51,14 +51,14 @@ module Text.Lucius
     , luciusUsedIdentifiers
     ) where
 
-import Text.CssCommon
+import Text.Internal.CssCommon
 import Text.Shakespeare.Base
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Data.Text (Text, unpack)
 import qualified Data.Text.Lazy as TL
 import Text.ParserCombinators.Parsec hiding (Line)
-import Text.Css
+import Text.Internal.Css
 import Data.Char (isSpace, toLower, toUpper)
 import Numeric (readHex)
 import Control.Applicative ((<$>))

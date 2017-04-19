@@ -1,10 +1,13 @@
+{-# OPTIONS_HADDOCK hide #-}
+-- | This module is only being exposed to work around a GHC bug, its API is not stable
+
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE CPP #-}
-module Text.CssCommon where
+module Text.Internal.CssCommon where
 
-import Text.Css
+import Text.Internal.Css
 import Text.MkSizeType
 import qualified Data.Text as TS
 import Text.Printf (printf)
