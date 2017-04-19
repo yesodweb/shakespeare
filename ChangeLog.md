@@ -1,3 +1,7 @@
+### 2.0.13
+
+* Expose Text.Internal.Css [#205](https://github.com/yesodweb/shakespeare/pull/205)
+
 ### 2.0.12.1
 
 * New contentHash parser breaks hash hrefs [#200](https://github.com/yesodweb/shakespeare/issues/200)
