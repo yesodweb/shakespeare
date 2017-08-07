@@ -176,9 +176,6 @@ cssFileDebug :: Bool -- ^ perform the indent-to-brace conversion
              -> Q Exp
 cssFileDebug toi2b parseBlocks' parseBlocks fp = do
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
-#ifdef GHC_7_4
-    qAddDependentFile fp
-#endif
     let vs = cssUsedIdentifiers toi2b parseBlocks s
     c <- mapM vtToExp vs
     cr <- [|cssRuntime toi2b|]
