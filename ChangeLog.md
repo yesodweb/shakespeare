@@ -1,3 +1,7 @@
+### 2.0.14
+
+* Fix Cassius and Lucius reload mode [#206](https://github.com/yesodweb/shakespeare/issues/206)
+
 ### 2.0.13
 
 * Expose Text.Internal.Css [#205](https://github.com/yesodweb/shakespeare/pull/205)
