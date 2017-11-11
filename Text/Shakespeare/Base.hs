@@ -125,7 +125,8 @@ parseDeref = do
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
         let op' = DerefIdent $ Ident op
-        ys <- many1 $ delim >> derefSingle
+        ys <- many1 $ try $ delim >> derefSingle
+        skipMany $ oneOf " \t"
         return $ DerefBranch (DerefBranch op' $ foldl1 DerefBranch $ x : xs) (foldl1 DerefBranch ys)
     derefSingle = derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> strLit <|> ident
     deref' lhs =
