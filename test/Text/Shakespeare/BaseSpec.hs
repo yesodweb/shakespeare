@@ -3,8 +3,11 @@ module Text.Shakespeare.BaseSpec (spec) where
 
 import Test.Hspec
 import Text.Shakespeare
-import Text.ParserCombinators.Parsec (parse, ParseError, (<|>))
-import Text.Shakespeare.Base (parseVarString, parseUrlString, parseIntString)
+import Text.ParserCombinators.Parsec
+       ((<|>), ParseError, parse, runParser)
+import Text.Shakespeare.Base
+       (Deref(..), Ident(..), parseDeref, parseVarString, parseUrlString,
+        parseIntString)
 import Language.Haskell.TH.Syntax (Exp (VarE))
 import Data.Text.Lazy.Builder (toLazyText, fromLazyText)
 import Data.Text.Lazy (pack)
@@ -22,6 +25,13 @@ spec = do
 
     run (varString <|> urlString <|> intString) "@{url} #{var}" `shouldBe` Right "@{url}"
   -}
+
+  it "parseDeref parse expressions with infix operator and trailing spaces" $ do
+    runParser parseDeref () "" " a + b \t " `shouldBe`
+      (Right
+         (DerefBranch
+            (DerefBranch (DerefIdent (Ident "+")) (DerefIdent (Ident "a")))
+            (DerefIdent (Ident "b"))))
 
   it "preFilter off" $ do
     preFilterN defaultShakespeareSettings template
