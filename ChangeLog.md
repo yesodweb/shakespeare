@@ -1,3 +1,7 @@
+### 2.0.14.1
+
+* Handle expressions with infix operator and trailing spaces [#211](https://github.com/yesodweb/shakespeare/issues/211)
+
 ### 2.0.14
 
 * Fix Cassius and Lucius reload mode [#206](https://github.com/yesodweb/shakespeare/issues/206)
