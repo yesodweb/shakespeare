@@ -94,14 +94,13 @@ derefTuple = try $ do
   return $ DerefTuple x
 
 parseDeref :: UserParser a Deref
-parseDeref = skipMany (oneOf " \t") >> (derefList <|>
-                                        derefTuple <|> (do
-    x <- derefSingle
-    (derefInfix x) <|> (do
-        res <- deref' $ (:) x
-        skipMany $ oneOf " \t"
-        return res)))
+parseDeref = do
+    skipMany (oneOf " \t")
+    derefList <|> derefTuple <|> derefOther
   where
+    derefOther = do
+        x <- derefSingle
+        derefInfix x <|> derefPrefix x
     delim = (many1 (char ' ') >> return())
             <|> lookAhead (oneOf "(\"" >> return ())
     derefOp = try $ do
@@ -115,6 +114,10 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|>
         | isAscii c = c `elem` "!#$%&*+./<=>?@\\^|-~:"
         | otherwise = isSymbol c || isPunctuation c
 
+    derefPrefix x = do
+        res <- deref' $ (:) x
+        skipMany $ oneOf " \t"
+        return res
     derefInfix x = try $ do
         _ <- delim
         xs <- many $ try $ derefSingle >>= \x' -> delim >> return x'
@@ -122,9 +125,10 @@ parseDeref = skipMany (oneOf " \t") >> (derefList <|>
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
         let op' = DerefIdent $ Ident op
-        ys <- many1 $ delim >> derefSingle
+        ys <- many1 $ try $ delim >> derefSingle
+        skipMany $ oneOf " \t"
         return $ DerefBranch (DerefBranch op' $ foldl1 DerefBranch $ x : xs) (foldl1 DerefBranch ys)
-    derefSingle = derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> strLit<|> ident
+    derefSingle = derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> strLit <|> ident
     deref' lhs =
         dollar <|> derefSingle'
                <|> return (foldl1 DerefBranch $ lhs [])
