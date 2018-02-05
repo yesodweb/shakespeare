@@ -16,6 +16,7 @@ import Data.Text.Lazy.Builder (Builder, singleton, toLazyText, fromLazyText, fro
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
 import Data.Monoid (Monoid, mconcat, mappend, mempty)
+import Data.Semigroup (Semigroup(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Language.Haskell.TH.Syntax
@@ -28,14 +29,6 @@ import Control.Arrow ((***), second)
 import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
 import Text.Shakespeare (VarType (..))
-
-#if MIN_VERSION_base(4,5,0)
-import Data.Monoid ((<>))
-#else
-(<>) :: Monoid m => m -> m -> m
-(<>) = mappend
-{-# INLINE (<>) #-}
-#endif
 
 type CssUrl url = (url -> [(T.Text, T.Text)] -> T.Text) -> Css
 
@@ -74,9 +67,13 @@ data Mixin = Mixin
     { mixinAttrs :: ![Attr Resolved]
     , mixinBlocks :: ![Block Resolved]
     }
+instance Semigroup Mixin where
+    Mixin a x <> Mixin b y = Mixin (a ++ b) (x ++ y)
 instance Monoid Mixin where
     mempty = Mixin mempty mempty
-    mappend (Mixin a x) (Mixin b y) = Mixin (a ++ b) (x ++ y)
+#if !(MIN_VERSION_base(4,11,0))
+    mappend = (<>)
+#endif
 
 data TopLevel a where
     TopBlock   :: !(Block a) -> TopLevel a

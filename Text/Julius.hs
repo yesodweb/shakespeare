@@ -47,7 +47,8 @@ module Text.Julius
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText, toLazyText, fromLazyText)
-import Data.Monoid
+import Data.Monoid (Monoid(..))
+import Data.Semigroup (Semigroup(..))
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
@@ -76,7 +77,7 @@ renderJavascriptUrl r s = renderJavascript $ s r
 
 -- | Newtype wrapper of 'Builder'.
 newtype Javascript = Javascript { unJavascript :: Builder }
-    deriving Monoid
+    deriving (Semigroup, Monoid)
 
 -- | Return type of template-reading functions.
 type JavascriptUrl url = (url -> [(TS.Text, TS.Text)] -> TS.Text) -> Javascript

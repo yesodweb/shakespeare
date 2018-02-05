@@ -53,6 +53,9 @@ library
                    , unordered-containers
                    , scientific       >= 0.3.0.0
 
+    if !impl(ghc >= 8.0)
+      build-depends: semigroups       >= 0.16
+
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
                      Text.Roy
