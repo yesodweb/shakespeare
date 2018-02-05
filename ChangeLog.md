@@ -1,3 +1,7 @@
+### 2.0.15
+
+* Semigroup instances
+
 ### 2.0.14.1
 
 * Handle expressions with infix operator and trailing spaces [#211](https://github.com/yesodweb/shakespeare/issues/211)
