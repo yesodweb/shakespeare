@@ -31,7 +31,7 @@
 --
 -- Further reading:
 --
--- 1. Shakespearean templates: <http://www.yesodweb.com/book/templates>
+-- 1. Shakespearean templates: <https://www.yesodweb.com/book/shakespearean-templates>
 --
 -- 2. Roy: <http://roy.brianmckenna.org/>
 module Text.Roy
