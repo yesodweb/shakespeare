@@ -49,9 +49,9 @@
 --
 -- Further reading:
 --
--- 1. Shakespearean templates: <http://www.yesodweb.com/book/templates>
+-- 1. Shakespearean templates: <https://www.yesodweb.com/book/shakespearean-templates>
 --
--- 2. TypeScript: <http://typescript.codeplex.com/>
+-- 2. TypeScript: <https://www.typescriptlang.org/>
 module Text.TypeScript
     ( -- * Functions
       -- ** Template-Reading Functions
