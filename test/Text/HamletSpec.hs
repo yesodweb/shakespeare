@@ -387,6 +387,12 @@ $newline text
       "<foo bar=\"baz\" bin=\"&lt;&gt;&quot;&amp;\">content</foo>\n" [hamlet|
 <foo *{attrs}>content
 |]
+    it "*{...} attribute class concatenation" $
+      let attrs = [("class", "second"), ("class", "third")] in helper
+      "<foo class=\"first second third\">content</foo>\n" [hamlet|
+<foo .first *{attrs}>content
+|]
+
     it "blank attr values" $ helper
       "<foo bar=\"\" baz bin=\"\"></foo>\n"
       [hamlet|<foo bar="" baz bin=>|]
