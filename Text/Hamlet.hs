@@ -50,11 +50,7 @@ module Text.Hamlet
 
 import Text.Shakespeare.Base
 import Text.Hamlet.Parse
-#if MIN_VERSION_template_haskell(2,9,0)
 import Language.Haskell.TH.Syntax hiding (Module)
-#else
-import Language.Haskell.TH.Syntax
-#endif
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import Data.Maybe (fromMaybe)
@@ -98,6 +94,9 @@ attrsToHtml =
         `mappend` toHtml v
         `mappend` preEscapedText (pack "\"")
         `mappend` rest
+
+combineClasses :: [(Text, Text)] -> [(Text, Text)]
+combineClasses = error . show
 
 type Render url = url -> [(Text, Text)] -> Text
 type Translate msg = msg -> Html
@@ -253,7 +252,7 @@ docToExp env hr scope (DocCase deref cases) = do
         let scope' = extraScope ++ scope
         insideExp <- docsToExp env hr scope' inside
         return $ Match pat (NormalB insideExp) []
-docToExp env hr v (DocContent c) = contentToExp env hr v c
+docToExp env hr v (DocContent c) = contentToExp env hr v $ error $ show c
 
 contentToExp :: Env -> HamletRules -> Scope -> Content -> Q Exp
 contentToExp _ hr _ (ContentRaw s) = do

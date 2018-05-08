@@ -50,7 +50,7 @@ data Content = ContentRaw String
              | ContentUrl Bool Deref -- ^ bool: does it include params?
              | ContentEmbed Deref
              | ContentMsg Deref
-             | ContentAttrs Deref
+             | ContentAttrs [(Maybe Deref, String, Maybe [Content])] [Deref]
     deriving (Show, Eq, Read, Data, Typeable)
 
 data Line = LineForall Deref Binding
@@ -486,6 +486,13 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD avoidNewLine) insid
     let takeClass (a, "class", b) = Just (a, fromMaybe [] b)
         takeClass _ = Nothing
     let clazzes = classes ++ mapMaybe takeClass attrs
+
+    let attrsWithClasses = map go classes ++ attrs
+          where
+            go :: (Maybe Deref, [Content])
+               -> (Maybe Deref, String, Maybe [Content])
+            go (x, y) = (x, "class", Just y)
+
     let notClass (_, x, _) = x /= "class"
     let noclass = filter notClass attrs
     let attrs' =
@@ -511,9 +518,8 @@ nestToDoc set (Nest (LineTag tn attrs content classes attrsD avoidNewLine) insid
     inside' <- nestToDoc set inside
     rest' <- nestToDoc set rest
     Ok $ start
-       : attrs''
-      ++ map (DocContent . ContentAttrs) attrsD
-      ++ seal
+       : DocContent (ContentAttrs attrsWithClasses attrsD)
+       : seal
        : map DocContent content
       ++ inside'
       ++ end
