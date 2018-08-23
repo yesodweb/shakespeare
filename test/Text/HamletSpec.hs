@@ -297,6 +297,18 @@ $newline never
     $forall num <- [1, 2, 3]
         <li>#{show num}
 |]
+    it "pattern-match list: maybe" $ do
+      let example :: [Int]
+          example = [1, 2, 3]
+      helper "<ul><li>1</li><li>2</li><li>3</li></ul>" [hamlet|
+$newline never
+<ul>
+    $case example
+        $of (:) x xs
+            <li>#{x}
+            $forall y <- xs
+                <li>#{y}
+|]
     it "infix operators" $
       helper "5" [hamlet|#{show $ (4 + 5) - (2 + 2)}|]
     it "infix operators with parens" $
