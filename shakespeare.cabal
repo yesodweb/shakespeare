@@ -106,8 +106,8 @@ flag test_coffee
     default: False
 
 flag test_roy
-    description: render tests through coffeescript render function
-    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    description: render tests through roy render function
+    -- cabal configure --enable-tests -ftest_roy && cabal build && dist/build/test/test
     default: False
 
 test-suite test
