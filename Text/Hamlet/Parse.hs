@@ -332,7 +332,7 @@ parseLine set = do
     isVariable (Ident (x:_)) = not (isUpper x)
     isVariable (Ident []) = error "isVariable: bad identifier"
 
-    isConstructor (Ident (x:_)) = isUpper x
+    isConstructor (Ident (x:_)) = isUpper x || generalCategory x == OtherPunctuation
     isConstructor (Ident []) = error "isConstructor: bad identifier"
 
     identPattern :: Parser Binding
