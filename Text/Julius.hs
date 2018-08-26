@@ -128,12 +128,14 @@ string s = {-# SCC "string" #-} singleton '"' <> quote s <> singleton '"'
                 Just (!c,t') -> fromText h <> escape c <> quote t'
         where (h,t) = {-# SCC "break" #-} T.break isEscape q
     isEscape c = c == '\"' ||
+                 c == '\'' ||
                  c == '\\' ||
                  c == '<'  ||
                  c == '>'  ||
                  c == '&'  ||
                  c < '\x20'
     escape '\"' = "\\\""
+    escape '\'' = "\\\'"
     escape '\\' = "\\\\"
     escape '\n' = "\\n"
     escape '\r' = "\\r"

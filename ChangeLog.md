@@ -1,3 +1,7 @@
+### 2.0.16
+
+* Updated `encodeToTextBuilder` also escapes single quotes [#221](https://github.com/yesodweb/shakespeare/pull/221)
+
 ### 2.0.15
 
 * Semigroup instances
