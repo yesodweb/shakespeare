@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Text.Hamlet.Parse
     ( Result (..)

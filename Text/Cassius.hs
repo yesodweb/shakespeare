@@ -2,7 +2,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Cassius
     ( -- * Datatypes
@@ -56,9 +55,6 @@ cassius = QuasiQuoter { quoteExp = quoteExp lucius . i2b }
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
-#ifdef GHC_7_4
-    qAddDependentFile fp
-#endif
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     quoteExp cassius contents
 

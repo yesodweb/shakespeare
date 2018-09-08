@@ -3,7 +3,7 @@
 -- | Internal functions to generate CSS size wrapper types.
 module Text.MkSizeType (mkSizeType) where
 
-#if MIN_VERSION_template_haskell(2,11,0)
+#if !MIN_VERSION_template_haskell(2,12,0)
 import Language.Haskell.TH (conT)
 #endif
 import Language.Haskell.TH.Syntax
@@ -25,10 +25,8 @@ dataDec name =
 #if MIN_VERSION_template_haskell(2,12,0)
   return $
     DataD [] name [] Nothing [constructor] [DerivClause Nothing (map ConT derives)]
-#elif MIN_VERSION_template_haskell(2,11,0)
-  DataD [] name [] Nothing [constructor] <$> mapM conT derives
 #else
-  return $ DataD [] name [] [constructor] derives
+  DataD [] name [] Nothing [constructor] <$> mapM conT derives
 #endif
   where constructor = NormalC name [(notStrict, ConT $ mkName "Rational")]
         derives = map mkName ["Eq", "Ord"]
@@ -88,17 +86,8 @@ unariFunDec2 name fun' = FunD fun [Clause [pat] body []]
         fun = mkName fun'
         x = mkName "x"
 
-#if MIN_VERSION_template_haskell(2,11,0)
 notStrict :: Bang
 notStrict = Bang NoSourceUnpackedness NoSourceStrictness
-#else
-notStrict :: Strict
-notStrict = NotStrict
-#endif
 
 instanceD :: Cxt -> Type -> [Dec] -> Dec
-#if MIN_VERSION_template_haskell(2,11,0)
 instanceD = InstanceD Nothing
-#else
-instanceD = InstanceD
-#endif

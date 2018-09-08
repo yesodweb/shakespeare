@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -24,20 +23,11 @@ import Control.Exception (Exception)
 import Data.Typeable (Typeable)
 import Text.Hamlet.Parse
 import Data.List (intercalate)
-#if MIN_VERSION_blaze_html(0,5,0)
 import Text.Blaze.Html (Html)
 import Text.Blaze.Internal (preEscapedString, preEscapedText)
-#else
-import Text.Blaze (preEscapedString, preEscapedText, Html)
-#endif
 import Data.Text (Text)
 
-#if MIN_VERSION_exceptions(0,4,0)
 import Control.Monad.Catch (MonadThrow, throwM)
-#else
-import Control.Monad.Catch (MonadCatch, throwM)
-#define MonadThrow MonadCatch
-#endif
 
 type HamletMap url = [([String], HamletData url)]
 type UrlRenderer url = (url -> [(Text, Text)] -> Text)
@@ -131,11 +121,7 @@ renderHamletRT :: MonadThrow m
                -> m Html
 renderHamletRT = renderHamletRT' False
 
-#if MIN_VERSION_exceptions(0,4,0)
 renderHamletRT' :: MonadThrow m
-#else
-renderHamletRT' :: MonadCatch m
-#endif
                 => Bool -- ^ should embeded template (via ^{..}) be plain Html or actual templates?
                 -> HamletRT
                 -> HamletMap url
@@ -192,12 +178,7 @@ renderHamletRT' tempAsHtml (HamletRT docs) scope0 renderUrl =
                 renderHamletRT' tempAsHtml (HamletRT docs') scope renderUrl
             HDBool False -> go scope (SDCond cs els)
             _ -> fa $ showName b ++ ": expected HDBool"
-#if MIN_VERSION_exceptions(0,4,0)
-    lookup' :: MonadThrow m
-#else
-    lookup' :: MonadCatch m
-#endif
-            => [String] -> [String] -> HamletMap url -> m (HamletData url)
+    lookup' :: MonadThrow m => [String] -> [String] -> HamletMap url -> m (HamletData url)
     lookup' orig k m =
         case lookup k m of
             Nothing | k == ["True"] -> return $ HDBool True
@@ -210,11 +191,7 @@ fa = throwM . HamletRenderException
 showName :: [String] -> String
 showName = intercalate "." . reverse
 
-#if MIN_VERSION_exceptions(0,4,0)
 flattenDeref' :: MonadThrow f => Doc -> Deref -> f [String]
-#else
-flattenDeref' :: MonadCatch f => Doc -> Deref -> f [String]
-#endif
 flattenDeref' orig deref =
     case flattenDeref deref of
         Nothing -> throwM $ HamletUnsupportedDocException orig

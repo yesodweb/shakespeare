@@ -4,7 +4,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE CPP #-}
 module Text.Internal.CssCommon where
 
 import Text.Internal.Css

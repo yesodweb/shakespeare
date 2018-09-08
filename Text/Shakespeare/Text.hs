@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module Text.Shakespeare.Text
     ( TextUrl
