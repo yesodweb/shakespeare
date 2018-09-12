@@ -1,3 +1,7 @@
+### 2.0.17
+
+* Fix parse pattern-match with operator constructor [#222](https://github.com/yesodweb/shakespeare/issues/222)
+
 ### 2.0.16
 
 * Updated `encodeToTextBuilder` also escapes single quotes [#221](https://github.com/yesodweb/shakespeare/pull/221)
