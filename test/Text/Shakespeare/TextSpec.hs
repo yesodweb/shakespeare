@@ -8,6 +8,7 @@ import Test.Hspec
 import Prelude hiding (reverse)
 import Text.Shakespeare.Text
 import Data.List (intercalate)
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.List
 import qualified Data.List as L
@@ -112,7 +113,9 @@ spec = do
                                      |]
 
 simpT :: String -> TL.Text -> Assertion
-simpT a b = pack a @=? TL.toStrict b
+simpT a b = nocrlf (pack a) @=? nocrlf (TL.toStrict b)
+  where
+    nocrlf = T.replace (pack "\r\n") (pack "\n")
 
 
 data Url = Home | Sub SubUrl
