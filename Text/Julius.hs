@@ -52,7 +52,7 @@ import Data.Semigroup (Semigroup(..))
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
-import Data.Aeson (Value)
+import Data.Aeson (Value, toJSON)
 import Data.Aeson.Types (Value(..))
 import Numeric (showHex)
 import qualified Data.HashMap.Strict as H
@@ -91,6 +91,9 @@ class ToJavascript a where
 
 instance ToJavascript Bool where toJavascript = Javascript . fromText . TS.toLower . TS.pack . show
 instance ToJavascript Value where toJavascript = Javascript . encodeToTextBuilder
+instance ToJavascript String where toJavascript = toJavascript . toJSON
+instance ToJavascript TS.Text where toJavascript = toJavascript . toJSON
+instance ToJavascript TL.Text where toJavascript = toJavascript . toJSON
 
 -- | Encode a JSON 'Value' to a "Data.Text" 'Builder', which can be
 -- embedded efficiently in a text-based protocol.
