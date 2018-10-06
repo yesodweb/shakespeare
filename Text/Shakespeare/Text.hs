@@ -2,6 +2,27 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
+-- | A Shakespearean module for general text processing, introducing type-safe,
+-- compile-time variable interpolation.
+--
+-- Text templates use the same parser as for other shakespearean templates
+-- which enables variable interpolation using @#{..}@.  The parser also
+-- recognize the @@{..}@ and @^{..}@ syntax.
+--
+-- If it is necessary that your template produces the output containing one of
+-- the interpolation syntax you can escape the sequence using a backslash:
+--
+-- > λ> :set -XQuasiQuotes
+-- > λ> let bar = 23 :: Int in [st|#{bar}|] :: Text
+--
+-- produces "23", but
+--
+-- > λ> let bar = 23 :: Int in [st|#\{bar}|] :: Text
+--
+-- returns "#{bar}".  The escaping backslash is removed from the output.
+--
+-- Further reading:
+-- Shakespearean templates: <https://www.yesodweb.com/book/shakespearean-templates>
 module Text.Shakespeare.Text
     ( TextUrl
     , ToText (..)
