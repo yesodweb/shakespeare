@@ -77,8 +77,6 @@ library
     if flag(test_export)
       cpp-options: -DTEST_EXPORT
 
-    extensions: TemplateHaskell
-
     if os(windows)
       CPP-Options: "-DWINDOWS"
 
@@ -139,8 +137,6 @@ test-suite test
                  , blaze-markup
                  , blaze-html
                  , exceptions
-
-    extensions: TemplateHaskell
 
 
 source-repository head
