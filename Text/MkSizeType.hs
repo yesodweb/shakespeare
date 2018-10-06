@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- | Internal functions to generate CSS size wrapper types.
 module Text.MkSizeType (mkSizeType) where
