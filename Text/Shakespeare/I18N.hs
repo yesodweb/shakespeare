@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE CPP #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -156,9 +155,6 @@ mkMessageCommon genType prefix postfix master dt folder lang = do
     files <- qRunIO $ getDirectoryContents folder
     let files' = filter (`notElem` [".", ".."]) files
     (_files', contents) <- qRunIO $ fmap (unzip . catMaybes) $ mapM (loadLang folder) files'
-#ifdef GHC_7_4
-    mapM_ qAddDependentFile $ concat _files'
-#endif
     let contents' = Map.toList $ Map.fromListWith (++) contents
     sdef <-
         case lookup lang contents' of
@@ -171,11 +167,7 @@ mkMessageCommon genType prefix postfix master dt folder lang = do
     c3 <- defClause
     return $
      ( if genType
-       then ((DataD [] mname []
-#if MIN_VERSION_template_haskell(2,11,0)
-                    Nothing
-#endif
-                    (map (toCon dt) sdef) []) :)
+       then ((DataD [] mname [] Nothing (map (toCon dt) sdef) []) :)
        else id)
         [ instanceD
             []
@@ -407,17 +399,8 @@ instance IsString (SomeMessage master) where
 instance master ~ master' => RenderMessage master (SomeMessage master') where
     renderMessage a b (SomeMessage msg) = renderMessage a b msg
 
-#if MIN_VERSION_template_haskell(2,11,0)
 notStrict :: Bang
 notStrict = Bang NoSourceUnpackedness NoSourceStrictness
-#else
-notStrict :: Strict
-notStrict = NotStrict
-#endif
 
 instanceD :: Cxt -> Type -> [Dec] -> Dec
-#if MIN_VERSION_template_haskell(2,11,0)
 instanceD = InstanceD Nothing
-#else
-instanceD = InstanceD
-#endif

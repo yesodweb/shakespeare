@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         2.0.15
+version:         2.0.18
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -34,7 +34,7 @@ extra-source-files:
   ChangeLog.md
 
 library
-    build-depends:   base             >= 4       && < 5
+    build-depends:   base             >= 4.9     && < 5
                    , time             >= 1
                    , containers
                    , template-haskell >= 2.7
@@ -52,9 +52,6 @@ library
                    , vector
                    , unordered-containers
                    , scientific       >= 0.3.0.0
-
-    if !impl(ghc >= 8.0)
-      build-depends: semigroups       >= 0.16
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
@@ -80,11 +77,6 @@ library
     if flag(test_export)
       cpp-options: -DTEST_EXPORT
 
-    extensions: TemplateHaskell
-
-    if impl(ghc >= 7.4)
-       cpp-options: -DGHC_7_4
-
     if os(windows)
       CPP-Options: "-DWINDOWS"
 
@@ -106,8 +98,8 @@ flag test_coffee
     default: False
 
 flag test_roy
-    description: render tests through coffeescript render function
-    -- cabal configure --enable-tests -ftest_coffee && cabal build && dist/build/test/test
+    description: render tests through roy render function
+    -- cabal configure --enable-tests -ftest_roy && cabal build && dist/build/test/test
     default: False
 
 test-suite test
@@ -127,7 +119,7 @@ test-suite test
     type: exitcode-stdio-1.0
 
     ghc-options:   -Wall
-    build-depends: base             >= 4       && < 5
+    build-depends: base             >= 4.9     && < 5
                  , shakespeare
                  , time             >= 1
                  , containers
@@ -145,8 +137,6 @@ test-suite test
                  , blaze-markup
                  , blaze-html
                  , exceptions
-
-    extensions: TemplateHaskell
 
 
 source-repository head

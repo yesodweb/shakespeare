@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Text.Hamlet.Parse
     ( Result (..)
@@ -24,7 +23,7 @@ import Text.Shakespeare.Base
 import Control.Applicative ((<$>), Applicative (..))
 import Control.Monad
 import Control.Arrow
-import Data.Char (isUpper)
+import Data.Char (GeneralCategory(..), generalCategory, isUpper)
 import Data.Data
 import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
@@ -307,7 +306,8 @@ parseLine set = do
 
     ident :: Parser Ident
     ident = do
-      i <- many1 (alphaNum <|> char '_' <|> char '\'')
+      i <- many1 (alphaNum <|> char '_' <|> char '\'') <|>
+           (char '(' *> many1 (satisfy (\c -> generalCategory c == OtherPunctuation)) <* char ')')
       white
       return (Ident i)
      <?> "identifier"
@@ -331,7 +331,7 @@ parseLine set = do
     isVariable (Ident (x:_)) = not (isUpper x)
     isVariable (Ident []) = error "isVariable: bad identifier"
 
-    isConstructor (Ident (x:_)) = isUpper x
+    isConstructor (Ident (x:_)) = isUpper x || generalCategory x == OtherPunctuation
     isConstructor (Ident []) = error "isConstructor: bad identifier"
 
     identPattern :: Parser Binding

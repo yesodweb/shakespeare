@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
@@ -50,11 +49,7 @@ module Text.Hamlet
 
 import Text.Shakespeare.Base
 import Text.Hamlet.Parse
-#if MIN_VERSION_template_haskell(2,9,0)
 import Language.Haskell.TH.Syntax hiding (Module)
-#else
-import Language.Haskell.TH.Syntax
-#endif
 import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import Data.Maybe (fromMaybe)
@@ -122,8 +117,8 @@ unIdent (Ident s) = s
 bindingPattern :: Binding -> Q (Pat, [(Ident, Exp)])
 bindingPattern (BindAs i@(Ident s) b) = do
     name <- newName s
-    (pattern, scope) <- bindingPattern b
-    return (AsP name pattern, (i, VarE name):scope)
+    (newPattern, scope) <- bindingPattern b
+    return (AsP name newPattern, (i, VarE name):scope)
 bindingPattern (BindVar i@(Ident s))
     | s == "_" = return (WildP, [])
     | all isDigit s = do
@@ -183,13 +178,8 @@ recordToFieldNames conStr = do
   -- use 'lookupValueName' instead of just using 'mkName' so we reify the
   -- data constructor and not the type constructor if their names match.
   Just conName                <- lookupValueName $ conToStr conStr
-#if MIN_VERSION_template_haskell(2,11,0)
   DataConI _ _ typeName         <- reify conName
   TyConI (DataD _ _ _ _ cons _) <- reify typeName
-#else
-  DataConI _ _ typeName _     <- reify conName
-  TyConI (DataD _ _ _ cons _) <- reify typeName
-#endif
   [fields] <- return [fields | RecC name fields <- cons, name == conName]
   return [fieldName | (fieldName, _, _) <- fields]
 
@@ -423,9 +413,6 @@ docFromString set s =
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
-#ifdef GHC_7_4
-    qAddDependentFile fp
-#endif
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     hamletFromString qhr set contents
 

@@ -6,7 +6,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE EmptyDataDecls #-}
 module Text.Internal.Css where
@@ -71,9 +70,6 @@ instance Semigroup Mixin where
     Mixin a x <> Mixin b y = Mixin (a ++ b) (x ++ y)
 instance Monoid Mixin where
     mempty = Mixin mempty mempty
-#if !(MIN_VERSION_base(4,11,0))
-    mappend = (<>)
-#endif
 
 data TopLevel a where
     TopBlock   :: !(Block a) -> TopLevel a
@@ -108,9 +104,6 @@ data CDData url = CDPlain Builder
 
 pack :: String -> Text
 pack = T.pack
-#if !MIN_VERSION_text(0, 11, 2)
-{-# NOINLINE pack #-}
-#endif
 
 fromText :: Text -> Builder
 fromText = TLB.fromText

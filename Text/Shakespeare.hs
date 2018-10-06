@@ -41,11 +41,10 @@ import Text.Parsec.Prim (modifyState, Parsec)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH (appE)
 import Language.Haskell.TH.Syntax
-#if !MIN_VERSION_template_haskell(2,8,0)
-import Language.Haskell.TH.Syntax.Internals
-#endif
 import Data.Text.Lazy.Builder (Builder, fromText)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid
+#endif
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
@@ -62,12 +61,6 @@ import Data.Data (Data)
 -- for pre conversion
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
-
-#if !MIN_VERSION_base(4,5,0)
-(<>) :: Monoid m => m -> m -> m
-(<>) = mappend
-{-# INLINE (<>) #-}
-#endif
 
 -- | A parser with a user state of [String]
 type Parser = Parsec String [String]
@@ -344,9 +337,6 @@ preFilter mfp ShakespeareSettings {..} template =
 
 pack' :: String -> TS.Text
 pack' = TS.pack
-#if !MIN_VERSION_text(0, 11, 2)
-{-# NOINLINE pack' #-}
-#endif
 
 contentsToShakespeare :: ShakespeareSettings -> [Content] -> Q Exp
 contentsToShakespeare rs a = do
@@ -394,11 +384,7 @@ shakespeareFromString r str = do
     contentsToShakespeare r $ contentFromString r s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
-shakespeareFile r fp =
-#ifdef GHC_7_4
-    qAddDependentFile fp >>
-#endif
-        readFileQ fp >>= shakespeareFromString r
+shakespeareFile r fp = readFileQ fp >>= shakespeareFromString r
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
     deriving (Show, Eq, Ord, Enum, Bounded, Typeable, Data, Generic)

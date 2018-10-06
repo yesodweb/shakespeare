@@ -148,6 +148,9 @@ console.log roy
      "var re = /[^{]/;"
      [julius|var re = /[^\{]/;|]
 
+  it "produces escaped JavaScript" $ jelper
+     "\"yay\""
+     [julius|#{"yay"}|]
 
 data Url = Home | Sub SubUrl
 data SubUrl = SubUrl
