@@ -13,11 +13,12 @@
 -- If it is necessary that your template produces the output containing one of
 -- the interpolation syntax you can escape the sequence using a backslash:
 --
--- > let bar = 23 :: Int in [lt|#{bar}|]
+-- > λ> :set -XQuasiQuotes
+-- > λ> let bar = 23 :: Int in [st|#{bar}|] :: Text
 --
 -- produces "23", but
 --
--- > let bar = 23 :: Int in [lt|#\{bar}|]
+-- > λ> let bar = 23 :: Int in [st|#\{bar}|] :: Text
 --
 -- returns "#{bar}".  The escaping backslash is removed from the output.
 --
