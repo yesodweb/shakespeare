@@ -70,6 +70,8 @@ import System.Directory (getModificationTime)
 import Data.Time (UTCTime)
 import Text.Blaze.Html (preEscapedToHtml)
 
+import Text.Internal.TemplateUtils
+
 -- | Convert some value to a list of attribute pairs.
 class ToAttributes a where
     toAttributes :: a -> [(Text, Text)]
@@ -413,6 +415,7 @@ docFromString set s =
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
+    _ <- addDependentFileRelative fp
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     hamletFromString qhr set contents
 
@@ -556,7 +559,7 @@ readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
 -- move to Shakespeare.Base?
 readFileQ :: FilePath -> Q String
-readFileQ fp = qRunIO $ readFileUtf8 fp
+readFileQ fp = addDependentFileRelative fp >> qRunIO (readFileUtf8 fp)
 
 {-# NOINLINE reloadMapRef #-}
 reloadMapRef :: IORef (M.Map FilePath (MTime, [Content]))

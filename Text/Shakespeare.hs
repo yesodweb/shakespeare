@@ -61,7 +61,7 @@ import Data.Data (Data)
 -- for pre conversion
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
-
+import Text.Internal.TemplateUtils
 -- | A parser with a user state of [String]
 type Parser = Parsec String [String]
 -- | run a parser with a user state of [String]
@@ -70,7 +70,7 @@ parse p = runParser p []
 
 -- move to Shakespeare.Base?
 readFileQ :: FilePath -> Q String
-readFileQ fp = qRunIO $ readFileUtf8 fp
+readFileQ fp = addDependentFileRelative fp >> qRunIO (readFileUtf8 fp)
 
 -- move to Shakespeare.Base?
 readFileUtf8 :: FilePath -> IO String

@@ -29,6 +29,8 @@ import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
 import Text.Shakespeare (VarType (..))
 
+import Text.Internal.TemplateUtils
+
 type CssUrl url = (url -> [(T.Text, T.Text)] -> T.Text) -> Css
 
 type DList a = [a] -> [a]
@@ -165,6 +167,7 @@ cssFileDebug :: Bool -- ^ perform the indent-to-brace conversion
              -> FilePath
              -> Q Exp
 cssFileDebug toi2b parseBlocks' parseBlocks fp = do
+    _ <- addDependentFileRelative fp
     s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     let vs = cssUsedIdentifiers toi2b parseBlocks s
     c <- mapM vtToExp vs

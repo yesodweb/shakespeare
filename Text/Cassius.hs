@@ -49,12 +49,14 @@ import Text.Internal.CssCommon
 import Text.Lucius (lucius)
 import qualified Text.Lucius
 import Text.IndentToBrace (i2b)
+import Text.Internal.TemplateUtils
 
 cassius :: QuasiQuoter
 cassius = QuasiQuoter { quoteExp = quoteExp lucius . i2b }
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
+    _ <- addDependentFileRelative fp
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
     quoteExp cassius contents
 
