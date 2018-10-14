@@ -3,7 +3,7 @@ module Text.Internal.TemplateUtils  where
 
 import System.Directory
 import System.FilePath
-
+import Text.Shakespeare.Base (readFileUtf8)
 import Language.Haskell.TH.Syntax
 
 -- | Uses 'addDependentFile' on a file relative to the src root
@@ -18,3 +18,7 @@ addDependentFileRelative relativeFile = do
     pwd <- runIO getCurrentDirectory
     addDependentFile $ pwd </> relativeFile
     return []
+
+-- | Track file via ghc dependencies and return IO returning file contents
+readFileQ :: FilePath -> Q String
+readFileQ fp = addDependentFileRelative fp >> qRunIO (readFileUtf8 fp)

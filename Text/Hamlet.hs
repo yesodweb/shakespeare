@@ -415,8 +415,7 @@ docFromString set s =
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
-    _ <- addDependentFileRelative fp
-    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    contents <- readFileQ fp
     hamletFromString qhr set contents
 
 -- | Like 'hamlet', but reads an external file at compile time.
@@ -552,14 +551,6 @@ hamletFileReloadWithSettings hrr settings fp = do
             c VTUrlParam = [|EUrlParam|]
             c VTMixin = [|\r -> EMixin $ \c -> r c|]
             c VTMsg = [|EMsg|]
-
--- move to Shakespeare.Base?
-readFileUtf8 :: FilePath -> IO String
-readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
-
--- move to Shakespeare.Base?
-readFileQ :: FilePath -> Q String
-readFileQ fp = addDependentFileRelative fp >> qRunIO (readFileUtf8 fp)
 
 {-# NOINLINE reloadMapRef #-}
 reloadMapRef :: IORef (M.Map FilePath (MTime, [Content]))

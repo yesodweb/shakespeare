@@ -56,8 +56,7 @@ cassius = QuasiQuoter { quoteExp = quoteExp lucius . i2b }
 
 cassiusFile :: FilePath -> Q Exp
 cassiusFile fp = do
-    _ <- addDependentFileRelative fp
-    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    contents <- readFileQ fp
     quoteExp cassius contents
 
 cassiusFileDebug, cassiusFileReload :: FilePath -> Q Exp

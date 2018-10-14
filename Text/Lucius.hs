@@ -223,8 +223,7 @@ parseComment = do
 
 luciusFile :: FilePath -> Q Exp
 luciusFile fp = do
-    _ <- addDependentFileRelative fp
-    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    contents <- readFileQ fp
     luciusFromString contents
 
 luciusFileDebug, luciusFileReload :: FilePath -> Q Exp

@@ -68,14 +68,6 @@ type Parser = Parsec String [String]
 parse ::  GenParser tok [a1] a -> SourceName -> [tok] -> Either ParseError a
 parse p = runParser p []
 
--- move to Shakespeare.Base?
-readFileQ :: FilePath -> Q String
-readFileQ fp = addDependentFileRelative fp >> qRunIO (readFileUtf8 fp)
-
--- move to Shakespeare.Base?
-readFileUtf8 :: FilePath -> IO String
-readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
-
 -- | Coffeescript, TypeScript, and other languages compiles down to Javascript.
 -- Previously we waited until the very end, at the rendering stage to perform this compilation.
 -- Lets call is a post-conversion

@@ -21,6 +21,7 @@ module Text.Shakespeare.Base
     , derefToExp
     , flattenDeref
     , readUtf8File
+    , readFileUtf8
     ) where
 
 import Language.Haskell.TH.Syntax
@@ -280,6 +281,9 @@ parseUnder = do
     (char '\\' >> return (Left "_")) <|> (do
         deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left "_")
+
+readFileUtf8 :: FilePath -> IO String
+readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
 readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do

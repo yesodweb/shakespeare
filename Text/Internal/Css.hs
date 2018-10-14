@@ -167,8 +167,7 @@ cssFileDebug :: Bool -- ^ perform the indent-to-brace conversion
              -> FilePath
              -> Q Exp
 cssFileDebug toi2b parseBlocks' parseBlocks fp = do
-    _ <- addDependentFileRelative fp
-    s <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    s <- readFileQ fp
     let vs = cssUsedIdentifiers toi2b parseBlocks s
     c <- mapM vtToExp vs
     cr <- [|cssRuntime toi2b|]
@@ -255,7 +254,7 @@ cssRuntime :: Bool -- ^ i2b?
            -> (url -> [(Text, Text)] -> Text)
            -> Css
 cssRuntime toi2b parseBlocks fp cd render' = unsafePerformIO $ do
-    s' <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    s' <- qRunIO $ readFileUtf8 fp
     let s = if toi2b then i2b s' else s'
     let a = either (error . show) id $ parse parseBlocks s s
     return $ CssWhitespace $ goTop [] a
