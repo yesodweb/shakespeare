@@ -52,7 +52,6 @@ library
                    , vector
                    , unordered-containers
                    , scientific       >= 0.3.0.0
-                   , filepath
 
     exposed-modules: Text.Shakespeare.I18N
                      Text.Shakespeare.Text
@@ -69,7 +68,6 @@ library
                      Text.TypeScript
                      Text.Internal.Css
                      Text.Internal.CssCommon
-                     Text.Internal.TemplateUtils
     other-modules:   Text.Hamlet.Parse
                      Text.MkSizeType
                      Text.IndentToBrace

@@ -22,6 +22,8 @@ module Text.Shakespeare.Base
     , flattenDeref
     , readUtf8File
     , readFileUtf8
+    , readFileQ
+    , readFileRecompileQ
     ) where
 
 import Language.Haskell.TH.Syntax
@@ -296,3 +298,10 @@ readUtf8File fp = do
 #else
       ret
 #endif
+
+readFileQ :: FilePath -> Q String
+readFileQ fp = qRunIO (readFileUtf8 fp)
+
+-- | Track file via ghc dependencies and return IO returning file contents
+readFileRecompileQ :: FilePath -> Q String
+readFileRecompileQ fp = addDependentFile fp >> qRunIO (readFileUtf8 fp)

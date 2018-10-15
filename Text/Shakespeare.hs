@@ -47,7 +47,6 @@ import Data.Monoid
 #endif
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
-import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
 
 import System.Directory (getModificationTime)
@@ -61,7 +60,7 @@ import Data.Data (Data)
 -- for pre conversion
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
-import Text.Internal.TemplateUtils
+
 -- | A parser with a user state of [String]
 type Parser = Parsec String [String]
 -- | run a parser with a user state of [String]
@@ -376,7 +375,7 @@ shakespeareFromString r str = do
     contentsToShakespeare r $ contentFromString r s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
-shakespeareFile r fp = readFileQ fp >>= shakespeareFromString r
+shakespeareFile r fp = readFileRecompileQ fp >>= shakespeareFromString r
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
     deriving (Show, Eq, Ord, Enum, Bounded, Typeable, Data, Generic)

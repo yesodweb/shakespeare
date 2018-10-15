@@ -66,7 +66,6 @@ import Data.Monoid (mconcat)
 import Data.List (isSuffixOf)
 import Control.Arrow (second)
 import Text.Shakespeare (VarType)
-import Text.Internal.TemplateUtils
 
 -- |
 --
@@ -223,7 +222,7 @@ parseComment = do
 
 luciusFile :: FilePath -> Q Exp
 luciusFile fp = do
-    contents <- readFileQ fp
+    contents <- readFileRecompileQ fp
     luciusFromString contents
 
 luciusFileDebug, luciusFileReload :: FilePath -> Q Exp

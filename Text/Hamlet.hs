@@ -70,8 +70,6 @@ import System.Directory (getModificationTime)
 import Data.Time (UTCTime)
 import Text.Blaze.Html (preEscapedToHtml)
 
-import Text.Internal.TemplateUtils
-
 -- | Convert some value to a list of attribute pairs.
 class ToAttributes a where
     toAttributes :: a -> [(Text, Text)]
@@ -415,7 +413,7 @@ docFromString set s =
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
-    contents <- readFileQ fp
+    contents <- readFileRecompileQ fp
     hamletFromString qhr set contents
 
 -- | Like 'hamlet', but reads an external file at compile time.

@@ -29,8 +29,6 @@ import Text.IndentToBrace (i2b)
 import Data.Functor.Identity (runIdentity)
 import Text.Shakespeare (VarType (..))
 
-import Text.Internal.TemplateUtils
-
 type CssUrl url = (url -> [(T.Text, T.Text)] -> T.Text) -> Css
 
 type DList a = [a] -> [a]
@@ -254,7 +252,7 @@ cssRuntime :: Bool -- ^ i2b?
            -> (url -> [(Text, Text)] -> Text)
            -> Css
 cssRuntime toi2b parseBlocks fp cd render' = unsafePerformIO $ do
-    s' <- qRunIO $ readFileUtf8 fp
+    s' <- readFileUtf8 fp
     let s = if toi2b then i2b s' else s'
     let a = either (error . show) id $ parse parseBlocks s s
     return $ CssWhitespace $ goTop [] a
