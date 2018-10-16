@@ -286,7 +286,7 @@ parseUnder = do
 
 -- | Read file's content as `String`, converting newlines
 --
--- @since 2.1.0
+-- @since 2.0.19
 readUtf8FileString :: FilePath -> IO String
 readUtf8FileString fp = fmap TL.unpack $ readUtf8File fp
 
@@ -304,13 +304,13 @@ readUtf8File fp = do
 
 -- | Embed file's content, converting newlines
 --
--- @since 2.1.0
+-- @since 2.0.19
 readFileQ :: FilePath -> Q String
 readFileQ fp = qRunIO (readUtf8FileString fp)
 
 -- | Embed file's content, converting newlines
 -- and track file via ghc dependencies, recompiling on changes
 --
--- @since 2.1.0
+-- @since 2.0.19
 readFileRecompileQ :: FilePath -> Q String
 readFileRecompileQ fp = addDependentFile fp >> readFileQ fp

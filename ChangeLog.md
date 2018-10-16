@@ -1,5 +1,5 @@
 
-### 2.1.0
+### 2.0.19
 * Change of the default behaviour of `*File` functions, they now will add their templates' source file to ghc-dependencies, thus recompiling on templates' changes.
 
 ### 2.0.18
