@@ -47,7 +47,6 @@ import Data.Monoid
 #endif
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as TS
-import qualified Data.Text.Lazy as TL
 import Text.Shakespeare.Base
 
 import System.Directory (getModificationTime)
@@ -67,14 +66,6 @@ type Parser = Parsec String [String]
 -- | run a parser with a user state of [String]
 parse ::  GenParser tok [a1] a -> SourceName -> [tok] -> Either ParseError a
 parse p = runParser p []
-
--- move to Shakespeare.Base?
-readFileQ :: FilePath -> Q String
-readFileQ fp = qRunIO $ readFileUtf8 fp
-
--- move to Shakespeare.Base?
-readFileUtf8 :: FilePath -> IO String
-readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
 
 -- | Coffeescript, TypeScript, and other languages compiles down to Javascript.
 -- Previously we waited until the very end, at the rendering stage to perform this compilation.
@@ -384,7 +375,7 @@ shakespeareFromString r str = do
     contentsToShakespeare r $ contentFromString r s
 
 shakespeareFile :: ShakespeareSettings -> FilePath -> Q Exp
-shakespeareFile r fp = readFileQ fp >>= shakespeareFromString r
+shakespeareFile r fp = readFileRecompileQ fp >>= shakespeareFromString r
 
 data VarType = VTPlain | VTUrl | VTUrlParam | VTMixin
     deriving (Show, Eq, Ord, Enum, Bounded, Typeable, Data, Generic)
@@ -460,7 +451,7 @@ shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
       Nothing -> fmap go' $ newContent mtime
   where
     newContent mtime = do
-        str <- readFileUtf8 fp
+        str <- readUtf8FileString fp
         s <- preFilter (Just fp) settings str
         insertReloadMap fp (mtime, contentFromString settings s)
 

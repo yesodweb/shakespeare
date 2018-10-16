@@ -222,7 +222,7 @@ parseComment = do
 
 luciusFile :: FilePath -> Q Exp
 luciusFile fp = do
-    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    contents <- readFileRecompileQ fp
     luciusFromString contents
 
 luciusFileDebug, luciusFileReload :: FilePath -> Q Exp

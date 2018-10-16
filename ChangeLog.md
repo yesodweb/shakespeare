@@ -1,3 +1,7 @@
+
+### 2.0.19
+* Change of the default behaviour of `*File` functions, they now will add their templates' source file to ghc-dependencies, thus recompiling on templates' changes.
+
 ### 2.0.18
 
 * ToJavascript instance for String, Strict and Lazy Text [#227](https://github.com/yesodweb/shakespeare/pull/227)

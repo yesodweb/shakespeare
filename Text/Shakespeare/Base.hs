@@ -21,6 +21,9 @@ module Text.Shakespeare.Base
     , derefToExp
     , flattenDeref
     , readUtf8File
+    , readUtf8FileString
+    , readFileQ
+    , readFileRecompileQ
     ) where
 
 import Language.Haskell.TH.Syntax
@@ -281,6 +284,12 @@ parseUnder = do
         deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left "_")
 
+-- | Read file's content as `String`, converting newlines
+--
+-- @since 2.0.19
+readUtf8FileString :: FilePath -> IO String
+readUtf8FileString fp = fmap TL.unpack $ readUtf8File fp
+
 readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do
     h <- SIO.openFile fp SIO.ReadMode
@@ -292,3 +301,16 @@ readUtf8File fp = do
 #else
       ret
 #endif
+
+-- | Embed file's content, converting newlines
+--
+-- @since 2.0.19
+readFileQ :: FilePath -> Q String
+readFileQ fp = qRunIO (readUtf8FileString fp)
+
+-- | Embed file's content, converting newlines
+-- and track file via ghc dependencies, recompiling on changes
+--
+-- @since 2.0.19
+readFileRecompileQ :: FilePath -> Q String
+readFileRecompileQ fp = addDependentFile fp >> readFileQ fp

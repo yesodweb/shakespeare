@@ -413,7 +413,7 @@ docFromString set s =
 
 hamletFileWithSettings :: Q HamletRules -> HamletSettings -> FilePath -> Q Exp
 hamletFileWithSettings qhr set fp = do
-    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    contents <- readFileRecompileQ fp
     hamletFromString qhr set contents
 
 -- | Like 'hamlet', but reads an external file at compile time.
@@ -550,14 +550,6 @@ hamletFileReloadWithSettings hrr settings fp = do
             c VTMixin = [|\r -> EMixin $ \c -> r c|]
             c VTMsg = [|EMsg|]
 
--- move to Shakespeare.Base?
-readFileUtf8 :: FilePath -> IO String
-readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
-
--- move to Shakespeare.Base?
-readFileQ :: FilePath -> Q String
-readFileQ fp = qRunIO $ readFileUtf8 fp
-
 {-# NOINLINE reloadMapRef #-}
 reloadMapRef :: IORef (M.Map FilePath (MTime, [Content]))
 reloadMapRef = unsafePerformIO $ newIORef M.empty
@@ -599,7 +591,7 @@ hamletRuntime settings fp cd render = unsafePerformIO $ do
       Nothing -> fmap go' $ newContent mtime
   where
     newContent mtime = do
-        s <- readFileUtf8 fp
+        s <- readUtf8FileString fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
     go' = mconcat . map (runtimeContentToHtml cd render (error "I18n embed IMPOSSIBLE") handleMsgEx)
@@ -620,7 +612,7 @@ hamletRuntimeMsg settings fp cd i18nRender render = unsafePerformIO $ do
       Nothing -> fmap go' $ newContent mtime
   where
     newContent mtime = do
-        s <- readFileUtf8 fp
+        s <- readUtf8FileString fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
     go' = mconcat . map (runtimeContentToHtml cd render i18nRender handleMsg)
