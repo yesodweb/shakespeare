@@ -591,7 +591,7 @@ hamletRuntime settings fp cd render = unsafePerformIO $ do
       Nothing -> fmap go' $ newContent mtime
   where
     newContent mtime = do
-        s <- readFileUtf8 fp
+        s <- readUtf8FileString fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
     go' = mconcat . map (runtimeContentToHtml cd render (error "I18n embed IMPOSSIBLE") handleMsgEx)
@@ -612,7 +612,7 @@ hamletRuntimeMsg settings fp cd i18nRender render = unsafePerformIO $ do
       Nothing -> fmap go' $ newContent mtime
   where
     newContent mtime = do
-        s <- readFileUtf8 fp
+        s <- readUtf8FileString fp
         insertReloadMap fp (mtime, contentFromString settings s)
 
     go' = mconcat . map (runtimeContentToHtml cd render i18nRender handleMsg)

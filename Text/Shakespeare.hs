@@ -451,7 +451,7 @@ shakespeareRuntime settings fp cd render' = unsafePerformIO $ do
       Nothing -> fmap go' $ newContent mtime
   where
     newContent mtime = do
-        str <- readFileUtf8 fp
+        str <- readUtf8FileString fp
         s <- preFilter (Just fp) settings str
         insertReloadMap fp (mtime, contentFromString settings s)
 

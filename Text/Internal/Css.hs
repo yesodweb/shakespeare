@@ -252,7 +252,7 @@ cssRuntime :: Bool -- ^ i2b?
            -> (url -> [(Text, Text)] -> Text)
            -> Css
 cssRuntime toi2b parseBlocks fp cd render' = unsafePerformIO $ do
-    s' <- readFileUtf8 fp
+    s' <- readUtf8FileString fp
     let s = if toi2b then i2b s' else s'
     let a = either (error . show) id $ parse parseBlocks s s
     return $ CssWhitespace $ goTop [] a

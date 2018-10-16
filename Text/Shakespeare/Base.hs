@@ -21,7 +21,7 @@ module Text.Shakespeare.Base
     , derefToExp
     , flattenDeref
     , readUtf8File
-    , readFileUtf8
+    , readUtf8FileString
     , readFileQ
     , readFileRecompileQ
     ) where
@@ -284,8 +284,11 @@ parseUnder = do
         deref <- derefCurlyBrackets
         return $ Right deref) <|> return (Left "_")
 
-readFileUtf8 :: FilePath -> IO String
-readFileUtf8 fp = fmap TL.unpack $ readUtf8File fp
+-- | Read file's content as `String`, converting newlines
+--
+-- @since 2.1.0
+readUtf8FileString :: FilePath -> IO String
+readUtf8FileString fp = fmap TL.unpack $ readUtf8File fp
 
 readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do
@@ -299,9 +302,15 @@ readUtf8File fp = do
       ret
 #endif
 
+-- | Embed file's content, converting newlines
+--
+-- @since 2.1.0
 readFileQ :: FilePath -> Q String
-readFileQ fp = qRunIO (readFileUtf8 fp)
+readFileQ fp = qRunIO (readUtf8FileString fp)
 
--- | Track file via ghc dependencies and return IO returning file contents
+-- | Embed file's content, converting newlines
+-- and track file via ghc dependencies, recompiling on changes
+--
+-- @since 2.1.0
 readFileRecompileQ :: FilePath -> Q String
-readFileRecompileQ fp = addDependentFile fp >> qRunIO (readFileUtf8 fp)
+readFileRecompileQ fp = addDependentFile fp >> readFileQ fp
