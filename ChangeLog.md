@@ -1,4 +1,7 @@
 
+### 2.0.20
+* Restore allowing GHC to detect changes to i18n message files in GHC >= 8.4.
+
 ### 2.0.19
 * Change of the default behaviour of `*File` functions, they now will add their templates' source file to ghc-dependencies, thus recompiling on templates' changes.
 
