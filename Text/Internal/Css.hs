@@ -123,7 +123,7 @@ cssUsedIdentifiers :: Bool -- ^ perform the indent-to-brace conversion
                    -> String
                    -> [(Deref, VarType)]
 cssUsedIdentifiers toi2b parseBlocks s' =
-    concat $ runIdentity $ mapM (getVars scope0) contents
+    concat $ either error id $ mapM (getVars scope0) contents
   where
     s = if toi2b then i2b s' else s'
     a = either (error . show) id $ parse parseBlocks s s
@@ -289,7 +289,7 @@ vtToExp (d, vt) = do
     c VTUrlParam = [|CDUrlParam|]
     c VTMixin = [|CDMixin|]
 
-getVars :: Monad m => [(String, String)] -> Content -> m [(Deref, VarType)]
+getVars :: [(String, String)] -> Content -> Either String [(Deref, VarType)]
 getVars _ ContentRaw{} = return []
 getVars scope (ContentVar d) =
     case lookupD d scope of
@@ -298,15 +298,15 @@ getVars scope (ContentVar d) =
 getVars scope (ContentUrl d) =
     case lookupD d scope of
         Nothing -> return [(d, VTUrl)]
-        Just s -> fail $ "Expected URL for " ++ s
+        Just s -> Left $ "Expected URL for " ++ s
 getVars scope (ContentUrlParam d) =
     case lookupD d scope of
         Nothing -> return [(d, VTUrlParam)]
-        Just s -> fail $ "Expected URLParam for " ++ s
+        Just s -> Left $ "Expected URLParam for " ++ s
 getVars scope (ContentMixin d) =
     case lookupD d scope of
         Nothing -> return [(d, VTMixin)]
-        Just s -> fail $ "Expected Mixin for " ++ s
+        Just s -> Left $ "Expected Mixin for " ++ s
 
 lookupD :: Deref -> [(String, b)] -> Maybe String
 lookupD (DerefIdent (Ident s)) scope =

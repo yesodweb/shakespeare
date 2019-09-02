@@ -1,3 +1,8 @@
+# ChangeLog for shakespeare
+
+### 2.0.21
+
+* Support for GHC 8.8
 
 ### 2.0.20
 * Restore allowing GHC to detect changes to i18n message files in GHC >= 8.4.
