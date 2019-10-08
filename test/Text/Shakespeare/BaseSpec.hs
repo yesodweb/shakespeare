@@ -14,6 +14,10 @@ import Data.Text.Lazy (pack)
 
 -- run :: Text.Parsec.Prim.Parsec Text.Parsec.Pos.SourceName () c -> Text.Parsec.Pos.SourceName -> c
 
+partialShakespeareSettings = defaultShakespeareSettings unused unused unused
+  where
+    unused = error "Unused setting"
+
 spec :: Spec
 spec = do
   let preFilterN = preFilter Nothing
@@ -34,7 +38,7 @@ spec = do
             (DerefIdent (Ident "b"))))
 
   it "preFilter off" $ do
-    preFilterN defaultShakespeareSettings template
+    preFilterN partialShakespeareSettings template
       `shouldReturn` template
 
   it "preFilter on" $ do
@@ -51,11 +55,11 @@ spec = do
 
   it "reload" $ do
     let helper input = $(do
-            shakespeareFileReload defaultShakespeareSettings
-                { toBuilder = VarE 'pack
-                , wrap = VarE 'toLazyText
-                , unwrap = VarE 'fromLazyText
-                } "test/reload.txt") undefined
+          shakespeareFileReload
+            (defaultShakespeareSettings (VarE 'pack)
+                                        (VarE 'toLazyText)
+                                        (VarE 'fromLazyText))
+            "test/reload.txt") undefined
     helper "here1" `shouldBe` pack "here1\n"
     helper "here2" `shouldBe` pack "here2\n"
 
@@ -64,7 +68,7 @@ spec = do
     urlString = parseUrlString '@' '?'
     intString = parseIntString '^'
 
-    preConversionSettings = defaultShakespeareSettings {
+    preConversionSettings = partialShakespeareSettings {
       preConversion = Just PreConvert {
           preConvert = Id
         , preEscapeIgnoreBalanced = "'\""

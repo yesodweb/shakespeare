@@ -73,11 +73,7 @@ settings = do
   toTExp <- [|toText|]
   wrapExp <- [|id|]
   unWrapExp <- [|id|]
-  return $ defaultShakespeareSettings { toBuilder = toTExp
-  , wrap = wrapExp
-  , unwrap = unWrapExp
-  }
-
+  return $ defaultShakespeareSettings toTExp wrapExp unWrapExp
 
 stext, lt, st, text, lbt, sbt :: QuasiQuoter
 stext = 
@@ -146,14 +142,12 @@ codegenSettings = do
   toTExp <- [|toText|]
   wrapExp <- [|id|]
   unWrapExp <- [|id|]
-  return $ defaultShakespeareSettings { toBuilder = toTExp
-  , wrap = wrapExp
-  , unwrap = unWrapExp
-  , varChar = '~'
-  , urlChar = '*'
-  , intChar = '&'
-  , justVarInterpolation = True -- always!
-  }
+  return $ (defaultShakespeareSettings toTExp wrapExp unWrapExp)
+    { varChar = '~'
+    , urlChar = '*'
+    , intChar = '&'
+    , justVarInterpolation = True -- always!
+    }
 
 -- | codegen is designed for generating Yesod code, including templates
 -- So it uses different interpolation characters that won't clash with templates.

@@ -109,8 +109,7 @@ data WrapInsertion = WrapInsertion {
 
 data PreConversion = ReadProcess String [String]
                    | Id
-  
-
+                   | ConvertAction (String -> IO String)
 
 data ShakespeareSettings = ShakespeareSettings
     { varChar :: Char
@@ -127,11 +126,18 @@ data ShakespeareSettings = ShakespeareSettings
     -- meaningful error messages.
     }
 
-defaultShakespeareSettings :: ShakespeareSettings
-defaultShakespeareSettings = ShakespeareSettings {
+defaultShakespeareSettings
+    :: Exp -- ^ An Exp that will convert variables to 'Builder'
+    -> Exp -- ^ An Exp that converts 'Builder' to the type being generated
+    -> Exp -- ^ The reversal of the previous conversion argument
+    -> ShakespeareSettings
+defaultShakespeareSettings tobuild wrapexp unwrapexp = ShakespeareSettings {
     varChar = '#'
   , urlChar = '@'
   , intChar = '^'
+  , toBuilder = tobuild
+  , wrap = wrapexp
+  , unwrap = unwrapexp
   , justVarInterpolation = False
   , preConversion = Nothing
   , modifyFinalValue = Nothing
@@ -251,6 +257,7 @@ preFilter mfp ShakespeareSettings {..} template =
               withVars = (addVars mWrapI vars parsed)
           in  applyVars mWrapI vars `fmap` case convert of
                   Id -> return withVars
+                  ConvertAction act -> act template
                   ReadProcess command args ->
                     readProcessError command args withVars mfp
   where
