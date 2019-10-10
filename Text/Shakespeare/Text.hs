@@ -28,6 +28,7 @@ module Text.Shakespeare.Text
     , ToText (..)
     , renderTextUrl
     , stext
+    , stextFile
     , text
     , textFile
     , textFileDebug
@@ -78,15 +79,25 @@ settings = do
   , unwrap = unWrapExp
   }
 
-
-stext, lt, st, text, lbt, sbt :: QuasiQuoter
-stext = 
+-- | "Simple text" quasi-quoter. May only be used to generate expressions.
+--
+-- Generated expressions have type 'TL.Text'.
+--
+-- @
+-- >>> do let x = "world"
+--        'Data.Text.Lazy.IO.putStrLn' ['stext'|Hello, #{x}!|]
+-- Hello, world!
+-- @
+stext :: QuasiQuoter
+stext =
   QuasiQuoter { quoteExp = \s -> do
     rs <- settings
     render <- [|toLazyText|]
     rendered <- shakespeareFromString rs { justVarInterpolation = True } s
     return (render `AppE` rendered)
     }
+
+lt, st, text, lbt, sbt :: QuasiQuoter
 lt = stext
 
 st = 
@@ -138,6 +149,14 @@ textFileReload :: FilePath -> Q Exp
 textFileReload fp = do
     rs <- settings
     shakespeareFileReload rs fp
+
+-- | Like 'stext', but reads an external file at compile-time.
+--
+-- @since 2.0.22
+stextFile :: FilePath -> Q Exp
+stextFile fp = do
+  rs <- settings
+  [|toLazyText $(shakespeareFile rs { justVarInterpolation = True } fp)|]
 
 -- | codegen is designed for generating Yesod code, including templates
 -- So it uses different interpolation characters that won't clash with templates.
