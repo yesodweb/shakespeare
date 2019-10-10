@@ -68,6 +68,9 @@ spec = do
       writeFile "test/texts/external2.text" "var #{var} = 1;"
       -}
 
+    it "stextFile" $ do
+      let var = "somevar"
+      TL.toStrict $(stextFile "test/texts/external2.text") @=? pack "var somevar = 2;"
 
     it "text module names" $
       let foo = "foo"
