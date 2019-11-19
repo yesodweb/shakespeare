@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.0.23
+
+* Add support to use caret interpolation in only var shakespeares [#242](https://github.com/yesodweb/shakespeare/issues/242)
+
 ### 2.0.22
 
 * Add `stextFile` to `Text.Shakespeare.Text`, which can be used to produce `Text` directly in the same way `shamletFile` can be used to produce `Html` directly. [#240](https://github.com/yesodweb/shakespeare/pull/240)

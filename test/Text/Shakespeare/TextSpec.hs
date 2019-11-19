@@ -10,10 +10,13 @@ import Text.Shakespeare.Text
 import Data.List (intercalate)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import Data.Text.Lazy.Builder (toLazyText)
 import qualified Data.List
 import qualified Data.List as L
 import Data.Text (Text, pack, unpack)
 import Data.Monoid (mappend)
+
+import Text.Shakespeare.BuilderQQ
 
 spec :: Spec
 spec = do
@@ -114,6 +117,11 @@ spec = do
                                      |#{val}
                                      |1
                                      |]
+
+    it "caret operation with justVarInterpolation = True" $ do
+      let val = 2 :: Int
+      let bld = [builderQQ|#{ show val }|]
+      simpT "2" $ toLazyText [builderQQ|^{ bld }|]
 
 simpT :: String -> TL.Text -> Assertion
 simpT a b = nocrlf (pack a) @=? nocrlf (TL.toStrict b)

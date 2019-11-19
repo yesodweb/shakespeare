@@ -360,7 +360,10 @@ contentsToShakespeare rs a = do
             up <- [|\r' (u, p) -> r' u p|]
             return $ wrap rs `AppE` (ts `AppE` (up `AppE` VarE r `AppE` derefToExp [] d))
         contentToBuilder r (ContentMix d) =
-            return $ derefToExp [] d `AppE` VarE r
+            return $
+              if justVarInterpolation rs
+                then derefToExp [] d
+                else derefToExp [] d `AppE` VarE r
 
 shakespeare :: ShakespeareSettings -> QuasiQuoter
 shakespeare r = QuasiQuoter { quoteExp = shakespeareFromString r }
