@@ -198,7 +198,11 @@ derefToExp _ (DerefIntegral i) = LitE $ IntegerL i
 derefToExp _ (DerefRational r) = LitE $ RationalL r
 derefToExp _ (DerefString s) = LitE $ StringL s
 derefToExp s (DerefList ds) = ListE $ map (derefToExp s) ds
-derefToExp s (DerefTuple ds) = TupE $ map (derefToExp s) ds
+derefToExp s (DerefTuple ds) = TupE $
+#if MIN_VERSION_template_haskell(2,16,0)
+                               map Just $
+#endif
+                               map (derefToExp s) ds
 
 -- FIXME shouldn't we use something besides a list here?
 flattenDeref :: Deref -> Maybe [String]

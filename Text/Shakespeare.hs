@@ -429,7 +429,11 @@ shakespeareFileReload settings fp = do
     vtToExp (d, vt) = do
         d' <- lift d
         c' <- c vt
-        return $ TupE [d', c' `AppE` derefToExp [] d]
+        return $ TupE
+#if MIN_VERSION_template_haskell(2,16,0)
+          $ map Just
+#endif
+          [d', c' `AppE` derefToExp [] d]
       where
         c :: VarType -> Q Exp
         c VTPlain = [|EPlain . $(return $
