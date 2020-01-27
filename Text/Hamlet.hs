@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -231,7 +232,11 @@ docToExp env hr scope (DocCond conds final) = do
     go (d, docs) = do
         let d' = derefToExp ((specialOrIdent, VarE 'or):scope) d
         docs' <- docsToExp env hr scope docs
-        return $ TupE [d', docs']
+        return $ TupE
+#if MIN_VERSION_template_haskell(2,16,0)
+          $ map Just
+#endif
+          [d', docs']
 docToExp env hr scope (DocCase deref cases) = do
     let exp_ = derefToExp scope deref
     matches <- mapM toMatch cases
@@ -538,7 +543,11 @@ hamletFileReloadWithSettings hrr settings fp = do
     vtToExp (d, vt) = do
         d' <- lift d
         c' <- toExp vt
-        return $ TupE [d', c' `AppE` derefToExp [] d]
+        return $ TupE
+#if MIN_VERSION_template_haskell(2,16,0)
+          $ map Just
+#endif
+          [d', c' `AppE` derefToExp [] d]
       where
         toExp = c
           where

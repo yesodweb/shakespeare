@@ -1,6 +1,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 -- | This module is only being exposed to work around a GHC bug, its API is not stable
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -281,7 +282,11 @@ vtToExp :: (Deref, VarType) -> Q Exp
 vtToExp (d, vt) = do
     d' <- lift d
     c' <- c vt
-    return $ TupE [d', c' `AppE` derefToExp [] d]
+    return $ TupE
+#if MIN_VERSION_template_haskell(2,16,0)
+      $ map Just
+#endif
+      [d', c' `AppE` derefToExp [] d]
   where
     c :: VarType -> Q Exp
     c VTPlain = [|CDPlain . toCss|]
