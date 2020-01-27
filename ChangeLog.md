@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.0.24
+
+* Fix build errors with GHC 8.10.1-alpha2 [#245](https://github.com/yesodweb/shakespeare/pull/245)
+
 ### 2.0.23
 
 * Add support to use caret interpolation in only var shakespeares [#242](https://github.com/yesodweb/shakespeare/issues/242)
