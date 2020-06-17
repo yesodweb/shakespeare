@@ -6,6 +6,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 -- | NOTE: This module should be considered internal, and will be hidden in
@@ -40,6 +41,7 @@ import Text.ParserCombinators.Parsec hiding (Line, parse, Parser)
 import Text.Parsec.Prim (modifyState, Parsec)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH (appE)
+import Language.Haskell.TH.Lift () -- Import orphan Lift Name instance
 import Language.Haskell.TH.Syntax
 import Data.Text.Lazy.Builder (Builder, fromText)
 #if !MIN_VERSION_base(4,11,0)
@@ -97,6 +99,7 @@ data PreConvert = PreConvert
     , preEscapeIgnoreLine :: [Char]
     , wrapInsertion :: Maybe WrapInsertion
     }
+    deriving Lift
 
 data WrapInsertion = WrapInsertion {
       wrapInsertionIndent     :: Maybe String
@@ -106,10 +109,11 @@ data WrapInsertion = WrapInsertion {
     , wrapInsertionEnd :: String
     , wrapInsertionAddParens :: Bool
     }
+    deriving Lift
 
 data PreConversion = ReadProcess String [String]
                    | Id
-  
+    deriving Lift
 
 
 data ShakespeareSettings = ShakespeareSettings
@@ -137,38 +141,20 @@ defaultShakespeareSettings = ShakespeareSettings {
   , modifyFinalValue = Nothing
 }
 
-instance Lift PreConvert where
-    lift (PreConvert convert ignore comment wrapInsertion) =
-        [|PreConvert $(lift convert) $(lift ignore) $(lift comment) $(lift wrapInsertion)|]
-
-instance Lift WrapInsertion where
-    lift (WrapInsertion indent sb sep sc e wp) =
-        [|WrapInsertion $(lift indent) $(lift sb) $(lift sep) $(lift sc) $(lift e) $(lift wp)|]
-
-instance Lift PreConversion where
-    lift (ReadProcess command args) =
-        [|ReadProcess $(lift command) $(lift args)|]
-    lift Id = [|Id|]
-
 instance Lift ShakespeareSettings where
     lift (ShakespeareSettings x1 x2 x3 x4 x5 x6 x7 x8 x9) =
         [|ShakespeareSettings
             $(lift x1) $(lift x2) $(lift x3)
             $(liftExp x4) $(liftExp x5) $(liftExp x6) $(lift x7) $(lift x8) $(liftMExp x9)|]
       where
-        liftExp (VarE n) = [|VarE $(liftName n)|]
-        liftExp (ConE n) = [|ConE $(liftName n)|]
+        liftExp (VarE n) = [|VarE $(lift n)|]
+        liftExp (ConE n) = [|ConE $(lift n)|]
         liftExp _ = error "liftExp only supports VarE and ConE"
         liftMExp Nothing = [|Nothing|]
         liftMExp (Just e) = [|Just|] `appE` liftExp e
-        liftName (Name (OccName a) b) = [|Name (OccName $(lift a)) $(liftFlavour b)|]
-        liftFlavour NameS = [|NameS|]
-        liftFlavour (NameQ (ModName a)) = [|NameQ (ModName $(lift a))|]
-        liftFlavour (NameU _) = error "liftFlavour NameU" -- [|NameU $(lift $ fromIntegral a)|]
-        liftFlavour (NameL _) = error "liftFlavour NameL" -- [|NameU $(lift $ fromIntegral a)|]
-        liftFlavour (NameG ns (PkgName p) (ModName m)) = [|NameG $(liftNS ns) (PkgName $(lift p)) (ModName $(lift m))|]
-        liftNS VarName = [|VarName|]
-        liftNS DataName = [|DataName|]
+#if MIN_VERSION_template_haskell(2,16,0)
+    liftTyped = unsafeTExpCoerce . lift
+#endif
 
 type QueryParameters = [(TS.Text, TS.Text)]
 type RenderUrl url = (url -> QueryParameters -> TS.Text)
@@ -195,7 +181,7 @@ contentFromString rs s =
     compressContents (ContentRaw x:ContentRaw y:z) =
         compressContents $ ContentRaw (x ++ y) : z
     compressContents (x:y) = x : compressContents y
-    
+
 parseContents :: ShakespeareSettings -> Parser Contents
 parseContents = many1 . parseContent
   where
@@ -274,7 +260,7 @@ preFilter mfp ShakespeareSettings {..} template =
       <> "("
       <> mconcat (intersperse ", " vars)
       <> ");\n"
-        where 
+        where
           removeTrailingSemiColon = reverse $
              dropWhile (\c -> c == ';' || isSpace c) (reverse str)
 
