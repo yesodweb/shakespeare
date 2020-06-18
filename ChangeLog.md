@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.0.24.1
+
+* Derive Lift instances wherever possible [#252](https://github.com/yesodweb/shakespeare/pull/252)
+
 ### 2.0.24
 
 * Fix build errors with GHC 8.10.1-alpha2 [#245](https://github.com/yesodweb/shakespeare/pull/245)
