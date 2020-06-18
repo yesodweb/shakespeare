@@ -2,6 +2,8 @@
 -- | This module is only being exposed to work around a GHC bug, its API is not stable
 
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -67,6 +69,7 @@ data Mixin = Mixin
     { mixinAttrs :: ![Attr Resolved]
     , mixinBlocks :: ![Block Resolved]
     }
+    deriving Lift
 instance Semigroup Mixin where
     Mixin a x <> Mixin b y = Mixin (a ++ b) (x ++ y)
 instance Monoid Mixin where
@@ -94,7 +97,7 @@ data Content = ContentRaw String
              | ContentUrl Deref
              | ContentUrlParam Deref
              | ContentMixin Deref
-    deriving (Show, Eq)
+    deriving (Show, Eq, Lift)
 
 type Contents = [Content]
 
@@ -510,23 +513,19 @@ renderBlock haveWhiteSpace indent (Block sel attrs () ())
         | haveWhiteSpace = fromString ";\n"
         | otherwise = singleton ';'
 
-instance Lift Mixin where
-    lift (Mixin a b) = [|Mixin a b|]
-instance Lift (Attr Unresolved) where
-    lift (Attr k v) = [|Attr k v :: Attr Unresolved |]
+deriving instance Lift (Attr Unresolved)
 instance Lift (Attr Resolved) where
     lift (Attr k v) = [|Attr $(liftBuilder k) $(liftBuilder v) :: Attr Resolved |]
+#if MIN_VERSION_template_haskell(2,16,0)
+    liftTyped = unsafeTExpCoerce . lift
+#endif
 
 liftBuilder :: Builder -> Q Exp
 liftBuilder b = [|fromText $ pack $(lift $ TL.unpack $ toLazyText b)|]
 
-instance Lift Content where
-    lift (ContentRaw s) = [|ContentRaw s|]
-    lift (ContentVar d) = [|ContentVar d|]
-    lift (ContentUrl d) = [|ContentUrl d|]
-    lift (ContentUrlParam d) = [|ContentUrlParam d|]
-    lift (ContentMixin m) = [|ContentMixin m|]
-instance Lift (Block Unresolved) where
-    lift (Block a b c d) = [|Block a b c d|]
+deriving instance Lift (Block Unresolved)
 instance Lift (Block Resolved) where
     lift (Block a b () ()) = [|Block $(liftBuilder a) b () ()|]
+#if MIN_VERSION_template_haskell(2,16,0)
+    liftTyped = unsafeTExpCoerce . lift
+#endif

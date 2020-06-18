@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE CPP #-}
 -- | General parsers, functions and datatypes for all Shakespeare languages.
@@ -41,7 +42,7 @@ import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
 
 newtype Ident = Ident String
-    deriving (Show, Eq, Read, Data, Typeable, Ord)
+    deriving (Show, Eq, Read, Data, Typeable, Ord, Lift)
 
 type Scope = [(Ident, Exp)]
 
@@ -53,35 +54,7 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefBranch Deref Deref
            | DerefList [Deref]
            | DerefTuple [Deref]
-    deriving (Show, Eq, Read, Data, Typeable, Ord)
-
-instance Lift Ident where
-    lift (Ident s) = [|Ident|] `appE` lift s
-instance Lift Deref where
-    lift (DerefModulesIdent v s) = do
-        dl <- [|DerefModulesIdent|]
-        v' <- lift v
-        s' <- lift s
-        return $ dl `AppE` v' `AppE` s'
-    lift (DerefIdent s) = do
-        dl <- [|DerefIdent|]
-        s' <- lift s
-        return $ dl `AppE` s'
-    lift (DerefBranch x y) = do
-        x' <- lift x
-        y' <- lift y
-        db <- [|DerefBranch|]
-        return $ db `AppE` x' `AppE` y'
-    lift (DerefIntegral i) = [|DerefIntegral|] `appE` lift i
-    lift (DerefRational r) = do
-        n <- lift $ numerator r
-        d <- lift $ denominator r
-        per <- [|(%) :: Int -> Int -> Ratio Int|]
-        dr <- [|DerefRational|]
-        return $ dr `AppE` InfixE (Just n) per (Just d)
-    lift (DerefString s) = [|DerefString|] `appE` lift s
-    lift (DerefList x) = [|DerefList $(lift x)|]
-    lift (DerefTuple x) = [|DerefTuple $(lift x)|]
+    deriving (Show, Eq, Read, Data, Typeable, Ord, Lift)
 
 derefParens, derefCurlyBrackets :: UserParser a Deref
 derefParens        = between (char '(') (char ')') parseDeref
@@ -298,7 +271,7 @@ readUtf8File :: FilePath -> IO TL.Text
 readUtf8File fp = do
     h <- SIO.openFile fp SIO.ReadMode
     SIO.hSetEncoding h SIO.utf8_bom
-    ret <- TIO.hGetContents h 
+    ret <- TIO.hGetContents h
     return $
 #ifdef WINDOWS
       TL.filter ('\r'/=) ret

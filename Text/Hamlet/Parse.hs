@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -30,7 +31,7 @@ import Text.ParserCombinators.Parsec hiding (Line)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (mapMaybe, fromMaybe, isNothing)
-import Language.Haskell.TH.Syntax (Lift (..))
+import Language.Haskell.TH.Syntax hiding (Module)
 
 data Result v = Error String | Ok v
     deriving (Show, Eq, Read, Data, Typeable)
@@ -614,24 +615,19 @@ data HamletSettings = HamletSettings
       -- | Mapping from short names in \"$doctype\" statements to full doctype.
     , hamletDoctypeNames :: [(String, String)]
     }
+    deriving Lift
 
 data NewlineStyle = NoNewlines -- ^ never add newlines
                   | NewlinesText -- ^ add newlines between consecutive text lines
                   | AlwaysNewlines -- ^ add newlines everywhere
                   | DefaultNewlineStyle
-    deriving Show
-
-instance Lift NewlineStyle where
-    lift NoNewlines = [|NoNewlines|]
-    lift NewlinesText = [|NewlinesText|]
-    lift AlwaysNewlines = [|AlwaysNewlines|]
-    lift DefaultNewlineStyle = [|DefaultNewlineStyle|]
+    deriving (Show, Lift)
 
 instance Lift (String -> CloseStyle) where
     lift _ = [|\s -> htmlCloseStyle s|]
-
-instance Lift HamletSettings where
-    lift (HamletSettings a b c d) = [|HamletSettings $(lift a) $(lift b) $(lift c) $(lift d)|]
+#if MIN_VERSION_template_haskell(2,16,0)
+    liftTyped = unsafeTExpCoerce . lift
+#endif
 
 
 -- See the html specification for a list of all void elements:
