@@ -24,9 +24,18 @@ module Text.Julius
     , juliusFileReload
     , jsFileReload
 
+    , jsModule
+    , juliusModule
+    , juliusModuleFile
+    , jsModuleFile
+    , juliusModuleFileReload
+    , jsModuleFileReload
+
       -- * Datatypes
     , JavascriptUrl
+    , JavascriptModuleUrl
     , Javascript (..)
+    , JavascriptModule (..)
     , RawJavascript (..)
 
       -- * Typeclass for interpolated variables
@@ -95,6 +104,27 @@ instance ToJavascript String where toJavascript = toJavascript . toJSON
 instance ToJavascript TS.Text where toJavascript = toJavascript . toJSON
 instance ToJavascript TL.Text where toJavascript = toJavascript . toJSON
 
+newtype JavascriptModule = JavascriptModule { unModule :: Javascript }
+    deriving (Semigroup, Monoid)
+
+type JavascriptModuleUrl url =
+  (url -> [(TS.Text, TS.Text)] -> TS.Text) -> JavascriptModule
+
+class ToJavascriptModule a where
+    toJavascriptModule :: a -> JavascriptModule
+
+instance ToJavascriptModule Bool where
+  toJavascriptModule =
+    JavascriptModule . Javascript . fromText . TS.toLower . TS.pack . show
+instance ToJavascriptModule Value where
+  toJavascriptModule = JavascriptModule . Javascript . encodeToTextBuilder
+instance ToJavascriptModule String where
+  toJavascriptModule = toJavascriptModule . toJSON
+instance ToJavascriptModule TS.Text where
+  toJavascriptModule = toJavascriptModule . toJSON
+instance ToJavascriptModule TL.Text where
+  toJavascriptModule = toJavascriptModule . toJSON
+
 -- | Encode a JSON 'Value' to a "Data.Text" 'Builder', which can be
 -- embedded efficiently in a text-based protocol.
 --
@@ -162,6 +192,8 @@ fromScientific s = formatScientificBuilder format prec s
 newtype RawJavascript = RawJavascript Builder
 instance ToJavascript RawJavascript where
     toJavascript (RawJavascript a) = Javascript a
+instance ToJavascriptModule RawJavascript where
+    toJavascriptModule (RawJavascript a) = JavascriptModule (Javascript a)
 
 class RawJS a where
     rawJS :: a -> RawJavascript
@@ -206,6 +238,41 @@ jsFileReload fp = do
     shakespeareFileReload rs fp
 
 juliusFileReload = jsFileReload
+
+javascriptModuleSettings :: Q ShakespeareSettings
+javascriptModuleSettings = do
+  toJExp <- [|toJavascriptModule|]
+  wrapExp <- [|JavascriptModule|]
+  unWrapExp <- [|unModule|]
+  asJavascriptUrl' <- [|id :: JavascriptModuleUrl a -> JavascriptModuleUrl a|]
+  return $ defaultShakespeareSettings { toBuilder = toJExp
+  , wrap = wrapExp
+  , unwrap = unWrapExp
+  , modifyFinalValue = Just asJavascriptUrl'
+  }
+
+jsModule, juliusModule :: QuasiQuoter
+jsModule = QuasiQuoter { quoteExp = \s -> do
+    rs <- javascriptModuleSettings
+    quoteExp (shakespeare rs) s
+    }
+
+juliusModule = jsModule
+
+jsModuleFile, juliusModuleFile :: FilePath -> Q Exp
+jsModuleFile fp = do
+    rs <- javascriptModuleSettings
+    shakespeareFile rs fp
+
+juliusModuleFile = jsModuleFile
+
+
+jsModuleFileReload, juliusModuleFileReload :: FilePath -> Q Exp
+jsModuleFileReload fp = do
+    rs <- javascriptModuleSettings
+    shakespeareFileReload rs fp
+
+juliusModuleFileReload = jsModuleFileReload
 
 jsFileDebug, juliusFileDebug :: FilePath -> Q Exp
 juliusFileDebug = jsFileReload
