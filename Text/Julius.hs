@@ -45,6 +45,8 @@ module Text.Julius
       -- ** Rendering Functions
     , renderJavascript
     , renderJavascriptUrl
+    , renderJavascriptModule
+    , renderJavascriptModuleUrl
 
       -- ** internal, used by 'Text.Coffee'
     , javascriptSettings
@@ -104,20 +106,25 @@ instance ToJavascript String where toJavascript = toJavascript . toJSON
 instance ToJavascript TS.Text where toJavascript = toJavascript . toJSON
 instance ToJavascript TL.Text where toJavascript = toJavascript . toJSON
 
-newtype JavascriptModule = JavascriptModule { unModule :: Javascript }
+newtype JavascriptModule = JavascriptModule { unJavascriptModule :: Builder }
     deriving (Semigroup, Monoid)
 
 type JavascriptModuleUrl url =
   (url -> [(TS.Text, TS.Text)] -> TS.Text) -> JavascriptModule
 
+renderJavascriptModule :: JavascriptModule -> TL.Text
+renderJavascriptModule = toLazyText . unJavascriptModule
+
+renderJavascriptModuleUrl :: (url -> [(TS.Text, TS.Text)] -> TS.Text) -> JavascriptModuleUrl url -> TL.Text
+renderJavascriptModuleUrl r s = renderJavascriptModule $ s r
+
 class ToJavascriptModule a where
     toJavascriptModule :: a -> JavascriptModule
 
 instance ToJavascriptModule Bool where
-  toJavascriptModule =
-    JavascriptModule . Javascript . fromText . TS.toLower . TS.pack . show
+  toJavascriptModule = JavascriptModule . fromText . TS.toLower . TS.pack . show
 instance ToJavascriptModule Value where
-  toJavascriptModule = JavascriptModule . Javascript . encodeToTextBuilder
+  toJavascriptModule = JavascriptModule . encodeToTextBuilder
 instance ToJavascriptModule String where
   toJavascriptModule = toJavascriptModule . toJSON
 instance ToJavascriptModule TS.Text where
@@ -193,7 +200,7 @@ newtype RawJavascript = RawJavascript Builder
 instance ToJavascript RawJavascript where
     toJavascript (RawJavascript a) = Javascript a
 instance ToJavascriptModule RawJavascript where
-    toJavascriptModule (RawJavascript a) = JavascriptModule (Javascript a)
+    toJavascriptModule (RawJavascript a) = JavascriptModule a
 
 class RawJS a where
     rawJS :: a -> RawJavascript
@@ -243,7 +250,7 @@ javascriptModuleSettings :: Q ShakespeareSettings
 javascriptModuleSettings = do
   toJExp <- [|toJavascriptModule|]
   wrapExp <- [|JavascriptModule|]
-  unWrapExp <- [|unModule|]
+  unWrapExp <- [|unJavascriptModule|]
   asJavascriptUrl' <- [|id :: JavascriptModuleUrl a -> JavascriptModuleUrl a|]
   return $ defaultShakespeareSettings { toBuilder = toJExp
   , wrap = wrapExp
