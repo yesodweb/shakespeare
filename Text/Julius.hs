@@ -112,6 +112,9 @@ newtype JavascriptModule = JavascriptModule { unJavascriptModule :: Builder }
 type JavascriptModuleUrl url =
   (url -> [(TS.Text, TS.Text)] -> TS.Text) -> JavascriptModule
 
+asJavascriptModuleUrl :: JavascriptModuleUrl url -> JavascriptModuleUrl url
+asJavascriptModuleUrl = id
+
 renderJavascriptModule :: JavascriptModule -> TL.Text
 renderJavascriptModule = toLazyText . unJavascriptModule
 
@@ -251,7 +254,7 @@ javascriptModuleSettings = do
   toJExp <- [|toJavascriptModule|]
   wrapExp <- [|JavascriptModule|]
   unWrapExp <- [|unJavascriptModule|]
-  asJavascriptUrl' <- [|id :: JavascriptModuleUrl a -> JavascriptModuleUrl a|]
+  asJavascriptUrl' <- [|asJavascriptModuleUrl|]
   return $ defaultShakespeareSettings { toBuilder = toJExp
   , wrap = wrapExp
   , unwrap = unWrapExp
