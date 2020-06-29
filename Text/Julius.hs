@@ -19,6 +19,10 @@ module Text.Julius
     , julius
     , juliusFile
     , jsFile
+    , jsModule
+    , juliusModule
+    , juliusModuleFile
+    , jsModuleFile
     , juliusFileDebug
     , jsFileDebug
     , juliusFileReload
@@ -63,6 +67,8 @@ import Data.Semigroup (Semigroup(..))
 import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
+import Text.Hamlet (HtmlUrl)
+import Text.Blaze.Html (preEscapedToHtml)
 import Data.Aeson (Value, toJSON)
 import Data.Aeson.Types (Value(..))
 import Numeric (showHex)
@@ -226,7 +232,17 @@ javascriptSettings = do
   , modifyFinalValue = Just asJavascriptUrl'
   }
 
-js, julius :: QuasiQuoter
+asJsModuleUrl :: JavascriptUrl url -> HtmlUrl url
+asJsModuleUrl = fmap
+  (\j -> preEscapedToHtml $ "<script type=\"module\">" <> unJavascript j <> "</script>")
+
+jsModuleSettings :: Q ShakespeareSettings
+jsModuleSettings = do
+  settings <- javascriptSettings
+  asUrl' <- [|asJsModuleUrl|]
+  return $ settings { modifyFinalValue = Just asUrl' }
+
+js, julius, jsModule, juliusModule :: QuasiQuoter
 js = QuasiQuoter { quoteExp = \s -> do
     rs <- javascriptSettings
     quoteExp (shakespeare rs) s
@@ -234,12 +250,25 @@ js = QuasiQuoter { quoteExp = \s -> do
 
 julius = js
 
-jsFile, juliusFile :: FilePath -> Q Exp
+jsModule = QuasiQuoter { quoteExp = \s -> do
+    rs <- jsModuleSettings
+    quoteExp (shakespeare rs) s
+    }
+
+juliusModule = jsModule
+
+jsFile, juliusFile, jsModuleFile, juliusModuleFile :: FilePath -> Q Exp
 jsFile fp = do
     rs <- javascriptSettings
     shakespeareFile rs fp
 
 juliusFile = jsFile
+
+jsModuleFile fp = do
+    rs <- jsModuleSettings
+    shakespeareFile rs fp
+
+juliusModuleFile = jsFile
 
 
 jsFileReload, juliusFileReload :: FilePath -> Q Exp
