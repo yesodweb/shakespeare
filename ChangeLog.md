@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.0.25
+
+* Support for GHC 9.0 [#254](https://github.com/yesodweb/shakespeare/pull/254)
+
 ### 2.0.24.1
 
 * Derive Lift instances wherever possible [#252](https://github.com/yesodweb/shakespeare/pull/252)
