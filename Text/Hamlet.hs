@@ -110,7 +110,11 @@ docsToExp env hr scope docs = do
     case exps of
         [] -> [|return ()|]
         [x] -> return x
-        _ -> return $ DoE $ map NoBindS exps
+        _ -> return $ DoE
+#if MIN_VERSION_template_haskell(2,17,0)
+                Nothing
+#endif
+                $ map NoBindS exps
 
 unIdent :: Ident -> String
 unIdent (Ident s) = s

@@ -152,7 +152,9 @@ instance Lift ShakespeareSettings where
         liftExp _ = error "liftExp only supports VarE and ConE"
         liftMExp Nothing = [|Nothing|]
         liftMExp (Just e) = [|Just|] `appE` liftExp e
-#if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,17,0)
+    liftTyped = unsafeCodeCoerce . lift
+#elif MIN_VERSION_template_haskell(2,16,0)
     liftTyped = unsafeTExpCoerce . lift
 #endif
 

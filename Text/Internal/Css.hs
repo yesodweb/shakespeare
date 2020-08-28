@@ -270,7 +270,7 @@ cssRuntime toi2b parseBlocks fp cd render' = unsafePerformIO $ do
       where
         cs = either error mconcat $ mapM (contentToBuilderRT cd render') cs'
     goTop scope (TopBlock b:rest) =
-        map TopBlock (either error ($[]) $ blockRuntime (addScope scope) render' b) ++
+        map TopBlock (either error ($ []) $ blockRuntime (addScope scope) render' b) ++
         goTop scope rest
     goTop scope (TopAtBlock name s' b:rest) =
         TopAtBlock name s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
@@ -516,16 +516,24 @@ renderBlock haveWhiteSpace indent (Block sel attrs () ())
 deriving instance Lift (Attr Unresolved)
 instance Lift (Attr Resolved) where
     lift (Attr k v) = [|Attr $(liftBuilder k) $(liftBuilder v) :: Attr Resolved |]
-#if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,17,0)
+    liftTyped = unsafeCodeCoerce . lift
+#elif MIN_VERSION_template_haskell(2,16,0)
     liftTyped = unsafeTExpCoerce . lift
 #endif
 
+#if MIN_VERSION_template_haskell(2,17,0)
+liftBuilder :: Quote m => Builder -> m Exp
+#else
 liftBuilder :: Builder -> Q Exp
+#endif
 liftBuilder b = [|fromText $ pack $(lift $ TL.unpack $ toLazyText b)|]
 
 deriving instance Lift (Block Unresolved)
 instance Lift (Block Resolved) where
     lift (Block a b () ()) = [|Block $(liftBuilder a) b () ()|]
-#if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,17,0)
+    liftTyped = unsafeCodeCoerce . lift
+#elif MIN_VERSION_template_haskell(2,16,0)
     liftTyped = unsafeTExpCoerce . lift
 #endif

@@ -625,7 +625,9 @@ data NewlineStyle = NoNewlines -- ^ never add newlines
 
 instance Lift (String -> CloseStyle) where
     lift _ = [|\s -> htmlCloseStyle s|]
-#if MIN_VERSION_template_haskell(2,16,0)
+#if MIN_VERSION_template_haskell(2,17,0)
+    liftTyped = unsafeCodeCoerce . lift
+#elif MIN_VERSION_template_haskell(2,16,0)
     liftTyped = unsafeTExpCoerce . lift
 #endif
 
