@@ -334,7 +334,7 @@ luciusRTInternal tl =
             -> Block Unresolved
             -> Either String [Block Resolved]
     goBlock scope =
-        either Left (Right . ($[])) . blockRuntime scope' (error "luciusRT has no URLs")
+        either Left (Right . ($ [])) . blockRuntime scope' (error "luciusRT has no URLs")
       where
         scope' = map goScope scope
 
