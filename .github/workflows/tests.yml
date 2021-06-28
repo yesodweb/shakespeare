@@ -26,4 +26,10 @@ jobs:
             set -ex
             stack upgrade
             stack --version
+            if [[ "${{ runner.os }}" = 'Windows' ]]
+            then
+              # Looks like a bug in Stack, this shouldn't break things
+              ls C:/ProgramData/Chocolatey/bin/
+              rm C:/ProgramData/Chocolatey/bin/ghc*
+            fi
             stack test --fast --no-terminal --resolver=${{ matrix.resolver }}
