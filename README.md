@@ -1,7 +1,6 @@
 # Shakespeare
 
-[![Build Status](https://travis-ci.org/yesodweb/shakespeare.svg?branch=master)](https://travis-ci.org/yesodweb/shakespeare)
-[![Window build](https://ci.appveyor.com/api/projects/status/github/yesodweb/shakespeare?svg=true)](https://ci.appveyor.com/project/snoyberg/shakespeare)
+![Tests](https://github.com/yesodweb/shakespeare/workflows/Tests/badge.svg)
 [![Hackage](https://img.shields.io/hackage/v/shakespeare.svg)](https://hackage.haskell.org/package/shakespeare)
 [![Stackage Nightly](http://stackage.org/package/shakespeare/badge/nightly)](http://stackage.org/nightly/package/shakespeare)
 [![Stackage LTS](http://stackage.org/package/shakespeare/badge/lts)](http://stackage.org/lts/package/shakespeare)
