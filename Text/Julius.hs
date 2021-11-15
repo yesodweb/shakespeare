@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -53,6 +54,9 @@ import qualified Data.Text as TS
 import qualified Data.Text.Lazy as TL
 import Text.Shakespeare
 import Data.Aeson (Value, toJSON)
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.KeyMap as KeyMap
+#endif
 import Data.Aeson.Types (Value(..))
 import Numeric (showHex)
 import qualified Data.HashMap.Strict as H
@@ -117,11 +121,17 @@ encodeToTextBuilder =
                       V.foldr f (singleton ']') (V.unsafeTail v)
       where f a z = singleton ',' <> go a <> z
     go (Object m) = {-# SCC "go/Object" #-}
-        case H.toList m of
+        case fromObject m of
           (x:xs) -> singleton '{' <> one x <> foldr f (singleton '}') xs
           _      -> "{}"
       where f a z     = singleton ',' <> one a <> z
             one (k,v) = string k <> singleton ':' <> go v
+
+#if MIN_VERSION_aeson(2,0,0)
+    fromObject = H.toList . KeyMap.toHashMapText
+#else
+    fromObject = H.toList
+#endif
 
 string :: T.Text -> Builder
 string s = {-# SCC "string" #-} singleton '"' <> quote s <> singleton '"'
