@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -186,7 +187,7 @@ toClauses prefix dt (lang, defs) =
         (pat, bod) <- mkBody dt (prefix ++ constr def) (map fst $ vars def) (content def)
         guard <- fmap NormalG [|$(return $ VarE a) == pack $(lift $ unpack lang)|]
         return $ Clause
-            [WildP, ConP (mkName ":") [VarP a, WildP], pat]
+            [WildP, conP (mkName ":") [VarP a, WildP], pat]
             (GuardedB [(guard, bod)])
             []
 
@@ -230,7 +231,7 @@ sToClause :: String -> String -> SDef -> Q Clause
 sToClause prefix dt sdef = do
     (pat, bod) <- mkBody dt (prefix ++ sconstr sdef) (map fst $ svars sdef) (scontent sdef)
     return $ Clause
-        [WildP, ConP (mkName "[]") [], pat]
+        [WildP, conP (mkName "[]") [], pat]
         (NormalB bod)
         []
 
@@ -241,9 +242,16 @@ defClause = do
     d <- newName "msg"
     rm <- [|renderMessage|]
     return $ Clause
-        [VarP a, ConP (mkName ":") [WildP, VarP c], VarP d]
+        [VarP a, conP (mkName ":") [WildP, VarP c], VarP d]
         (NormalB $ rm `AppE` VarE a `AppE` VarE c `AppE` VarE d)
         []
+
+conP :: Name -> [Pat] -> Pat
+#if MIN_VERSION_template_haskell(2,18,0)
+conP name = ConP name []
+#else
+conP = ConP
+#endif
 
 toCon :: String -> SDef -> Con
 toCon dt (SDef c vs _) =

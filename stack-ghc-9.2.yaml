@@ -1,6 +1,10 @@
 resolver: nightly-2021-11-14
+compiler: ghc-9.2.1
 
 extra-deps:
   - aeson-2.0.2.0
+  - attoparsec-0.14.2
+  - base-compat-0.12.1
+  - base-compat-batteries-0.12.1
   # https://github.com/simonmar/happy/issues/215
   - happy-1.20.0
