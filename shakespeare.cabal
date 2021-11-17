@@ -45,7 +45,7 @@ library
                    , ghc-prim
                    , bytestring
                    , directory        >= 1.2
-                   , aeson
+                   , aeson            < 3
                    , blaze-markup
                    , blaze-html
                    , exceptions

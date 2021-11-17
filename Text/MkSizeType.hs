@@ -38,7 +38,7 @@ showInstanceDec name unit' = instanceD [] (instanceType "Show" name) [showDec]
         x = mkName "x"
         unit = LitE $ StringL unit'
         showDec = FunD (mkName "show") [Clause [showPat] showBody []]
-        showPat = ConP name [VarP x]
+        showPat = conP name [VarP x]
         showBody = NormalB $ AppE (AppE showSize $ VarE x) unit
 
 numInstanceDec :: Name -> Dec
@@ -65,8 +65,8 @@ instanceType className name = AppT (ConT $ mkName className) (ConT name)
 
 binaryFunDec :: Name -> String -> Dec
 binaryFunDec name fun' = FunD fun [Clause [pat1, pat2] body []]
-  where pat1 = ConP name [VarP v1]
-        pat2 = ConP name [VarP v2]
+  where pat1 = conP name [VarP v1]
+        pat2 = conP name [VarP v2]
         body = NormalB $ AppE (ConE name) result
         result = AppE (AppE (VarE fun) (VarE v1)) (VarE v2)
         fun = mkName fun'
@@ -75,7 +75,7 @@ binaryFunDec name fun' = FunD fun [Clause [pat1, pat2] body []]
 
 unariFunDec1 :: Name -> String -> Dec
 unariFunDec1 name fun' = FunD fun [Clause [pat] body []]
-  where pat = ConP name [VarP v]
+  where pat = conP name [VarP v]
         body = NormalB $ AppE (ConE name) (AppE (VarE fun) (VarE v))
         fun = mkName fun'
         v = mkName "v"
@@ -92,3 +92,10 @@ notStrict = Bang NoSourceUnpackedness NoSourceStrictness
 
 instanceD :: Cxt -> Type -> [Dec] -> Dec
 instanceD = InstanceD Nothing
+
+conP :: Name -> [Pat] -> Pat
+#if MIN_VERSION_template_haskell(2,18,0)
+conP name = ConP name []
+#else
+conP = ConP
+#endif
