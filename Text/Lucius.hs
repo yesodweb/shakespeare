@@ -238,7 +238,7 @@ parseTopLevels =
             ignore = many (whiteSpace1 <|> string' "<!--" <|> string' "-->")
                         >> return ()
         ignore
-        tl <- ((charset <|> media <|> impor <|> topAtBlock <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
+        tl <- ((charset <|> media <|> impor <|> supports <|> topAtBlock <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
             <|> (return $ map compressTopLevel $ front [])
         ignore
         return tl
@@ -258,6 +258,12 @@ parseTopLevels =
         val <- parseContents ";"
         _ <- char ';'
         return $ TopAtDecl "import" val
+    supports = do
+        try $ stringCI "@supports "
+        selector <- parseContents "{"
+        _ <- char '{'
+        b <- parseBlocks id
+        return $ TopAtBlock "supports" selector b
     var = try $ do
         _ <- char '@'
         isPage <- (try $ string "page " >> return True) <|>

@@ -1,0 +1,7 @@
+@supports only screen{
+    hana {
+        dul {
+            set: net;
+        }
+    }
+}
