@@ -278,7 +278,7 @@ bin {
     it "lucius media" $ do
       celper "@media only screen{foo bar{baz:bin}}" $(luciusFile "test/cassiuses/external-media.lucius")
       celper "@media only screen {\n    foo bar {\n        baz: bin;\n    }\n}\n" $(luciusFileDebug "test/cassiuses/external-media.lucius")
-      celper "@media only screen {foo bar{baz:bin}}" [lucius|
+      celper "@media only screen{foo bar{baz:bin}}" [lucius|
         @media only screen {
             foo {
                 bar {
