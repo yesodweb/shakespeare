@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.0.26
+
+* Support `@supports` [#263](https://github.com/yesodweb/shakespeare/pull/263)
+
 ### 2.0.25.1
 
 * Support for GHC 9.2 and aeson 2 [#260](https://github.com/yesodweb/shakespeare/pull/260)
