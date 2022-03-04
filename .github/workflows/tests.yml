@@ -20,6 +20,9 @@ jobs:
           - --resolver=lts-16
           - --resolver=lts-14
           - --stack-yaml=stack-ghc-9.2.yaml
+        exclude:
+          - os: windows-latest
+            stack_args: "--stack-yaml=stack-ghc-9.2.yaml"
 
     steps:
       - name: Clone project
