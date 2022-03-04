@@ -288,6 +288,17 @@ bin {
         }
         |]
 
+    it "lucius supports" $ do
+      celper "@supports only screen{hana dul{set:net}}" $(luciusFile "test/cassiuses/external-supports.lucius")
+      celper "@supports only screen {\n    hana dul {\n        set: net;\n    }\n}\n" $(luciusFileDebug "test/cassiuses/external-supports.lucius")
+      celper "@supports only screen    {hana,dul{set:net;dasut:yeosut}}" [lucius|
+        @supports only screen    {
+            hana, dul {
+                set: net;
+                dasut: yeosut;
+            }
+        }
+        |]
 
     {-
     it "cassius removes whitespace" $ do
@@ -366,6 +377,21 @@ foo { foo:X#{bar}Y; }
         celper "@media (max-width: 400px){foo{color:red}}" [lucius|
 @mobileWidth: 400px;
 @media (max-width: #{mobileWidth}){ foo { color: red; } }
+|]
+    -- note: this file format is window (CR;NL)
+    it "variables in supports selector" $
+        celper "@supports ((perspective: 1px)\r\n           and (not (-webkit-overflow-scrolling: touch))) {html,body{overflow:hidden;height:100%}body{transform:translateZ(0px)}}" [lucius|
+@perspectiveTestValue: 1px;
+@supports ((perspective: #{perspectiveTestValue})
+           and (not (-webkit-overflow-scrolling: touch))) {
+    html, body {
+        overflow: hidden;
+        height:100%;
+    }
+    body {
+        transform: translateZ(0px);
+    }
+}
 |]
     it "URLs in import" $ celper
         "@import url(\"suburl\");" [lucius|
