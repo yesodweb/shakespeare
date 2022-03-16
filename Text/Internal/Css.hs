@@ -67,7 +67,7 @@ data Block a = Block
 
 data Mixin = Mixin
     { mixinAttrs :: ![Attr Resolved]
-    , mixinBlocks :: ![Block Resolved]
+    , mixinBlocks :: ![(HasLeadingSpace, Block Resolved)]
     }
     deriving Lift
 instance Semigroup Mixin where
@@ -176,6 +176,12 @@ cssFileDebug toi2b parseBlocks' parseBlocks fp = do
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
 
+runtimePrependSelector :: Builder -> (HasLeadingSpace, Block Resolved) -> Block Resolved
+runtimePrependSelector builder (hsl, Block x b () ()) =
+    Block (builder <> addSpace x) b () ()
+  where
+    addSpace = if hsl then (TLB.singleton ' ' <>) else id
+
 combineSelectors :: HasLeadingSpace
                  -> [Contents]
                  -> [Contents]
@@ -204,7 +210,9 @@ blockRuntime cd render' (Block x attrs z mixinsDerefs) = do
         , blockAttrs    = concat $ attrs' : map mixinAttrs mixins
         , blockBlocks   = ()
         , blockMixins   = ()
-        } : foldr ($) rest z'
+        }
+        : fmap (runtimePrependSelector $ mconcat x') (concatMap mixinBlocks mixins)
+        ++ foldr ($) rest z'
     {-
     (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
     . foldr (.) id (map (subGo x) z)
@@ -345,24 +353,28 @@ blockToMixin :: Name
              -> Block Unresolved
              -> Q Exp
 blockToMixin r scope (Block _sel props subblocks mixins) =
+    -- TODO: preserve the CPS in @mixinBlocks@ below
     [|Mixin
         { mixinAttrs    = concat
                         $ $(listE $ map go props)
                         : map mixinAttrs $mixinsE
-        -- FIXME too many complications to implement sublocks for now...
-        , mixinBlocks   = [] -- foldr (.) id $(listE $ map subGo subblocks) []
-        }|]
-      {-
-      . foldr (.) id $(listE $ map subGo subblocks)
-      . (concatMap mixinBlocks $mixinsE ++)
+        , mixinBlocks   = concat $(listE $ map subGo subblocks)
+        }
     |]
-    -}
   where
     mixinsE = return $ ListE $ map (derefToExp []) mixins
     go (Attr x y) = conE 'Attr
         `appE` (contentsToBuilder r scope x)
         `appE` (contentsToBuilder r scope y)
-    subGo (Block sel' b c d) = blockToCss r scope $ Block sel' b c d
+    -- We don't use the @hls@ to combine selectors, because the parent
+    -- selector for a mixin is the dummy @mixin@ selector. But we may want
+    -- to know later if the block needs a leading space, because the mixin
+    -- might include an @&@ which needs to mix correctly with the parent
+    -- block's selector.
+    subGo (hls, Block sel' b c d) =
+      [| map (\x -> ($(lift hls), x))
+         $ $(blockToCss r scope $ Block sel' b c d) []
+      |]
 
 blockToCss :: Name
            -> Scope
@@ -378,7 +390,9 @@ blockToCss r scope (Block sel props subblocks mixins) =
         , blockMixins   = ()
         } :: Block Resolved):)
       . foldr (.) id $(listE $ map subGo subblocks)
-      . (concatMap mixinBlocks $mixinsE ++)
+      . (fmap (runtimePrependSelector $(selectorToBuilder r scope sel))
+          (concatMap mixinBlocks $mixinsE)
+        ++)
     |]
   where
     mixinsE = return $ ListE $ map (derefToExp []) mixins
