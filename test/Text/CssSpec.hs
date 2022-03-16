@@ -601,7 +601,7 @@ encodeUrlChar y =
 
 
 
-celper :: String -> CssUrl Url -> Assertion
+celper :: HasCallStack => String -> CssUrl Url -> Assertion
 celper res h = do
     let x = renderCssUrl render h
     T.pack res @=? x
