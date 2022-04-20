@@ -49,6 +49,7 @@ library
                    , blaze-markup
                    , blaze-html
                    , exceptions
+                   , file-embed       >= 0.0.1   && < 0.1
                    , transformers
                    , vector
                    , unordered-containers
