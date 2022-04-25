@@ -1,5 +1,10 @@
 # ChangeLog for shakespeare
 
+### 2.0.27
+
+* Change how embedded templates are located by the compiler. Relative files are now resolved using the Cabal project root, to fix builds of multi-project codebases. [#266](https://github.com/yesodweb/shakespeare/pull/266)
+* Change how messages are located by the compiler. The message directory is now resolved using the Cabal project root, to fix builds of multi-project codebases. [#266](https://github.com/yesodweb/shakespeare/pull/266)
+
 ### 2.0.26
 
 * Support `@supports` [#263](https://github.com/yesodweb/shakespeare/pull/263)

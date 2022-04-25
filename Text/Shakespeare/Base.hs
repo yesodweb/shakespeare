@@ -30,6 +30,7 @@ module Text.Shakespeare.Base
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH (appE)
 import Data.Char (isUpper, isSymbol, isPunctuation, isAscii)
+import Data.FileEmbed (makeRelativeToProject)
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Prim (Parsec)
 import Data.List (intercalate)
@@ -283,11 +284,16 @@ readUtf8File fp = do
 --
 -- @since 2.0.19
 readFileQ :: FilePath -> Q String
-readFileQ fp = qRunIO (readUtf8FileString fp)
+readFileQ rawFp = do
+  fp <- makeRelativeToProject rawFp
+  qRunIO (readUtf8FileString fp)
 
 -- | Embed file's content, converting newlines
 -- and track file via ghc dependencies, recompiling on changes
 --
 -- @since 2.0.19
 readFileRecompileQ :: FilePath -> Q String
-readFileRecompileQ fp = addDependentFile fp >> readFileQ fp
+readFileRecompileQ rawFp = do
+  fp <- makeRelativeToProject rawFp
+  addDependentFile fp
+  qRunIO (readUtf8FileString fp)

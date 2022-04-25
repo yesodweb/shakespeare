@@ -66,6 +66,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (filterM, forM)
 import Data.Text (Text, pack, unpack)
 import System.Directory
+import Data.FileEmbed (makeRelativeToProject)
 import Data.Maybe (catMaybes)
 import Data.List (isSuffixOf, sortBy, foldl')
 import qualified Data.Map as Map
@@ -152,7 +153,8 @@ mkMessageCommon :: Bool      -- ^ generate a new datatype from the constructors 
                 -> FilePath  -- ^ path to translation folder
                 -> Lang      -- ^ default lang
                 -> Q [Dec]
-mkMessageCommon genType prefix postfix master dt folder lang = do
+mkMessageCommon genType prefix postfix master dt rawFolder lang = do
+    folder <- makeRelativeToProject rawFolder
     files <- qRunIO $ getDirectoryContents folder
     let files' = filter (`notElem` [".", ".."]) files
     (filess, contents) <- qRunIO $ fmap (unzip . catMaybes) $ mapM (loadLang folder) files'

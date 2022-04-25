@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         2.0.26
+version:         2.0.27
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -49,6 +49,7 @@ library
                    , blaze-markup
                    , blaze-html
                    , exceptions
+                   , file-embed       >= 0.0.1   && < 0.1
                    , transformers
                    , vector
                    , unordered-containers
