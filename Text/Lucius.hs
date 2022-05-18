@@ -92,16 +92,16 @@ parseBlock = do
     _ <- char '{'
     whiteSpace
     pairsBlocks <- parsePairsBlocks id
-    let (pairs, blocks, mixins) = partitionPBs pairsBlocks
+    let (attrs, blocks) = partitionPBs pairsBlocks
     whiteSpace
-    return $ Block sel pairs (map detectAmp blocks) mixins
+    return $ Block sel attrs (map detectAmp blocks)
 
 -- | Looks for an & at the beginning of a selector and, if present, indicates
 -- that we should not have a leading space. Otherwise, we should have the
 -- leading space.
 detectAmp :: Block Unresolved -> (Bool, Block Unresolved)
-detectAmp (Block (sel) b c d) =
-    (hls, Block sel' b c d)
+detectAmp (Block (sel) b c) =
+    (hls, Block sel' b c)
   where
     (hls, sel') =
         case sel of
@@ -109,14 +109,15 @@ detectAmp (Block (sel) b c d) =
             (ContentRaw ('&':s):rest):others -> (False, (ContentRaw s : rest) : others)
             _ -> (True, sel)
 
-partitionPBs :: [PairBlock] -> ([Attr Unresolved], [Block Unresolved], [Deref])
+partitionPBs :: [PairBlock]
+             -> ([Either (Attr Unresolved) Deref], [Block Unresolved])
 partitionPBs =
-    go id id id
+    go id id
   where
-    go a b c [] = (a [], b [], c [])
-    go a b c (PBAttr x:xs) = go (a . (x:)) b c xs
-    go a b c (PBBlock x:xs) = go a (b . (x:)) c xs
-    go a b c (PBMixin x:xs) = go a b (c . (x:)) xs
+    go a b [] = (a [], b [])
+    go a b (PBAttr x:xs) = go (a . ((Left x):)) b xs
+    go a b (PBMixin x:xs) = go (a . ((Right x):)) b xs
+    go a b (PBBlock x:xs) = go a (b . (x:)) xs
 
 parseSelector :: Parser (Selector Unresolved)
 parseSelector =
@@ -391,6 +392,6 @@ luciusMixinFromString s' = do
     r <- newName "_render"
     case fmap compressBlock $ parse parseBlock s s of
         Left e -> error $ show e
-        Right block -> blockToMixin r [] block
+        Right block -> fmap unType $ blockToMixin r [] block
   where
     s = concat ["mixin{", s', "}"]

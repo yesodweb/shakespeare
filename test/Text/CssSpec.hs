@@ -452,6 +452,23 @@ foo { foo:X#{bar}Y; }
                 ^{bins}
             }
         |]
+    it "cassius mixins keep order" $ do
+        let bins = [cassiusMixin|
+                   bin:bin2
+                   bin3:bin4
+                   |] :: Mixin
+            bams = [cassiusMixin|
+                   bam:bam2
+                   ^{bins}
+                   bam3:bam4
+                   |] :: Mixin
+        celper "foo{bam:bam2;bin:bin2;bin3:bin4;bam3:bam4;bar:baz}" [lucius|
+            foo {
+                ^{bams}
+                bar: baz;
+            }
+        |]
+
     it "more complicated mixins" $ do
         let transition val =
                 [luciusMixin|
