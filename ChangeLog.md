@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.0.28
+
+* Add support for sub-blocks in mixins [#264](https://github.com/yesodweb/shakespeare/pull/264)
+
 ### 2.0.27
 
 * Change how embedded templates are located by the compiler. Relative files are now resolved using the Cabal project root, to fix builds of multi-project codebases. [#266](https://github.com/yesodweb/shakespeare/pull/266)
