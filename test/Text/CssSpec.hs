@@ -427,14 +427,11 @@ foo { foo:X#{bar}Y; }
     it "lucius mixins" $ do
         let bins = [luciusMixin|
                    bin:bin2;
-                   /* FIXME not currently implementing sublocks in mixins
                    foo2 {
-                       x: y
+                       x: y;
                    }
-                   */
                    |] :: Mixin
-        -- No sublocks celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
-        celper "foo{bar:baz;bin:bin2}" [lucius|
+        celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
             foo {
                 bar: baz;
                 ^{bins}
@@ -444,9 +441,11 @@ foo { foo:X#{bar}Y; }
         let bins = [cassiusMixin|
                    bin:bin2
                    bin3:bin4
+
+                   foo2
+                       x:y
                    |] :: Mixin
-        -- No sublocks celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
-        celper "foo{bar:baz;bin:bin2;bin3:bin4}" [lucius|
+        celper "foo{bar:baz;bin:bin2;bin3:bin4}foo foo2{x:y}" [lucius|
             foo {
                 bar: baz;
                 ^{bins}
@@ -469,17 +468,43 @@ foo { foo:X#{bar}Y; }
                     }
                 |]
 
+    it "nested mixin blocks" $ do
+        let bar = [luciusMixin|
+                  bar {
+                     bin:baz;
+                  }
+                  |]
+            foo = [luciusMixin|
+                  foo {
+                    ^{bar}
+                  }
+                  |] :: Mixin
+        celper "selector foo bar{bin:baz}" [lucius|
+            selector {
+                ^{foo}
+            }
+        |]
+
+    it "mixins with pseudoselectors" $ do
+        let bar = [luciusMixin|
+                  &:hover {
+                     bin:baz;
+                  }
+                  |] :: Mixin
+        celper "foo:hover{bin:baz}" [lucius|
+            foo {
+                ^{bar}
+            }
+        |]
+
     it "runtime mixin" $ do
         let bins = [luciusMixin|
                    bin:bin2;
-                   /* FIXME not currently implementing sublocks in mixins
                    foo2 {
-                       x: y
+                       x: y;
                    }
-                   */
                    |] :: Mixin
-        -- No sublocks celper "foo{bar:baz;bin:bin2}foo foo2{x:y}" [lucius|
-        Right (T.pack "foo{bar:baz;bin:bin2}") @=? luciusRTMixin
+        Right (T.pack "foo{bar:baz;bin:bin2}foo foo2{x:y}") @=? luciusRTMixin
             (T.pack "foo { bar: baz; ^{bins} }")
             True
             [(TS.pack "bins", RTVMixin bins)]
@@ -576,7 +601,7 @@ encodeUrlChar y =
 
 
 
-celper :: String -> CssUrl Url -> Assertion
+celper :: HasCallStack => String -> CssUrl Url -> Assertion
 celper res h = do
     let x = renderCssUrl render h
     T.pack res @=? x
