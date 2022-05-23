@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.0.29
+
+* Support the upcoming `template-haskell` release with GHC 9.4 [#267](https://github.com/yesodweb/shakespeare/pull/267)
+
 ### 2.0.28
 
 * Add support for sub-blocks in mixins [#264](https://github.com/yesodweb/shakespeare/pull/264)
