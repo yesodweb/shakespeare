@@ -7,3 +7,4 @@ cabal-dev/
 cabal.sandbox.config
 /tarballs/
 /.stack-work/
+dist-newstyle/

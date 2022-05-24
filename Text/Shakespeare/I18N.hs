@@ -61,7 +61,7 @@ module Text.Shakespeare.I18N
     , Lang
     ) where
 
-import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Syntax hiding (makeRelativeToProject)
 import Control.Applicative ((<$>))
 import Control.Monad (filterM, forM)
 import Data.Text (Text, pack, unpack)
