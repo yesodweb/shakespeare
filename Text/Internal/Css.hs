@@ -62,8 +62,8 @@ data Block (a :: Resolved) where
     } -> Block 'Unresolved
 
 data Mixin = Mixin
-    { mixinAttrs  :: ![Attr 'Resolved]
-    , mixinBlocks :: ![Block 'Resolved]
+    { mixinAttrs :: ![Attr 'Resolved]
+    , mixinBlocks :: ![(HasLeadingSpace, Block 'Resolved)]
     }
     deriving Lift
 instance Semigroup Mixin where
@@ -179,6 +179,12 @@ cssFileDebug toi2b parseBlocks' parseBlocks fp = do
     parseBlocks'' <- parseBlocks'
     return $ cr `AppE` parseBlocks'' `AppE` (LitE $ StringL fp) `AppE` ListE c
 
+runtimePrependSelector :: Builder -> (HasLeadingSpace, Block 'Resolved) -> Block 'Resolved
+runtimePrependSelector builder (hsl, BlockResolved x b) =
+    BlockResolved (builder <> addSpace x) b
+  where
+    addSpace = if hsl then (TLB.singleton ' ' <>) else id
+
 combineSelectors :: HasLeadingSpace
                  -> [Contents]
                  -> [Contents]
@@ -198,14 +204,16 @@ blockRuntime :: [(Deref, CDData url)]
              -> Either String (DList (Block 'Resolved))
 -- FIXME share code with blockToCss
 blockRuntime cd render' (BlockUnresolved x attrs z mixinsDerefs) = do
-    x'         <- mapM go' $ intercalate [ContentRaw ","] x
-    attrs'     <- mapM (either resolveAttr getMixinAttrs) attrs
-    z'         <- mapM (subGo x) z -- FIXME use difflists again
-    mixinAttrs <- mapM getMixinAttrs mixinsDerefs
+    mixins <- mapM getMixin mixinsDerefs
+    x' <- mapM go' $ intercalate [ContentRaw ","] x
+    attrs' <- mapM (either resolveAttr getMixinAttrs) attrs
+    z' <- mapM (subGo x) z -- FIXME use difflists again
     Right $ \rest -> BlockResolved
         { blockResSelector = mconcat x'
-        , blockResAttrs    = concat $ attrs' ++ mixinAttrs
-        } : foldr ($) rest z'
+        , blockResAttrs    = concat $ attrs' ++ map mixinAttrs mixins
+        }
+        : fmap (runtimePrependSelector $ mconcat x') (concatMap mixinBlocks mixins)
+        ++ foldr ($) rest z'
     {-
     (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
     . foldr (.) id (map (subGo x) z)
@@ -213,12 +221,15 @@ blockRuntime cd render' (BlockUnresolved x attrs z mixinsDerefs) = do
   where
     go' = contentToBuilderRT cd render'
 
-    getMixinAttrs :: Deref -> Either String [Attr 'Resolved]
-    getMixinAttrs d =
+    getMixin :: Deref -> Either String Mixin
+    getMixin d =
         case lookup d cd of
             Nothing -> Left $ "Mixin not found: " ++ show d
-            Just (CDMixin m) -> Right $ mixinAttrs m
+            Just (CDMixin m) -> Right m
             Just _ -> Left $ "For " ++ show d ++ ", expected Mixin"
+
+    getMixinAttrs :: Deref -> Either String [Attr 'Resolved]
+    getMixinAttrs = fmap mixinAttrs . getMixin 
 
     resolveAttr :: Attr 'Unresolved -> Either String [Attr 'Resolved]
     resolveAttr (AttrUnresolved k v) =
@@ -349,25 +360,31 @@ compressBlock (BlockUnresolved x y blocks mixins) =
 blockToMixin :: Name
              -> Scope
              -> Block 'Unresolved
-             -> ExpQ
-blockToMixin r scope (BlockUnresolved _sel props _subblocks mixins) =
+             -> Q Exp
+blockToMixin r scope (BlockUnresolved _sel props subblocks mixins) =
+    -- TODO: preserve the CPS in @mixinBlocks@ below
     [|Mixin
         { mixinAttrs =
             (concatMap
               (either (:[]) mixinAttrs)
               $(processAttrsAndDerefs r scope props))
-            ++ (concatMap mixinAttrs $mixinsE) -- old mixin back
-        -- FIXME too many complications to implement sublocks for now...
-        , mixinBlocks = []
-        }|]
-      {-
-      . foldr (.) id $(listE $ map subGo subblocks)
-      . (concatMap mixinBlocks $mixinsE ++)
+            ++ (concatMap mixinAttrs $mixinsE)
+        , mixinBlocks = concat $(listE $ map subGo subblocks)
+        }
     |]
-    -}
   where
     mixinsE :: Q Exp
-    mixinsE = pure $ ListE $ map (derefToExp []) mixins
+    mixinsE = return $ ListE $ map (derefToExp []) mixins
+
+    -- We don't use the @hls@ to combine selectors, because the parent
+    -- selector for a mixin is the dummy @mixin@ selector. But we may want
+    -- to know later if the block needs a leading space, because the mixin
+    -- might include an @&@ which needs to mix correctly with the parent
+    -- block's selector.
+    subGo (hls, BlockUnresolved sel' b c d) =
+      [| map (\x -> ($(lift hls), x))
+           $ $(blockToCss r scope $ BlockUnresolved sel' b c d) []
+      |]
         
 blockToCss :: Name
            -> Scope
@@ -375,15 +392,20 @@ blockToCss :: Name
            -> ExpQ
 blockToCss r scope (BlockUnresolved sel props subblocks mixins) =
     [| let attrsAndMixins = $(processAttrsAndDerefs r scope props)
+           selToBuilder = $(selectorToBuilder r scope sel)
        in (BlockResolved
-            { blockResSelector = $(selectorToBuilder r scope sel)
+            { blockResSelector = selToBuilder
             , blockResAttrs    =        
                 (concatMap (either (:[]) mixinAttrs) attrsAndMixins)
                 ++ (concatMap mixinAttrs $mixinsE)
             } :)
           . foldr (.) id $(listE $ map subGo subblocks)
-          . (concatMap (either (const []) mixinBlocks) attrsAndMixins ++)
-          . (concatMap mixinBlocks $mixinsE ++)
+          . (fmap
+                (runtimePrependSelector selToBuilder)
+                (concatMap (either (const []) mixinBlocks) attrsAndMixins) ++)
+          . (fmap
+                (runtimePrependSelector selToBuilder)
+                (concatMap mixinBlocks $mixinsE) ++)
     |]
   where
     mixinsE :: Q Exp

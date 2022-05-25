@@ -3,6 +3,13 @@
 ### 2.0.30
 
 * Add new cassius and lucius parsers to maintain order between attributes and mixin blocks.
+### 2.0.29
+
+* Support the upcoming `template-haskell` release with GHC 9.4 [#267](https://github.com/yesodweb/shakespeare/pull/267)
+
+### 2.0.28
+
+* Add support for sub-blocks in mixins [#264](https://github.com/yesodweb/shakespeare/pull/264)
 
 ### 2.0.27
 

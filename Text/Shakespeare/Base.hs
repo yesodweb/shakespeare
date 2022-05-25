@@ -27,7 +27,7 @@ module Text.Shakespeare.Base
     , readFileRecompileQ
     ) where
 
-import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Syntax hiding (makeRelativeToProject)
 import Language.Haskell.TH (appE)
 import Data.Char (isUpper, isSymbol, isPunctuation, isAscii)
 import Data.FileEmbed (makeRelativeToProject)
