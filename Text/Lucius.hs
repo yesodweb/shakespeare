@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -86,7 +87,7 @@ whiteSpace1 :: Parser ()
 whiteSpace1 =
     ((oneOf " \t\n\r" >> return ()) <|> (parseComment >> return ()))
 
-parseBlock :: Parser (Block Unresolved)
+parseBlock :: Parser (Block 'Unresolved)
 parseBlock = do
     sel <- parseSelector
     _ <- char '{'
@@ -94,14 +95,14 @@ parseBlock = do
     pairsBlocks <- parsePairsBlocks id
     let (attrs, blocks) = partitionPBs pairsBlocks
     whiteSpace
-    return $ Block sel attrs (map detectAmp blocks)
+    return $ BlockUnresolved sel attrs (map detectAmp blocks)
 
 -- | Looks for an & at the beginning of a selector and, if present, indicates
 -- that we should not have a leading space. Otherwise, we should have the
 -- leading space.
-detectAmp :: Block Unresolved -> (Bool, Block Unresolved)
-detectAmp (Block (sel) b c) =
-    (hls, Block sel' b c)
+detectAmp :: Block 'Unresolved -> (Bool, Block 'Unresolved)
+detectAmp (BlockUnresolved (sel) b c) =
+    (hls, BlockUnresolved sel' b c)
   where
     (hls, sel') =
         case sel of
@@ -110,7 +111,7 @@ detectAmp (Block (sel) b c) =
             _ -> (True, sel)
 
 partitionPBs :: [PairBlock]
-             -> ([Either (Attr Unresolved) Deref], [Block Unresolved])
+             -> ([Either (Attr 'Unresolved) Deref], [Block 'Unresolved])
 partitionPBs =
     go id id
   where
@@ -119,7 +120,7 @@ partitionPBs =
     go a b (PBMixin x:xs) = go (a . ((Right x):)) b xs
     go a b (PBBlock x:xs) = go a (b . (x:)) xs
 
-parseSelector :: Parser (Selector Unresolved)
+parseSelector :: Parser [Contents]
 parseSelector =
     go id
   where
@@ -140,8 +141,8 @@ trim =
     trimS True = dropWhile isSpace
     trimS False = reverse . dropWhile isSpace . reverse
 
-data PairBlock = PBAttr (Attr Unresolved)
-               | PBBlock (Block Unresolved)
+data PairBlock = PBAttr (Attr 'Unresolved)
+               | PBBlock (Block 'Unresolved)
                | PBMixin Deref
 parsePairsBlocks :: ([PairBlock] -> [PairBlock]) -> Parser [PairBlock]
 parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
@@ -170,7 +171,7 @@ parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
             <|> (anyChar >> checkIfBlock)
             <|> fail "checkIfBlock"
 
-parsePair :: Parser (Attr Unresolved)
+parsePair :: Parser (Attr 'Unresolved)
 parsePair = do
     key <- parseContents ":"
     _ <- char ':'
@@ -178,7 +179,7 @@ parsePair = do
     val <- parseContents ";}"
     (char ';' >> return ()) <|> return ()
     whiteSpace
-    return $ Attr key val
+    return $ AttrUnresolved key val
 
 parseContents :: String -> Parser Contents
 parseContents = many1 . parseContent
@@ -230,7 +231,7 @@ luciusFileDebug, luciusFileReload :: FilePath -> Q Exp
 luciusFileDebug = cssFileDebug False [|parseTopLevels|] parseTopLevels
 luciusFileReload = luciusFileDebug
 
-parseTopLevels :: Parser [TopLevel Unresolved]
+parseTopLevels :: Parser [TopLevel 'Unresolved]
 parseTopLevels =
     go id
   where
@@ -298,25 +299,25 @@ stringCI [] = return ()
 stringCI (c:cs) = (char (toLower c) <|> char (toUpper c)) >> stringCI cs
 
 luciusRT' :: TL.Text
-          -> Either String ([(Text, Text)] -> Either String [TopLevel Resolved])
+          -> Either String ([(Text, Text)] -> Either String [TopLevel 'Resolved])
 luciusRT' =
     either Left (Right . go) . luciusRTInternal
   where
-    go :: ([(Text, RTValue)] -> Either String [TopLevel Resolved])
-       -> ([(Text, Text)] -> Either String [TopLevel Resolved])
+    go :: ([(Text, RTValue)] -> Either String [TopLevel 'Resolved])
+       -> ([(Text, Text)] -> Either String [TopLevel 'Resolved])
     go f = f . map (second RTVRaw)
 
 luciusRTInternal
     :: TL.Text
-    -> Either String ([(Text, RTValue)] -> Either String [TopLevel Resolved])
+    -> Either String ([(Text, RTValue)] -> Either String [TopLevel 'Resolved])
 luciusRTInternal tl =
     case parse parseTopLevels (TL.unpack tl) (TL.unpack tl) of
         Left s -> Left $ show s
         Right tops -> Right $ \scope -> go scope tops
   where
     go :: [(Text, RTValue)]
-       -> [TopLevel Unresolved]
-       -> Either String [TopLevel Resolved]
+       -> [TopLevel 'Unresolved]
+       -> Either String [TopLevel 'Resolved]
     go _ [] = Right []
     go scope (TopAtDecl dec cs':rest) = do
         let scope' = map goScope scope
@@ -338,8 +339,8 @@ luciusRTInternal tl =
     go scope (TopVar k v:rest) = go ((pack k, RTVRaw $ pack v):scope) rest
 
     goBlock :: [(Text, RTValue)]
-            -> Block Unresolved
-            -> Either String [Block Resolved]
+            -> Block 'Unresolved
+            -> Either String [Block 'Resolved]
     goBlock scope =
         either Left (Right . ($ [])) . blockRuntime scope' (error "luciusRT has no URLs")
       where
@@ -392,6 +393,6 @@ luciusMixinFromString s' = do
     r <- newName "_render"
     case fmap compressBlock $ parse parseBlock s s of
         Left e -> error $ show e
-        Right block -> fmap unType $ blockToMixin r [] block
+        Right block -> blockToMixin r [] block
   where
     s = concat ["mixin{", s', "}"]
