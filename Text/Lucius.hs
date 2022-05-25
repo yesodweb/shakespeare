@@ -10,18 +10,27 @@
 module Text.Lucius
     ( -- * Parsing
       lucius
+    , luciusOrd
     , luciusFile
+    , luciusFileOrd
     , luciusFileDebug
+    , luciusFileDebugOrd
     , luciusFileReload
+    , luciusFileReloadOrd
       -- ** Mixins
     , luciusMixin
+    , luciusMixinOrd
     , Mixin
       -- ** Runtime
     , luciusRT
+    , luciusRTOrd
     , luciusRT'
+    , luciusRTOrd'
     , luciusRTMinified
+    , luciusRTMinifiedOrd
       -- *** Mixin
     , luciusRTMixin
+    , luciusRTMixinOrd
     , RTValue (..)
     , -- * Datatypes
       Css
@@ -73,12 +82,21 @@ import Text.Shakespeare (VarType)
 -- >>> renderCss ([lucius|foo{bar:baz}|] undefined)
 -- "foo{bar:baz}"
 lucius :: QuasiQuoter
-lucius = QuasiQuoter { quoteExp = luciusFromString }
+lucius = luciusWithOrder Unordered
+{-# DEPRECATED lucius "Use 'luciusOrd' instead" #-}
 
-luciusFromString :: String -> Q Exp
-luciusFromString s =
+-- | Like 'lucius' but preserves the order of attributes and mixins
+-- @since 2.0.28
+luciusOrd :: QuasiQuoter
+luciusOrd = luciusWithOrder Ordered
+
+luciusWithOrder :: Order -> QuasiQuoter
+luciusWithOrder order = QuasiQuoter { quoteExp = luciusFromString order}
+
+luciusFromString :: Order -> String -> Q Exp
+luciusFromString order s =
     topLevelsToCassius
-  $ either (error . show) id $ parse parseTopLevels s s
+  $ either (error . show) id $ parse (parseTopLevels order) s s
 
 whiteSpace :: Parser ()
 whiteSpace = many whiteSpace1 >> return ()
@@ -87,22 +105,24 @@ whiteSpace1 :: Parser ()
 whiteSpace1 =
     ((oneOf " \t\n\r" >> return ()) <|> (parseComment >> return ()))
 
-parseBlock :: Parser (Block 'Unresolved)
-parseBlock = do
+parseBlock :: Order -> Parser (Block 'Unresolved)
+parseBlock order = do
     sel <- parseSelector
     _ <- char '{'
     whiteSpace
-    pairsBlocks <- parsePairsBlocks id
-    let (attrs, blocks) = partitionPBs pairsBlocks
+    pairsBlocks <- parsePairsBlocks order id
+    let (attrs, blocks, mixins) = case order of
+          Unordered -> partitionPBs  pairsBlocks
+          Ordered   -> partitionPBs' pairsBlocks
     whiteSpace
-    return $ BlockUnresolved sel attrs (map detectAmp blocks)
+    return $ BlockUnresolved sel attrs (map detectAmp blocks) mixins
 
 -- | Looks for an & at the beginning of a selector and, if present, indicates
 -- that we should not have a leading space. Otherwise, we should have the
 -- leading space.
 detectAmp :: Block 'Unresolved -> (Bool, Block 'Unresolved)
-detectAmp (BlockUnresolved (sel) b c) =
-    (hls, BlockUnresolved sel' b c)
+detectAmp (BlockUnresolved (sel) b c d) =
+    (hls, BlockUnresolved sel' b c d)
   where
     (hls, sel') =
         case sel of
@@ -110,12 +130,26 @@ detectAmp (BlockUnresolved (sel) b c) =
             (ContentRaw ('&':s):rest):others -> (False, (ContentRaw s : rest) : others)
             _ -> (True, sel)
 
+-- | This function implementation does not keep the order
+-- of attributes and mixins and is used in legacy parsers:
+-- 'cassius', 'cassiusFile', 'lucius', 'luciusFile' etc.
+-- To maintain attributes and mixins ordering, use 'partitionPBs'.
 partitionPBs :: [PairBlock]
-             -> ([Either (Attr 'Unresolved) Deref], [Block 'Unresolved])
+              -> ([Either (Attr 'Unresolved) Deref], [Block 'Unresolved], [Deref])
 partitionPBs =
+    go id id id
+  where
+    go a b c [] = (a [], b [], c [])
+    go a b c (PBAttr x:xs) = go (a . ((Left x):)) b c xs
+    go a b c (PBBlock x:xs) = go a (b . (x:)) c xs
+    go a b c (PBMixin x:xs) = go a b (c . (x:)) xs
+
+partitionPBs' :: [PairBlock]
+             -> ([Either (Attr 'Unresolved) Deref], [Block 'Unresolved], [Deref])
+partitionPBs' =
     go id id
   where
-    go a b [] = (a [], b [])
+    go a b [] = (a [], b [], [])
     go a b (PBAttr x:xs) = go (a . ((Left x):)) b xs
     go a b (PBMixin x:xs) = go (a . ((Right x):)) b xs
     go a b (PBBlock x:xs) = go a (b . (x:)) xs
@@ -144,14 +178,14 @@ trim =
 data PairBlock = PBAttr (Attr 'Unresolved)
                | PBBlock (Block 'Unresolved)
                | PBMixin Deref
-parsePairsBlocks :: ([PairBlock] -> [PairBlock]) -> Parser [PairBlock]
-parsePairsBlocks front = (char '}' >> return (front [])) <|> (do
+parsePairsBlocks :: Order -> ([PairBlock] -> [PairBlock]) -> Parser [PairBlock]
+parsePairsBlocks order front = (char '}' >> return (front [])) <|> (do
     isBlock <- lookAhead checkIfBlock
     x <- grabMixin <|> (if isBlock then grabBlock else grabPair)
-    parsePairsBlocks $ front . (:) x)
+    parsePairsBlocks order $ front . (:) x)
   where
     grabBlock = do
-        b <- parseBlock
+        b <- parseBlock order
         whiteSpace
         return $ PBBlock b
     grabPair = PBAttr <$> parsePair
@@ -223,16 +257,43 @@ parseComment = do
     return $ ContentRaw ""
 
 luciusFile :: FilePath -> Q Exp
-luciusFile fp = do
+luciusFile = luciusFileWithOrd Unordered
+{-# DEPRECATED luciusFile "Use 'luciusFileOrd' instead" #-}
+
+-- | Like 'luciusFile' but preserves the order of attributes and mixins
+-- @since 2.0.28
+luciusFileOrd :: FilePath -> Q Exp
+luciusFileOrd = luciusFileWithOrd Ordered
+
+luciusFileWithOrd :: Order -> FilePath -> Q Exp
+luciusFileWithOrd order fp = do
     contents <- readFileRecompileQ fp
-    luciusFromString contents
+    luciusFromString order contents
 
-luciusFileDebug, luciusFileReload :: FilePath -> Q Exp
-luciusFileDebug = cssFileDebug False [|parseTopLevels|] parseTopLevels
+luciusFileDebug :: FilePath -> Q Exp
+luciusFileDebug = luciusFileDebugWithOrder Unordered
+{-# DEPRECATED luciusFileDebug "Use 'luciusFileDebugOrd' instead" #-}
+
+luciusFileReload :: FilePath -> Q Exp
 luciusFileReload = luciusFileDebug
+{-# DEPRECATED luciusFileReload "Use 'luciusFileReloadOrd' instead" #-}
 
-parseTopLevels :: Parser [TopLevel 'Unresolved]
-parseTopLevels =
+-- | Like 'luciusFileDebug' but preserves the order of attributes and mixins
+-- @since 2.0.28
+luciusFileDebugOrd :: FilePath -> Q Exp
+luciusFileDebugOrd = luciusFileDebugWithOrder Ordered
+
+-- | Like 'luciusFileReload' but preserves the order of attributes and mixins
+-- @since 2.0.28
+luciusFileReloadOrd :: FilePath -> Q Exp
+luciusFileReloadOrd = luciusFileDebugOrd
+
+luciusFileDebugWithOrder :: Order -> FilePath -> Q Exp
+luciusFileDebugWithOrder order =
+  cssFileDebug False [|parseTopLevels order|] (parseTopLevels order)
+
+parseTopLevels :: Order -> Parser [TopLevel 'Unresolved]
+parseTopLevels order =
     go id
   where
     go front = do
@@ -240,7 +301,7 @@ parseTopLevels =
             ignore = many (whiteSpace1 <|> string' "<!--" <|> string' "-->")
                         >> return ()
         ignore
-        tl <- ((charset <|> media <|> impor <|> supports <|> topAtBlock <|> var <|> fmap TopBlock parseBlock) >>= \x -> go (front . (:) x))
+        tl <- ((charset <|> media <|> impor <|> supports <|> topAtBlock <|> var <|> fmap TopBlock (parseBlock order)) >>= \x -> go (front . (:) x))
             <|> (return $ map compressTopLevel $ front [])
         ignore
         return tl
@@ -292,7 +353,7 @@ parseTopLevels =
     parseBlocks front = do
         whiteSpace
         (char '}' >> return (map compressBlock $ front []))
-            <|> (parseBlock >>= \x -> parseBlocks (front . (:) x))
+            <|> ((parseBlock order) >>= \x -> parseBlocks (front . (:) x))
 
 stringCI :: String -> Parser ()
 stringCI [] = return ()
@@ -300,18 +361,33 @@ stringCI (c:cs) = (char (toLower c) <|> char (toUpper c)) >> stringCI cs
 
 luciusRT' :: TL.Text
           -> Either String ([(Text, Text)] -> Either String [TopLevel 'Resolved])
-luciusRT' =
-    either Left (Right . go) . luciusRTInternal
+luciusRT' = luciusRTWithOrder' Unordered
+{-# DEPRECATED luciusRT' "Use luciusRT' instead" #-}
+
+-- | Like @luciusRT'@ but preserves the order of attributes and mixins
+-- @since 2.0.28
+luciusRTOrd' :: TL.Text
+          -> Either String ([(Text, Text)] -> Either String [TopLevel 'Resolved])
+luciusRTOrd' = luciusRTWithOrder' Ordered
+
+luciusRTWithOrder'::
+     Order -- ^ Should we keep attributes and mixins order or not
+  -> TL.Text
+  -> Either String ([(Text, Text)] -> Either String [TopLevel 'Resolved])
+luciusRTWithOrder' order =
+    either Left (Right . go) . luciusRTInternal order
   where
     go :: ([(Text, RTValue)] -> Either String [TopLevel 'Resolved])
        -> ([(Text, Text)] -> Either String [TopLevel 'Resolved])
     go f = f . map (second RTVRaw)
 
-luciusRTInternal
-    :: TL.Text
-    -> Either String ([(Text, RTValue)] -> Either String [TopLevel 'Resolved])
-luciusRTInternal tl =
-    case parse parseTopLevels (TL.unpack tl) (TL.unpack tl) of
+luciusRTInternal ::
+     Order
+  -> TL.Text
+  -> Either String ([(Text, RTValue)]
+  -> Either String [TopLevel 'Resolved])
+luciusRTInternal order tl =
+    case parse (parseTopLevels order) (TL.unpack tl) (TL.unpack tl) of
         Left s -> Left $ show s
         Right tops -> Right $ \scope -> go scope tops
   where
@@ -355,7 +431,17 @@ luciusRTInternal tl =
                 RTVMixin m -> CDMixin m
 
 luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
-luciusRT tl scope = either Left (Right . renderCss . CssWhitespace) $ either Left ($ scope) (luciusRT' tl)
+luciusRT = luciusRTWithOrder Unordered
+{-# DEPRECATED luciusRT "Use 'luciusRTOrd' instead" #-}
+
+-- | Like 'luciusRT' but preserves the order of attributes and mixins
+-- @since 2.0.28
+luciusRTOrd :: TL.Text -> [(Text, Text)] -> Either String TL.Text
+luciusRTOrd = luciusRTWithOrder Ordered
+
+luciusRTWithOrder :: Order -> TL.Text -> [(Text, Text)] -> Either String TL.Text
+luciusRTWithOrder order tl scope =
+  either Left (Right . renderCss . CssWhitespace) $ either Left ($ scope) (luciusRTWithOrder' order tl)
 
 -- | Runtime Lucius with mixin support.
 --
@@ -364,12 +450,28 @@ luciusRTMixin :: TL.Text -- ^ template
               -> Bool -- ^ minify?
               -> [(Text, RTValue)] -- ^ scope
               -> Either String TL.Text
-luciusRTMixin tl minify scope =
-    either Left (Right . renderCss . cw) $ either Left ($ scope) (luciusRTInternal tl)
+luciusRTMixin = luciusRTMixinWithOrder Unordered
+{-# DEPRECATED luciusRTMixin "Use 'luciusRTMixinOrd' instead" #-}
+
+-- | Like 'luciusRTMixin' but preserves the order of attributes and mixins.
+-- @since 2.0.28
+luciusRTMixinOrd :: TL.Text -- ^ template
+              -> Bool -- ^ minify?
+              -> [(Text, RTValue)] -- ^ scope
+              -> Either String TL.Text
+luciusRTMixinOrd = luciusRTMixinWithOrder Ordered
+
+luciusRTMixinWithOrder ::
+     Order
+  -> TL.Text -- ^ template
+  -> Bool -- ^ minify?
+  -> [(Text, RTValue)] -- ^ scope
+  -> Either String TL.Text
+luciusRTMixinWithOrder order tl minify scope =
+    either Left (Right . renderCss . cw) $ either Left ($ scope) (luciusRTInternal order tl)
   where
-    cw
-        | minify = CssNoWhitespace
-        | otherwise = CssWhitespace
+    cw | minify = CssNoWhitespace
+       | otherwise = CssWhitespace
 
 data RTValue = RTVRaw Text
              | RTVMixin Mixin
@@ -378,20 +480,39 @@ data RTValue = RTVRaw Text
 --
 -- Since 1.0.3
 luciusRTMinified :: TL.Text -> [(Text, Text)] -> Either String TL.Text
-luciusRTMinified tl scope = either Left (Right . renderCss . CssNoWhitespace) $ either Left ($ scope) (luciusRT' tl)
+luciusRTMinified = luciusRTMinifiedWithOrder Unordered
+{-# DEPRECATED luciusRTMinified "Use 'luciusRTMinifiedOrd' instead" #-}
+
+-- | Like 'luciusRTMinified' but preserves the order of attributes and mixins.
+-- @since 2.0.28
+luciusRTMinifiedOrd :: TL.Text -> [(Text, Text)] -> Either String TL.Text
+luciusRTMinifiedOrd = luciusRTMinifiedWithOrder Ordered
+
+luciusRTMinifiedWithOrder :: Order -> TL.Text -> [(Text, Text)] -> Either String TL.Text
+luciusRTMinifiedWithOrder order tl scope =
+  either Left (Right . renderCss . CssNoWhitespace) $ either Left ($ scope) (luciusRTWithOrder' order tl)
 
 -- | Determine which identifiers are used by the given template, useful for
 -- creating systems like yesod devel.
-luciusUsedIdentifiers :: String -> [(Deref, VarType)]
-luciusUsedIdentifiers = cssUsedIdentifiers False parseTopLevels
+luciusUsedIdentifiers :: Order -> String -> [(Deref, VarType)]
+luciusUsedIdentifiers order = cssUsedIdentifiers False (parseTopLevels order)
 
 luciusMixin :: QuasiQuoter
-luciusMixin = QuasiQuoter { quoteExp = luciusMixinFromString }
+luciusMixin = luciusMixinWithOrder Unordered
+{-# DEPRECATED luciusMixin "Use 'luciusMixinOrd' instead" #-}
 
-luciusMixinFromString :: String -> Q Exp
-luciusMixinFromString s' = do
+-- | Like 'luciusMixin' but preserves the order of attributes and mixins.
+-- @since 2.0.28
+luciusMixinOrd :: QuasiQuoter
+luciusMixinOrd = luciusMixinWithOrder Ordered
+
+luciusMixinWithOrder :: Order -> QuasiQuoter
+luciusMixinWithOrder order = QuasiQuoter { quoteExp = luciusMixinFromString order}
+
+luciusMixinFromString :: Order -> String -> Q Exp
+luciusMixinFromString order s' = do
     r <- newName "_render"
-    case fmap compressBlock $ parse parseBlock s s of
+    case fmap compressBlock $ parse (parseBlock order) s s of
         Left e -> error $ show e
         Right block -> blockToMixin r [] block
   where
