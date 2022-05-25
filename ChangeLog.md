@@ -1,6 +1,6 @@
 # ChangeLog for shakespeare
 
-### 2.0.28
+### 2.0.30
 
 * Add new cassius and lucius parsers to maintain order between attributes and mixin blocks.
 

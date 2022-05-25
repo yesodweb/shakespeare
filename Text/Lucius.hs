@@ -86,7 +86,7 @@ lucius = luciusWithOrder Unordered
 {-# DEPRECATED lucius "Use 'luciusOrd' instead" #-}
 
 -- | Like 'lucius' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 luciusOrd :: QuasiQuoter
 luciusOrd = luciusWithOrder Ordered
 
@@ -261,7 +261,7 @@ luciusFile = luciusFileWithOrd Unordered
 {-# DEPRECATED luciusFile "Use 'luciusFileOrd' instead" #-}
 
 -- | Like 'luciusFile' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 luciusFileOrd :: FilePath -> Q Exp
 luciusFileOrd = luciusFileWithOrd Ordered
 
@@ -279,12 +279,12 @@ luciusFileReload = luciusFileDebug
 {-# DEPRECATED luciusFileReload "Use 'luciusFileReloadOrd' instead" #-}
 
 -- | Like 'luciusFileDebug' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 luciusFileDebugOrd :: FilePath -> Q Exp
 luciusFileDebugOrd = luciusFileDebugWithOrder Ordered
 
 -- | Like 'luciusFileReload' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 luciusFileReloadOrd :: FilePath -> Q Exp
 luciusFileReloadOrd = luciusFileDebugOrd
 
@@ -365,7 +365,7 @@ luciusRT' = luciusRTWithOrder' Unordered
 {-# DEPRECATED luciusRT' "Use luciusRT' instead" #-}
 
 -- | Like @luciusRT'@ but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 luciusRTOrd' :: TL.Text
           -> Either String ([(Text, Text)] -> Either String [TopLevel 'Resolved])
 luciusRTOrd' = luciusRTWithOrder' Ordered
@@ -435,7 +435,7 @@ luciusRT = luciusRTWithOrder Unordered
 {-# DEPRECATED luciusRT "Use 'luciusRTOrd' instead" #-}
 
 -- | Like 'luciusRT' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 luciusRTOrd :: TL.Text -> [(Text, Text)] -> Either String TL.Text
 luciusRTOrd = luciusRTWithOrder Ordered
 
@@ -454,7 +454,7 @@ luciusRTMixin = luciusRTMixinWithOrder Unordered
 {-# DEPRECATED luciusRTMixin "Use 'luciusRTMixinOrd' instead" #-}
 
 -- | Like 'luciusRTMixin' but preserves the order of attributes and mixins.
--- @since 2.0.28
+-- @since 2.0.30
 luciusRTMixinOrd :: TL.Text -- ^ template
               -> Bool -- ^ minify?
               -> [(Text, RTValue)] -- ^ scope
@@ -484,7 +484,7 @@ luciusRTMinified = luciusRTMinifiedWithOrder Unordered
 {-# DEPRECATED luciusRTMinified "Use 'luciusRTMinifiedOrd' instead" #-}
 
 -- | Like 'luciusRTMinified' but preserves the order of attributes and mixins.
--- @since 2.0.28
+-- @since 2.0.30
 luciusRTMinifiedOrd :: TL.Text -> [(Text, Text)] -> Either String TL.Text
 luciusRTMinifiedOrd = luciusRTMinifiedWithOrder Ordered
 
@@ -502,7 +502,7 @@ luciusMixin = luciusMixinWithOrder Unordered
 {-# DEPRECATED luciusMixin "Use 'luciusMixinOrd' instead" #-}
 
 -- | Like 'luciusMixin' but preserves the order of attributes and mixins.
--- @since 2.0.28
+-- @since 2.0.30
 luciusMixinOrd :: QuasiQuoter
 luciusMixinOrd = luciusMixinWithOrder Ordered
 

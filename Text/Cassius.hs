@@ -60,7 +60,7 @@ cassius = QuasiQuoter { quoteExp = quoteExp lucius . i2b }
 {-# DEPRECATED cassius "Use 'cassiusOrd' instead" #-}
 
 -- | Like 'cassius' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 cassiusOrd :: QuasiQuoter
 cassiusOrd = QuasiQuoter { quoteExp = quoteExp luciusOrd . i2b }
 
@@ -69,7 +69,7 @@ cassiusFile = cassiusFileWithOrder Unordered
 {-# DEPRECATED cassiusFile "Use 'cassiusFileOrd' instead" #-}
 
 -- | Like 'cassiusFile' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 cassiusFileOrd :: FilePath -> Q Exp
 cassiusFileOrd = cassiusFileWithOrder Ordered
 
@@ -90,12 +90,12 @@ cassiusFileReload = cassiusFileDebug
 {-# DEPRECATED cassiusFileReload "Use 'cassiusFileReloadOrd' instead" #-}
 
 -- | Like 'cassiusFileDebug' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 cassiusFileDebugOrd :: FilePath -> Q Exp
 cassiusFileDebugOrd = cassiusFileDebugWithOrder Ordered
 
 -- | Like 'cassiusFileReload' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 cassiusFileReloadOrd :: FilePath -> Q Exp
 cassiusFileReloadOrd = cassiusFileDebugOrd
 
@@ -119,7 +119,7 @@ cassiusMixin = QuasiQuoter
 {-# DEPRECATED cassiusMixin "Use 'cassiusMixinOrd' instead" #-}
 
 -- | Like 'cassiusMixin' but preserves the order of attributes and mixins
--- @since 2.0.28
+-- @since 2.0.30
 cassiusMixinOrd :: QuasiQuoter
 cassiusMixinOrd = QuasiQuoter
     { quoteExp = quoteExp Text.Lucius.luciusMixinOrd . i2bMixin
