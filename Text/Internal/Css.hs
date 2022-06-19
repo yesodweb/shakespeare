@@ -51,14 +51,13 @@ type instance Str 'Unresolved = Contents
 
 data Block (a :: Resolved) where
   BlockResolved :: 
-    { blockResSelector :: !Builder
-    , blockResAttrs    :: ![Attr 'Resolved]
+    { brSelectors :: !Builder
+    , brAttrs     :: ![Attr 'Resolved]
     } -> Block 'Resolved
   BlockUnresolved ::
-    { blockUnresSelector :: ![Contents]
-    , blockUnresAttrs    :: ![Either (Attr 'Unresolved) Deref]
-    , blockUnresBlocks   :: ![(HasLeadingSpace, Block 'Unresolved)]
-    , blockUnresMixins   :: ![Deref]
+    { buSelectors      :: ![Contents]
+    , buAttrsAndMixins :: ![Either (Attr 'Unresolved) Deref]
+    , buBlocks         :: ![(HasLeadingSpace, Block 'Unresolved)]
     } -> Block 'Unresolved
 
 data Mixin = Mixin
@@ -134,8 +133,7 @@ cssUsedIdentifiers toi2b parseBlocks s' =
     a = either (error . show) id $ parse parseBlocks s s
     (scope0, contents) = go a
 
-    go :: [TopLevel 'Unresolved]
-       -> (Scope, [Content])
+    go :: [TopLevel 'Unresolved] -> (Scope, [Content])
     go [] = ([], [])
     go (TopAtDecl dec cs:rest) =
         (scope, rest'')
@@ -151,13 +149,12 @@ cssUsedIdentifiers toi2b parseBlocks s' =
       where
         (scope1, rest1) = go (map TopBlock blocks)
         (scope2, rest2) = go rest
-    go (TopBlock (BlockUnresolved x y z mixins):rest) =
-        (scope1 ++ scope2, rest0 ++ rest1 ++ rest2 ++ restm)
+    go (TopBlock (BlockUnresolved x y z):rest) =
+        (scope1 ++ scope2, rest0 ++ rest1 ++ rest2)
       where
         rest0 = intercalate [ContentRaw ","] x ++ concatMap go' y
         (scope1, rest1) = go (map (TopBlock . snd) z)
         (scope2, rest2) = go rest
-        restm = map ContentMixin mixins
     go (TopVar k v:rest) =
         ((k, v):scope, rest')
       where
@@ -203,16 +200,16 @@ blockRuntime :: [(Deref, CDData url)]
              -> Block 'Unresolved
              -> Either String (DList (Block 'Resolved))
 -- FIXME share code with blockToCss
-blockRuntime cd render' (BlockUnresolved x attrs z mixinsDerefs) = do
-    mixins <- mapM getMixin mixinsDerefs
+blockRuntime cd render' (BlockUnresolved x attrsAndMixins z) = do
     x' <- mapM go' $ intercalate [ContentRaw ","] x
-    attrs' <- mapM (either resolveAttr getMixinAttrs) attrs
+    attrs' <- mapM (either resolveAttr getMixinAttrs) attrsAndMixins
+    blocks' <- mapM (either (const $ Right []) getMixinBlocks) attrsAndMixins
     z' <- mapM (subGo x) z -- FIXME use difflists again
     Right $ \rest -> BlockResolved
-        { blockResSelector = mconcat x'
-        , blockResAttrs    = concat $ attrs' ++ map mixinAttrs mixins
+        { brSelectors = mconcat x'
+        , brAttrs     = concat attrs'
         }
-        : fmap (runtimePrependSelector $ mconcat x') (concatMap mixinBlocks mixins)
+        : map (runtimePrependSelector $ mconcat x') (concat blocks')
         ++ foldr ($) rest z'
     {-
     (:) (Css' (mconcat $ map go' $ intercalate [ContentRaw "," ] x) (map go'' y))
@@ -229,7 +226,10 @@ blockRuntime cd render' (BlockUnresolved x attrs z mixinsDerefs) = do
             Just _ -> Left $ "For " ++ show d ++ ", expected Mixin"
 
     getMixinAttrs :: Deref -> Either String [Attr 'Resolved]
-    getMixinAttrs = fmap mixinAttrs . getMixin 
+    getMixinAttrs = fmap mixinAttrs . getMixin
+
+    getMixinBlocks :: Deref -> Either String [(HasLeadingSpace, Block 'Resolved)]
+    getMixinBlocks = fmap mixinBlocks . getMixin
 
     resolveAttr :: Attr 'Unresolved -> Either String [Attr 'Resolved]
     resolveAttr (AttrUnresolved k v) =
@@ -239,9 +239,9 @@ blockRuntime cd render' (BlockUnresolved x attrs z mixinsDerefs) = do
     subGo :: [Contents] -- ^ parent selectors
           -> (HasLeadingSpace, Block 'Unresolved)
           -> Either String (DList (Block 'Resolved))
-    subGo x' (hls, BlockUnresolved a b c d) =
+    subGo x' (hls, BlockUnresolved a b c) =
         let a' = combineSelectors hls x' a
-         in blockRuntime cd render' (BlockUnresolved a' b c d)
+         in blockRuntime cd render' (BlockUnresolved a' b c)
 
 contentToBuilderRT :: [(Deref, CDData url)]
                    -> (url -> [(Text, Text)] -> Text)
@@ -346,8 +346,8 @@ compressTopLevel x@TopVar{} = x
 
 compressBlock :: Block 'Unresolved
               -> Block 'Unresolved
-compressBlock (BlockUnresolved x y blocks mixins) =
-    BlockUnresolved (map cc x) (map go y) (map (second compressBlock) blocks) mixins
+compressBlock (BlockUnresolved x y blocks) =
+    BlockUnresolved (map cc x) (map go y) (map (second compressBlock) blocks)
   where
     go :: Either (Attr 'Unresolved) Deref -> Either (Attr 'Unresolved) Deref
     go (Left (AttrUnresolved k v)) = Left $ AttrUnresolved (cc k) (cc v)
@@ -361,61 +361,57 @@ blockToMixin :: Name
              -> Scope
              -> Block 'Unresolved
              -> Q Exp
-blockToMixin r scope (BlockUnresolved _sel props subblocks mixins) =
+blockToMixin r scope (BlockUnresolved _sel props subblocks) =
     -- TODO: preserve the CPS in @mixinBlocks@ below
-    [|Mixin
-        { mixinAttrs =
-            (concatMap
-              (either (:[]) mixinAttrs)
-              $(processAttrsAndDerefs r scope props))
-            ++ (concatMap mixinAttrs $mixinsE)
-        , mixinBlocks = concat $(listE $ map subGo subblocks)
-        }
+    [| let attrsAndMixins = $(processAttrsAndDerefs r scope props)
+        in Mixin
+            { mixinAttrs =
+                concatMap (either (:[]) mixinAttrs) attrsAndMixins
+            , mixinBlocks =
+                concat $
+                  $(listE $ map subGo subblocks)
+                  ++ map (either (const []) mixinBlocks) attrsAndMixins
+            }
     |]
   where
-    mixinsE :: Q Exp
-    mixinsE = return $ ListE $ map (derefToExp []) mixins
-
     -- We don't use the @hls@ to combine selectors, because the parent
     -- selector for a mixin is the dummy @mixin@ selector. But we may want
     -- to know later if the block needs a leading space, because the mixin
     -- might include an @&@ which needs to mix correctly with the parent
     -- block's selector.
-    subGo (hls, BlockUnresolved sel' b c d) =
+    subGo (hls, BlockUnresolved sel' b c) =
       [| map (\x -> ($(lift hls), x))
-           $ $(blockToCss r scope $ BlockUnresolved sel' b c d) []
+           $ $(blockToCss r scope $ BlockUnresolved sel' b c) []
       |]
         
 blockToCss :: Name
            -> Scope
            -> Block 'Unresolved
            -> ExpQ
-blockToCss r scope (BlockUnresolved sel props subblocks mixins) =
+blockToCss r scope (BlockUnresolved sel props subblocks) =
     [| let attrsAndMixins = $(processAttrsAndDerefs r scope props)
            selToBuilder = $(selectorToBuilder r scope sel)
-       in (BlockResolved
-            { blockResSelector = selToBuilder
-            , blockResAttrs    =        
-                (concatMap (either (:[]) mixinAttrs) attrsAndMixins)
-                ++ (concatMap mixinAttrs $mixinsE)
-            } :)
+       in ( BlockResolved
+            { brSelectors = selToBuilder
+            , brAttrs     = concatMap (either (:[]) mixinAttrs) attrsAndMixins
+            }:)
           . foldr (.) id $(listE $ map subGo subblocks)
           . (fmap
                 (runtimePrependSelector selToBuilder)
                 (concatMap (either (const []) mixinBlocks) attrsAndMixins) ++)
-          . (fmap
-                (runtimePrependSelector selToBuilder)
-                (concatMap mixinBlocks $mixinsE) ++)
     |]
   where
-    mixinsE :: Q Exp
-    mixinsE = pure $ ListE $ map (derefToExp []) mixins
     subGo :: (HasLeadingSpace, Block 'Unresolved) -> Q Exp
-    subGo (hls, BlockUnresolved sel' b c d) =
+    subGo (hls, BlockUnresolved sel' b c) =
         let sel'' = combineSelectors hls sel sel'
-         in blockToCss r scope $ BlockUnresolved sel'' b c d
+         in blockToCss r scope $ BlockUnresolved sel'' b c
 
-processAttrsAndDerefs :: Name -> Scope -> [Either (Attr 'Unresolved) Deref] -> Q Exp
+
+processAttrsAndDerefs ::
+     Name
+  -> Scope
+  -> [Either (Attr 'Unresolved) Deref]
+  -> Q Exp -- ^ Either (Attr 'Resolved) Mixin
 processAttrsAndDerefs r scope props = listE $ map go props
   where
     go (Right deref) = pure $ ConE 'Right `AppE` (derefToExp [] deref)
@@ -569,7 +565,7 @@ liftBuilder b = [|fromText $ pack $(lift $ TL.unpack $ toLazyText b)|]
 instance Lift (Block a) where
   lift = \case
     BlockResolved a b -> [|BlockResolved $(liftBuilder a) b|]
-    BlockUnresolved a b c d -> [|BlockUnresolved a b c d|]
+    BlockUnresolved a b c -> [|BlockUnresolved a b c|]
 #if MIN_VERSION_template_haskell(2,17,0)
   liftTyped = unsafeCodeCoerce . lift
 #elif MIN_VERSION_template_haskell(2,16,0)

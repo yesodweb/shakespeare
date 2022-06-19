@@ -111,18 +111,16 @@ parseBlock order = do
     _ <- char '{'
     whiteSpace
     pairsBlocks <- parsePairsBlocks order id
-    let (attrs, blocks, mixins) = case order of
-          Unordered -> partitionPBs  pairsBlocks
-          Ordered   -> partitionPBs' pairsBlocks
+    let (attrs, blocks) = partitionPBs order pairsBlocks
     whiteSpace
-    return $ BlockUnresolved sel attrs (map detectAmp blocks) mixins
+    return $ BlockUnresolved sel attrs (map detectAmp blocks)
 
 -- | Looks for an & at the beginning of a selector and, if present, indicates
 -- that we should not have a leading space. Otherwise, we should have the
 -- leading space.
 detectAmp :: Block 'Unresolved -> (Bool, Block 'Unresolved)
-detectAmp (BlockUnresolved (sel) b c d) =
-    (hls, BlockUnresolved sel' b c d)
+detectAmp (BlockUnresolved (sel) b c) =
+    (hls, BlockUnresolved sel' b c)
   where
     (hls, sel') =
         case sel of
@@ -130,29 +128,21 @@ detectAmp (BlockUnresolved (sel) b c d) =
             (ContentRaw ('&':s):rest):others -> (False, (ContentRaw s : rest) : others)
             _ -> (True, sel)
 
--- | This function implementation does not keep the order
--- of attributes and mixins and is used in legacy parsers:
--- 'cassius', 'cassiusFile', 'lucius', 'luciusFile' etc.
--- To maintain attributes and mixins ordering, use 'partitionPBs'.
-partitionPBs :: [PairBlock]
-              -> ([Either (Attr 'Unresolved) Deref], [Block 'Unresolved], [Deref])
-partitionPBs =
-    go id id id
+partitionPBs ::
+     Order
+  -> [PairBlock]
+  -> ([Either (Attr 'Unresolved) Deref], [Block 'Unresolved])
+partitionPBs order = go id id id
   where
-    go a b c [] = (a [], b [], c [])
+    -- We append the unordered legacy mixins 'c' to the end of the ordered list 'a'
+    go a b c [] = (a $ c [], b [])
     go a b c (PBAttr x:xs) = go (a . ((Left x):)) b c xs
     go a b c (PBBlock x:xs) = go a (b . (x:)) c xs
-    go a b c (PBMixin x:xs) = go a b (c . (x:)) xs
-
-partitionPBs' :: [PairBlock]
-             -> ([Either (Attr 'Unresolved) Deref], [Block 'Unresolved], [Deref])
-partitionPBs' =
-    go id id
-  where
-    go a b [] = (a [], b [], [])
-    go a b (PBAttr x:xs) = go (a . ((Left x):)) b xs
-    go a b (PBMixin x:xs) = go (a . ((Right x):)) b xs
-    go a b (PBBlock x:xs) = go a (b . (x:)) xs
+    go a b c (PBMixin x:xs) = case order of
+      -- If we are interested in order, then we collect attributes and mixins in one list 'a'.
+      Ordered   -> go (a . ((Right x):)) b c xs
+      -- Otherwise (legacy style) we collect mixins in a separate list 'c'.
+      Unordered -> go a b (c . (Right x:)) xs
 
 parseSelector :: Parser [Contents]
 parseSelector =
