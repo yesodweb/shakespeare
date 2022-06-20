@@ -5,6 +5,20 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 
+-- | This module is the twin brother of module Text.Cassius.
+-- The difference is that these parsers preserv the given order of attributes and mixin blocks.
+--
+-- > let bams = [cassiusMixin|
+-- >               bam1:bam2
+-- >               ^{bins}
+-- >               bam3:bam4
+-- >            |] :: Mixin
+-- >     bins = [cassiusMixin|
+-- >               bin1:bin2
+-- >            |] :: Mixin
+-- >  in renderCss ([Text.Ordered.lucius|foo{bar1:bar2;^{bams};bar3:bar4;}|] undefined)
+-- > "foo{bar1:bar2;bam1:bam2;bin1:bin2;bam3:bam4;bar3:bar4}"
+
 module Text.Cassius.Ordered
     ( -- * Datatypes
       Css
