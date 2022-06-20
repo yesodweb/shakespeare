@@ -7,7 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
-module Text.Lucius
+module Text.Lucius.Ordered
     ( -- * Parsing
       lucius
     , luciusFile
@@ -63,42 +63,43 @@ import Text.Internal.Css
 --
 -- >>> renderCss ([lucius|foo{bar:baz}|] undefined)
 -- "foo{bar:baz}"
+-- @since 2.0.30
 lucius :: QuasiQuoter
-lucius = luciusWithOrder Unordered
+lucius = luciusWithOrder Ordered
 
+-- | @since 2.0.30
 luciusFile :: FilePath -> Q Exp
-luciusFile = luciusFileWithOrd Unordered
+luciusFile = luciusFileWithOrd Ordered
 
+-- | @since 2.0.30
 luciusFileDebug :: FilePath -> Q Exp
-luciusFileDebug = luciusFileDebugWithOrder Unordered
+luciusFileDebug = luciusFileDebugWithOrder Ordered
 
+-- | @since 2.0.30
 luciusFileReload :: FilePath -> Q Exp
 luciusFileReload = luciusFileDebug
 
-
+-- | @since 2.0.30
 luciusRT' :: TL.Text
-          -> Either String ([(Text, Text)] -> Either String [TopLevel 'Resolved])
-luciusRT' = luciusRTWithOrder' Unordered
+          -> Either String ([(Text, Text)]
+          -> Either String [TopLevel 'Resolved])
+luciusRT' = luciusRTWithOrder' Ordered
 
+-- | @since 2.0.30
 luciusRT :: TL.Text -> [(Text, Text)] -> Either String TL.Text
-luciusRT = luciusRTWithOrder Unordered
+luciusRT = luciusRTWithOrder Ordered
 
-
--- | Runtime Lucius with mixin support.
---
--- Since 1.0.6
+-- | @since 2.0.30
 luciusRTMixin :: TL.Text -- ^ template
               -> Bool -- ^ minify?
               -> [(Text, RTValue)] -- ^ scope
               -> Either String TL.Text
-luciusRTMixin = luciusRTMixinWithOrder Unordered
+luciusRTMixin = luciusRTMixinWithOrder Ordered
 
--- | Same as 'luciusRT', but output has no added whitespace.
---
--- Since 1.0.3
+-- | @since 2.0.30
 luciusRTMinified :: TL.Text -> [(Text, Text)] -> Either String TL.Text
-luciusRTMinified = luciusRTMinifiedWithOrder Unordered
+luciusRTMinified = luciusRTMinifiedWithOrder Ordered
 
+-- | @since 2.0.30
 luciusMixin :: QuasiQuoter
-luciusMixin = luciusMixinWithOrder Unordered
-
+luciusMixin = luciusMixinWithOrder Ordered

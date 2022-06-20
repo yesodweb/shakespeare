@@ -65,12 +65,16 @@ library
                      Text.Hamlet.RT
                      Text.Hamlet.Runtime
                      Text.Lucius
+                     Text.Lucius.Ordered
                      Text.Cassius
+                     Text.Cassius.Ordered
                      Text.Shakespeare.Base
                      Text.Shakespeare
                      Text.TypeScript
+                     Text.Internal.Cassius
                      Text.Internal.Css
                      Text.Internal.CssCommon
+                     Text.Internal.Lucius
     other-modules:   Text.Hamlet.Parse
                      Text.MkSizeType
                      Text.IndentToBrace
