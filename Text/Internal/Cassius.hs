@@ -1,9 +1,8 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Internal.Cassius (i2bMixin) where
 
-import Data.Text.Lazy qualified as TL
+import qualified Data.Text.Lazy as TL
 import Text.IndentToBrace (i2b)
 
 i2bMixin :: String -> String

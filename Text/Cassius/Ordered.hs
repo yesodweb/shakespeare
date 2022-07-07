@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
@@ -62,7 +61,7 @@ import Text.Internal.Cassius (i2bMixin)
 import Text.Internal.Css
 import Text.Internal.CssCommon
 import Text.Internal.Lucius (parseTopLevels)
-import Text.Lucius.Ordered qualified as Lucius.Ordered
+import qualified Text.Lucius.Ordered as Lucius.Ordered
 import Text.Shakespeare (VarType)
 import Text.Shakespeare.Base
 
