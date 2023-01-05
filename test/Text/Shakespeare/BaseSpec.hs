@@ -33,6 +33,25 @@ spec = do
             (DerefBranch (DerefIdent (Ident "+")) (DerefIdent (Ident "a")))
             (DerefIdent (Ident "b"))))
 
+  it "parseDeref parse expressions with record dot" $ do
+    runParser parseDeref () "" "x.y" `shouldBe`
+      Right (DerefGetField (DerefIdent (Ident "x")) "y")
+
+  it "parseDeref parse expressions with multiple record dots" $ do
+    runParser parseDeref () "" "x.y.z" `shouldBe`
+      Right (DerefGetField (DerefGetField (DerefIdent (Ident "x")) "y") "z")
+
+  it "parseDeref dot surrounded by whitespace" $ do
+    runParser parseDeref () "" "x . y" `shouldBe`
+      Right
+        (DerefBranch
+          (DerefBranch (DerefIdent (Ident ".")) (DerefIdent (Ident "x")))
+          (DerefIdent (Ident "y")))
+
+  it "parseDeref parse expressions with parenthesized record dot" $ do
+    runParser parseDeref () "" "(x).y" `shouldBe`
+      Right (DerefGetField (DerefIdent (Ident "x")) "y")
+
   it "preFilter off" $ do
     preFilterN defaultShakespeareSettings template
       `shouldReturn` template

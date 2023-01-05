@@ -1,6 +1,9 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Text.Shakespeare.TextSpec (spec) where
+
+import HamletTestTypes (ARecord(..))
 
 import Test.HUnit hiding (Test)
 import Test.Hspec
@@ -122,6 +125,12 @@ spec = do
       let val = 2 :: Int
       let bld = [builderQQ|#{ show val }|]
       simpT "2" $ toLazyText [builderQQ|^{ bld }|]
+    
+#if MIN_VERSION_template_haskell(2,18,0)
+    it "record dot" $ do
+      let z = ARecord 22 True
+      telper "221" [text|#{z.field1}#{fromEnum z.field2}|]
+#endif
 
 simpT :: String -> TL.Text -> Assertion
 simpT a b = nocrlf (pack a) @=? nocrlf (TL.toStrict b)
