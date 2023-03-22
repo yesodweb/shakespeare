@@ -1,6 +1,6 @@
 # ChangeLog for shakespeare
 
-### 2.1.30
+### 2.1.0
 
 * Add `OverloadedRecordDot`-style record access in expressions
 
