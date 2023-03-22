@@ -56,6 +56,10 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefList [Deref]
            | DerefTuple [Deref]
            | DerefGetField Deref String
+           -- ^ Record field access via @OverloadedRecordDot@. 'derefToExp' only supports this
+           -- feature on compilers which support @OverloadedRecordDot@.
+           --
+           -- @since 2.1.0
     deriving (Show, Eq, Read, Data, Typeable, Ord, Lift)
 
 derefParens, derefCurlyBrackets :: UserParser a Deref
