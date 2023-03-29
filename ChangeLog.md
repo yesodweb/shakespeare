@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.1.0
+
+* Add `OverloadedRecordDot`-style record access in expressions
+
 ### 2.0.30
 
 * Add `Text.Cassius.Ordered` and `Text.Lucius.Ordered` modules with parsers to maintain order between attributes and mixin blocks.

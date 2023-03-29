@@ -55,6 +55,11 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefBranch Deref Deref
            | DerefList [Deref]
            | DerefTuple [Deref]
+           | DerefGetField Deref String
+           -- ^ Record field access via @OverloadedRecordDot@. 'derefToExp' only supports this
+           -- feature on compilers which support @OverloadedRecordDot@.
+           --
+           -- @since 2.1.0
     deriving (Show, Eq, Read, Data, Typeable, Ord, Lift)
 
 derefParens, derefCurlyBrackets :: UserParser a Deref
@@ -105,7 +110,15 @@ parseDeref = do
         ys <- many1 $ try $ delim >> derefSingle
         skipMany $ oneOf " \t"
         return $ DerefBranch (DerefBranch op' $ foldl1 DerefBranch $ x : xs) (foldl1 DerefBranch ys)
-    derefSingle = derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> strLit <|> ident
+    derefSingle = do
+        x <- derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> strLit <|> ident
+        fields <- many recordDot
+        pure $ foldl DerefGetField x fields
+    recordDot = do
+        _ <- char '.'
+        x <- lower <|> char '_'
+        xs <- many (alphaNum <|> char '_' <|> char '\'')
+        pure (x : xs)
     deref' lhs =
         dollar <|> derefSingle'
                <|> return (foldl1 DerefBranch $ lhs [])
@@ -177,6 +190,12 @@ derefToExp s (DerefTuple ds) = TupE $
                                map Just $
 #endif
                                map (derefToExp s) ds
+derefToExp s (DerefGetField x f) =
+#if MIN_VERSION_template_haskell(2,18,0)
+    GetFieldE (derefToExp s x) f
+#else
+    error "Your compiler doesn't support OverloadedRecordDot"
+#endif
 
 -- FIXME shouldn't we use something besides a list here?
 flattenDeref :: Deref -> Maybe [String]
