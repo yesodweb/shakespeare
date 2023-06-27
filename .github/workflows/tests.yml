@@ -17,8 +17,12 @@ jobs:
         stack_args:
           - --resolver=nightly
           - --resolver=lts-18
+          - --resolver=lts-22
+          - --resolver=lts-20
+          - --resolver=lts-19
           - --resolver=lts-16
           - --resolver=lts-14
+          - --resolver=lts-12
           - --stack-yaml=stack-ghc-9.2.yaml
         exclude:
           - os: windows-latest
