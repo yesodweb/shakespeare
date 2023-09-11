@@ -79,7 +79,7 @@ data Line = LineForall Deref Binding
 
 parseLines :: HamletSettings -> String -> Result (Maybe NewlineStyle, HamletSettings, [(Int, Line)])
 parseLines set s =
-    case parse parser s s of
+    case parse parser "[Hamlet input]" s of
         Left e -> Error $ show e
         Right x -> Ok x
   where
