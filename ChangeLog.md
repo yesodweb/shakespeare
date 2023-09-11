@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.1.0.1
+
+* Fix 100⨯ slowdown on parsec-3.1.15 [#277](https://github.com/yesodweb/shakespeare/pull/277)
+
 ### 2.1.0
 
 * Add `OverloadedRecordDot`-style record access in expressions
