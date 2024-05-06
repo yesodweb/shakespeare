@@ -33,6 +33,25 @@ spec = do
             (DerefBranch (DerefIdent (Ident "+")) (DerefIdent (Ident "a")))
             (DerefIdent (Ident "b"))))
 
+  it "parseDeref parse single type applications" $ do
+    runParser parseDeref () "" "x @y" `shouldBe`
+      Right
+        (DerefBranch
+          (DerefIdent (Ident "x"))
+          (DerefType "y"))
+  it "parseDeref parse unit type applications" $ do
+    runParser parseDeref () "" "x @()" `shouldBe`
+      Right
+        (DerefBranch
+          (DerefIdent (Ident "x"))
+          (DerefType "()"))
+  it "parseDeref parse compound type applications" $ do
+    runParser parseDeref () "" "x @(Maybe String)" `shouldBe`
+      Right
+        (DerefBranch
+          (DerefIdent (Ident "x"))
+          (DerefType "Maybe String"))
+
   it "parseDeref parse expressions with record dot" $ do
     runParser parseDeref () "" "x.y" `shouldBe`
       Right (DerefGetField (DerefIdent (Ident "x")) "y")
@@ -106,4 +125,3 @@ spec = do
 
     eShowErrors :: Either ParseError c -> c
     eShowErrors = either (error . show) id
-
