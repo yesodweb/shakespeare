@@ -106,9 +106,7 @@ parseDeref = do
     derefInfix x = try $ do
         _ <- delim
         xs <- many $ try $ derefSingle >>= \x' -> delim >> return x'
-        op <-
-            (try $ liftA2 (:) (satisfy isOperatorChar) (many (satisfy isOperatorChar <|> char '@'))
-                <|> liftA2 (:) (char '@') (many1 (satisfy isOperatorChar <|> char '@'))) <?> "operator"
+        op <- (many1 (satisfy isOperatorChar) <* lookAhead (oneOf " \t")) <?> "operator"
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
         let op' = DerefIdent $ Ident op
@@ -121,7 +119,7 @@ parseDeref = do
         pure $ foldl DerefGetField x fields
     tyNameOrVar = liftA2 (:) (alphaNum <|> char '\'') (many (alphaNum <|> char '_' <|> char '\''))
     derefType = try $ do
-        _ <- char '@'
+        _ <- char '@' >> notFollowedBy (oneOf " \t")
         x <-
             try tyNameOrVar
                 <|> try (string "()")

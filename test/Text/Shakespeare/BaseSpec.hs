@@ -51,6 +51,12 @@ spec = do
         (DerefBranch
           (DerefIdent (Ident "x"))
           (DerefType "Maybe String"))
+  it "parseDeref parse single @ as operator" $ do
+    runParser parseDeref () "" "x @ y" `shouldBe`
+      Right
+        (DerefBranch
+          (DerefBranch (DerefIdent (Ident "@")) (DerefIdent (Ident "x")))
+          (DerefIdent (Ident "y")))
 
   it "parseDeref parse expressions with record dot" $ do
     runParser parseDeref () "" "x.y" `shouldBe`
