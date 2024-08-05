@@ -43,6 +43,7 @@ import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
 import Data.Maybe (mapMaybe)
 import Data.List.NonEmpty (nonEmpty, NonEmpty ((:|)))
+import Control.Applicative (liftA2)
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable, Ord, Lift)
