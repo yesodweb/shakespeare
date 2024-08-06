@@ -29,7 +29,7 @@ module Text.Shakespeare.Base
 
 import Language.Haskell.TH.Syntax hiding (makeRelativeToProject)
 import Language.Haskell.TH (appE)
-import Data.Char (isUpper, isSymbol, isPunctuation, isAscii, isLower, isNumber)
+import Data.Char (isUpper, isSymbol, isPunctuation, isAscii)
 import Data.FileEmbed (makeRelativeToProject)
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Prim (Parsec)
@@ -41,8 +41,6 @@ import qualified Data.Text.Lazy as TL
 import qualified System.IO as SIO
 import qualified Data.Text.Lazy.IO as TIO
 import Control.Monad (when)
-import Data.Maybe (mapMaybe)
-import Data.List.NonEmpty (nonEmpty, NonEmpty ((:|)))
 
 newtype Ident = Ident String
     deriving (Show, Eq, Read, Data, Typeable, Ord, Lift)
@@ -57,7 +55,6 @@ data Deref = DerefModulesIdent [String] Ident
            | DerefBranch Deref Deref
            | DerefList [Deref]
            | DerefTuple [Deref]
-           | DerefType String
            | DerefGetField Deref String
            -- ^ Record field access via @OverloadedRecordDot@. 'derefToExp' only supports this
            -- feature on compilers which support @OverloadedRecordDot@.
@@ -96,7 +93,7 @@ parseDeref = do
 
     -- See: http://www.haskell.org/onlinereport/haskell2010/haskellch2.html#x7-160002.2
     isOperatorChar c
-        | isAscii c = c `elem` "!#$%&*+./<=>?\\^|-~:"
+        | isAscii c = c `elem` "!#$%&*+./<=>?@\\^|-~:"
         | otherwise = isSymbol c || isPunctuation c
 
     derefPrefix x = do
@@ -106,7 +103,7 @@ parseDeref = do
     derefInfix x = try $ do
         _ <- delim
         xs <- many $ try $ derefSingle >>= \x' -> delim >> return x'
-        op <- (many1 (satisfy isOperatorChar) <* lookAhead (oneOf " \t")) <?> "operator"
+        op <- many1 (satisfy isOperatorChar) <?> "operator"
         -- special handling for $, which we don't deal with
         when (op == "$") $ fail "don't handle $"
         let op' = DerefIdent $ Ident op
@@ -114,21 +111,9 @@ parseDeref = do
         skipMany $ oneOf " \t"
         return $ DerefBranch (DerefBranch op' $ foldl1 DerefBranch $ x : xs) (foldl1 DerefBranch ys)
     derefSingle = do
-        x <- derefType <|> derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> fmap DerefString strLit <|> ident
+        x <- derefTuple <|> derefList <|> derefOp <|> derefParens <|> numeric <|> strLit <|> ident
         fields <- many recordDot
         pure $ foldl DerefGetField x fields
-    tyNameOrVar = liftA2 (:) (alphaNum <|> char '\'') (many (alphaNum <|> char '_' <|> char '\''))
-    derefType = try $ do
-        _ <- char '@' >> notFollowedBy (oneOf " \t")
-        x <-
-            try tyNameOrVar
-                <|> try (string "()")
-                <|> try strLit
-                <|> between
-                        (char '(')
-                        (char ')')
-                        (unwords <$> many ((try tyNameOrVar <|> try strLitQuoted) <* many (oneOf " \t")))
-        pure $ DerefType x
     recordDot = do
         _ <- char '.'
         x <- lower <|> char '_'
@@ -154,8 +139,11 @@ parseDeref = do
             Nothing -> DerefIntegral $ read' "Integral" $ n ++ x
             Just z -> DerefRational $ toRational
                        (read' "Rational" $ n ++ x ++ '.' : z :: Double)
-    strLitQuoted = liftA2 (:) (char '"') (many quotedChar) <> fmap pure (char '"')
-    strLit = char '"' *> many quotedChar <* char '"'
+    strLit = do
+        _ <- char '"'
+        chars <- many quotedChar
+        _ <- char '"'
+        return $ DerefString chars
     quotedChar = (char '\\' >> escapedChar) <|> noneOf "\""
     escapedChar =
         let cecs = [('n', '\n'),  ('r', '\r'), ('b', '\b'), ('t', '\t')
@@ -185,31 +173,8 @@ expType :: Ident -> Name -> Exp
 expType (Ident (c:_)) = if isUpper c || c == ':' then ConE else VarE
 expType (Ident "") = error "Bad Ident"
 
-strType :: String -> Type
-strType t0 = case t0 of
-    "" -> ConT ''()
-    hd : tl
-        | all isNumber t0 -> LitT (NumTyLit (read t0))
-        | isLower hd -> VarT (mkName (hd : tl))
-        | otherwise -> ConT (mkName (hd : tl))
-
-strTypeWords :: String -> Type
-strTypeWords t = case words t of
-    [] -> ConT ''()
-    [ty] -> strType ty
-    ts@(ty : tys)
-        | not (null ty)
-            && head ty == '\"'
-            && not (null (last ts))
-            && last (last ts) == '\"' ->
-                LitT (StrTyLit t)
-        | otherwise -> foldl AppT (strType ty) (map strType tys)
-
 derefToExp :: Scope -> Deref -> Exp
-derefToExp s (DerefBranch x y) = case y of
-    DerefBranch (DerefType t) y' -> derefToExp s x `AppTypeE` strTypeWords t `AppE` derefToExp s y'
-    DerefType t -> derefToExp s x `AppTypeE` strTypeWords t
-    _ -> derefToExp s x `AppE` derefToExp s y
+derefToExp s (DerefBranch x y) = derefToExp s x `AppE` derefToExp s y
 derefToExp _ (DerefModulesIdent mods i@(Ident s)) =
     expType i $ Name (mkOccName s) (NameQ $ mkModName $ intercalate "." mods)
 derefToExp scope (DerefIdent i@(Ident s)) =
@@ -219,7 +184,6 @@ derefToExp scope (DerefIdent i@(Ident s)) =
 derefToExp _ (DerefIntegral i) = LitE $ IntegerL i
 derefToExp _ (DerefRational r) = LitE $ RationalL r
 derefToExp _ (DerefString s) = LitE $ StringL s
-derefToExp _ (DerefType _) = error "exposed type application"
 derefToExp s (DerefList ds) = ListE $ map (derefToExp s) ds
 derefToExp s (DerefTuple ds) = TupE $
 #if MIN_VERSION_template_haskell(2,16,0)
