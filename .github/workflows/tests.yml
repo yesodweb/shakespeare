@@ -14,34 +14,29 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        stack_args:
-          - --resolver=nightly
-          - --resolver=lts-21
-          - --resolver=lts-20
-          - --resolver=lts-19
-          - --resolver=lts-18
-          - --resolver=lts-16
-          - --resolver=lts-14
-          - --resolver=lts-12
-          - --stack-yaml=stack-ghc-9.2.yaml
-        exclude:
-          - os: windows-latest
-            stack_args: "--stack-yaml=stack-ghc-9.2.yaml"
+        args:
+        - "--resolver lts-22"
+        - "--resolver lts-21"
+        - "--resolver lts-20"
 
     steps:
       - name: Clone project
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Install stack if needed
+        shell: bash
+        run: |
+            set -ex
+            if [[ "${{ matrix.os }}" == "macos-latest" ]]
+            then
+                # macos-latest does not include Haskell tools as of 2024-05-06.
+              curl -sSL https://get.haskellstack.org/ | sh
+            fi
 
       - name: Build and run tests
         shell: bash
         run: |
             set -ex
-            stack upgrade
             stack --version
-            if [[ "${{ runner.os }}" = 'Windows' ]]
-            then
-              # Looks like a bug in Stack, this shouldn't break things
-              ls C:/ProgramData/Chocolatey/bin/
-              rm C:/ProgramData/Chocolatey/bin/ghc*
-            fi
-            stack test --fast --no-terminal ${{ matrix.stack_args }}
+            stack test --fast --no-terminal ${{ matrix.args }}
+

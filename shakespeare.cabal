@@ -1,5 +1,5 @@
 name:            shakespeare
-version:         2.1.0
+version:         2.1.2
 license:         MIT
 license-file:    LICENSE
 author:          Michael Snoyman <michael@snoyman.com>
@@ -146,8 +146,7 @@ test-suite test
                  , blaze-markup
                  , blaze-html
                  , exceptions
-
-
+ 
 source-repository head
   type:     git
   location: https://github.com/yesodweb/shakespeare.git

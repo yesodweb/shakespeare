@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
@@ -62,7 +63,6 @@ module Text.Shakespeare.I18N
     ) where
 
 import Language.Haskell.TH.Syntax hiding (makeRelativeToProject)
-import Control.Applicative ((<$>))
 import Control.Monad (filterM, forM)
 import Data.Text (Text, pack, unpack)
 import System.Directory
@@ -72,12 +72,12 @@ import Data.List (isSuffixOf, sortBy, foldl')
 import qualified Data.Map as Map
 import qualified Data.ByteString as S
 import Data.Text.Encoding (decodeUtf8)
-import Data.Char (isSpace, toLower, toUpper)
+import Data.Char (isSpace, toLower, toUpper, isLower)
 import Data.Ord (comparing)
 import Text.Shakespeare.Base (Deref (..), Ident (..), parseHash, derefToExp)
-import Text.ParserCombinators.Parsec (parse, many, eof, many1, noneOf, (<|>))
+import Text.ParserCombinators.Parsec (parse, many, eof, many1, noneOf, (<|>), 
+  string, spaces, char, option, alphaNum, sepBy1, try)
 import Control.Arrow ((***))
-import Data.Monoid (mempty, mappend)
 import qualified Data.Text as T
 import Data.String (IsString (fromString))
 
@@ -165,22 +165,79 @@ mkMessageCommon genType prefix postfix master dt rawFolder lang = do
             Nothing -> error $ "Did not find main language file: " ++ unpack lang
             Just def -> toSDefs def
     mapM_ (checkDef sdef) $ map snd contents'
-    let mname = mkName $ dt ++ postfix
-    c1 <- fmap concat $ mapM (toClauses prefix dt) contents'
-    c2 <- mapM (sToClause prefix dt) sdef
+    let mname = mkName $ dt2 ++ postfix 
+    c1 <- fmap concat $ mapM (toClauses prefix dt2 ) contents'  
+    c2 <- mapM (sToClause prefix dt2) sdef 
     c3 <- defClause
     return $
      ( if genType
-       then ((DataD [] mname [] Nothing (map (toCon dt) sdef) []) :)
+       then ((DataD [] mname [] Nothing (map (toCon dt2) sdef) []) :)  
        else id)
         [ instanceD
-            []
-            (ConT ''RenderMessage `AppT` (ConT $ mkName master) `AppT` ConT mname)
+            cxt  -- Here the parsed context should be added, otherwise []
+            (ConT ''RenderMessage `AppT` (if ' ' `elem` master' 
+               then let (ts, us) = break (== ' ') . 
+                          filter (\x -> x /= '(' && x /= ')') $ master' in 
+                    let us1 = filter (/= ' ') us in ParensT (ConT (mkName ts) 
+                          `AppT` VarT (mkName us1))  else ConT $ 
+                          mkName master') `AppT` ConT mname)
             [ FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
             ]
         ]
+           where (dt1, cxt0) = case (parse parseName "" dt) of
+                                Left err  -> error $ show err
+                                Right x -> x
+                 dt2 = concat . take 1 $ dt1
+                 master' | cxt0 == [] = master
+                         | otherwise = (\xss -> if length xss > 1 
+                                                  then '(':unwords xss ++ ")" 
+                                                  else concat . take 1 $ xss) . fst $  
+                                         (case parse parseName "" master of
+                                            Left err  -> error $ show err
+                                            Right x -> x)
+                 cxt = fmap (\(c:rest) -> foldl' (\acc v -> acc `AppT` nameToType v) 
+                                             (ConT $ mkName c) rest) cxt0
 
-toClauses :: String -> String -> (Lang, [Def]) -> Q [Clause]
+                 nameToType :: String -> Type  -- Is taken from the 
+-- https://hackage.haskell.org/package/yesod-core-1.6.26.0/docs/src/Yesod.Routes.Parse.html#nameToType
+                 nameToType t = if isTvar t
+                                then VarT $ mkName t
+                                else ConT $ mkName t
+
+                 isTvar :: String -> Bool  -- Is taken from the 
+-- https://hackage.haskell.org/package/yesod-core-1.6.26.0/docs/src/Yesod.Routes.Parse.html#isTvar
+                 isTvar (h:_) = isLower h
+                 isTvar _     = False
+
+                 parseName = do
+                      cxt' <- option [] parseContext
+                      args <- many parseWord
+                      spaces
+                      eof
+                      return (args, cxt')
+
+                 parseWord = do
+                      spaces
+                      many1 alphaNum
+
+                 parseContext = try $ do
+                      cxts <- parseParen parseContexts
+                      spaces
+                      _ <- string "=>"
+                      return cxts
+
+                 parseParen p = do
+                      spaces
+                      _ <- try ( char '(' )
+                      r <- p
+                      spaces
+                      _ <- try ( char ')' )
+                      return r
+
+                 parseContexts =
+                      sepBy1 (many1 parseWord) (spaces >> char ',' >> return ())
+
+toClauses :: String -> String -> (Lang, [Def]) -> Q [Clause] 
 toClauses prefix dt (lang, defs) =
     mapM go defs
   where
@@ -261,7 +318,7 @@ toCon dt (SDef c vs _) =
   where
     go (n, t) = (varName dt n, notStrict, ConT $ mkName t)
 
-varName :: String -> String -> Name
+varName :: String -> String -> Name  
 varName a y =
     mkName $ concat [lower a, "Message", upper y]
   where
@@ -358,8 +415,7 @@ loadLangFile :: FilePath -> IO [Def]
 loadLangFile file = do
     bs <- S.readFile file
     let s = unpack $ decodeUtf8 bs
-    defs <- fmap catMaybes $ mapM (parseDef . T.unpack . T.strip . T.pack) $ lines s
-    return defs
+    fmap catMaybes $ mapM (parseDef . T.unpack . T.strip . T.pack) $ lines s
 
 parseDef :: String -> IO (Maybe Def)
 parseDef "" = return Nothing
