@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.1.2
+
+* Add support for context parsing in mkMessage function and related ones [#282](https://github.com/yesodweb/shakespeare/issues/282). Added support for building with LTS versions of 22, 21, 20 and removed older ones.
+
 ### 2.1.0
 
 * Add `OverloadedRecordDot`-style record access in expressions
