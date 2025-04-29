@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### Unreleased
+
+* Internal change to remove record constructor for message i18n [#290](https://github.com/yesodweb/shakespeare/pull/290)
+
 ### 2.1.5
 
 * Add better support for `mkMessage`ing data types with params.[#295](https://github.com/yesodweb/shakespeare/pull/295)
