@@ -4,7 +4,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
 -----------------------------------------------------------------------------
@@ -124,8 +123,8 @@ mkMessage :: String   -- ^ base name to use for translation type
           -> FilePath -- ^ subdirectory which contains the translation files
           -> Lang     -- ^ default translation language
           -> Q [Dec]
-mkMessage dt folder lang =
-    mkMessageCommon True "Msg" "Message" dt dt folder lang
+mkMessage dt =
+    mkMessageCommon True "Msg" "Message" dt dt
 
 
 -- | create 'RenderMessage' instance for an existing data-type
@@ -134,7 +133,7 @@ mkMessageFor :: String     -- ^ master translation data type
              -> FilePath   -- ^ path to translation folder
              -> Lang       -- ^ default language
              -> Q [Dec]
-mkMessageFor master dt folder lang = mkMessageCommon False "" "" master dt folder lang
+mkMessageFor = mkMessageCommon False "" ""
 
 -- | create an additional set of translations for a type created by `mkMessage`
 mkMessageVariant :: String     -- ^ master translation data type
@@ -142,7 +141,7 @@ mkMessageVariant :: String     -- ^ master translation data type
                  -> FilePath   -- ^ path to translation folder
                  -> Lang       -- ^ default language
                  -> Q [Dec]
-mkMessageVariant master dt folder lang = mkMessageCommon False "Msg" "Message" master dt folder lang
+mkMessageVariant = mkMessageCommon False "Msg" "Message"
 
 -- |used by 'mkMessage' and 'mkMessageFor' to generate a 'RenderMessage' and possibly a message data type
 mkMessageCommon :: Bool      -- ^ generate a new datatype from the constructors found in the .msg files
@@ -157,16 +156,16 @@ mkMessageCommon genType prefix postfix master dt rawFolder lang = do
     folder <- makeRelativeToProject rawFolder
     files <- qRunIO $ getDirectoryContents folder
     let files' = filter (`notElem` [".", ".."]) files
-    (filess, contents) <- qRunIO $ fmap (unzip . catMaybes) $ mapM (loadLang folder) files'
+    (filess, contents) <- qRunIO $ unzip . catMaybes <$> mapM (loadLang folder) files'
     (mapM_.mapM_) addDependentFile filess
     let contents' = Map.toList $ Map.fromListWith (++) contents
     sdef <-
         case lookup lang contents' of
             Nothing -> error $ "Did not find main language file: " ++ unpack lang
             Just def -> toSDefs def
-    mapM_ (checkDef sdef) $ map snd contents'
+    mapM_ (checkDef sdef . snd) contents'
     let mname = mkName $ dt2 ++ postfix
-    c1 <- fmap concat $ mapM (toClauses prefix dt2 ) contents'
+    c1 <- concat <$> mapM (toClauses prefix dt2 ) contents'
     c2 <- mapM (sToClause prefix dt2) sdef
     c3 <- defClause
     return $
@@ -190,11 +189,11 @@ mkMessageCommon genType prefix postfix master dt rawFolder lang = do
             [ FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
             ]
         ]
-           where (dt1, cxt0) = case (parse parseName "" dt) of
+           where (dt1, cxt0) = case parse parseName "" dt of
                                 Left err  -> error $ show err
                                 Right x -> x
                  dt2 = concat . take 1 $ dt1
-                 master' | cxt0 == [] = master
+                 master' | null cxt0 = master
                          | otherwise = (\xss -> if length xss > 1 
                                                   then '(':unwords xss ++ ")" 
                                                   else concat . take 1 $ xss) . fst $  
@@ -287,10 +286,7 @@ mkBody dt cs vs ct = do
     fixDeref vp (DerefIdent (Ident i)) = DerefIdent $ Ident $ fixIdent vp i
     fixDeref vp (DerefBranch a b) = DerefBranch (fixDeref vp a) (fixDeref vp b)
     fixDeref _ d = d
-    fixIdent vp i =
-        case lookup i vp of
-            Nothing -> i
-            Just y -> nameBase y
+    fixIdent vp i = maybe i nameBase (lookup i vp)
 
 sToClause :: String -> String -> SDef -> Q Clause
 sToClause prefix dt sdef = do
