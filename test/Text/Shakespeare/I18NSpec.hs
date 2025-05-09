@@ -35,3 +35,27 @@ mkMessage "(YesodSubApp master) => SubApp master" "other-messages" "en"
 
 mkMessage "Test" "test-messages" "en"
 
+newtype SubAppNoRec master = SubAppNoRec
+  {
+     getOrderingNR :: Ordering
+  }
+
+data TestNoRec = TestNoRec
+
+instance Testable TestNoRec where
+  isTestable TestNoRec = True
+
+mkMessageOpts
+  (setConPrefix "MsgNR" $ setUseRecordCons False defMakeMessageOpts)
+  "(YesodSubApp master) => SubAppNoRec master"
+  "(YesodSubApp master) => SubAppNoRec master"
+  "other-messages"
+  "en"
+
+mkMessageOpts
+  (setConPrefix "MsgNR" $ setUseRecordCons False defMakeMessageOpts)
+  "TestNoRec"
+  "TestNoRec"
+  "test-messages"
+  "en"
+
