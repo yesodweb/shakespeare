@@ -59,6 +59,15 @@ module Text.Shakespeare.I18N
     , ToMessage (..)
     , SomeMessage (..)
     , Lang
+
+    , mkMessageOpts
+
+    , MakeMessageOpts
+    , defMakeMessageOpts
+    , setGenType
+    , setConPrefix
+    , setTypeSuffix
+    , setUseRecordCons
     ) where
 
 import Language.Haskell.TH.Syntax hiding (makeRelativeToProject)
@@ -152,7 +161,25 @@ mkMessageCommon :: Bool      -- ^ generate a new datatype from the constructors 
                 -> FilePath  -- ^ path to translation folder
                 -> Lang      -- ^ default lang
                 -> Q [Dec]
-mkMessageCommon genType prefix postfix master dt rawFolder lang = do
+mkMessageCommon genType prefix postfix =
+    mkMessageOpts opts
+    where
+    opts = defMakeMessageOpts
+        { mmGenType = genType
+        , mmConPrefix = prefix
+        , mmTypeSuffix = postfix
+        }
+
+-- | used by 'mkMessage', 'mkMessageFor' to generate a 'RenderMessage' and possibly a message data type
+--
+-- @since 2.1.6
+mkMessageOpts :: MakeMessageOpts -- ^ options
+                -> String    -- ^ base name of master datatype
+                -> String    -- ^ base name of translation datatype
+                -> FilePath  -- ^ path to translation folder
+                -> Lang      -- ^ default lang
+                -> Q [Dec]
+mkMessageOpts opts@(MkMakeMessageOpts {mmGenType = genType, mmTypeSuffix = postfix}) master dt rawFolder lang = do
     folder <- makeRelativeToProject rawFolder
     files <- qRunIO $ getDirectoryContents folder
     let files' = filter (`notElem` [".", ".."]) files
@@ -165,12 +192,12 @@ mkMessageCommon genType prefix postfix master dt rawFolder lang = do
             Just def -> toSDefs def
     mapM_ (checkDef sdef . snd) contents'
     let mname = mkName $ dt2 ++ postfix
-    c1 <- concat <$> mapM (toClauses prefix dt2 ) contents'
-    c2 <- mapM (sToClause prefix dt2) sdef
+    c1 <- concat <$> mapM (toClauses opts dt2 ) contents'
+    c2 <- mapM (sToClause opts dt2) sdef
     c3 <- defClause
     return $
      ( if genType
-       then ((DataD [] mname [] Nothing (map (toCon dt2) sdef) []) :)
+       then (DataD [] mname [] Nothing (map (toCon opts dt2) sdef) [] :)
        else id)
         [ instanceD
             cxt  -- Here the parsed context should be added, otherwise []
@@ -242,27 +269,30 @@ mkMessageCommon genType prefix postfix master dt rawFolder lang = do
                  parseContexts =
                       sepBy1 (many1 parseWord) (spaces >> char ',' >> return ())
 
-toClauses :: String -> String -> (Lang, [Def]) -> Q [Clause] 
-toClauses prefix dt (lang, defs) =
+toClauses :: MakeMessageOpts -> String -> (Lang, [Def]) -> Q [Clause] 
+toClauses opts@(MkMakeMessageOpts {mmConPrefix = prefix}) dt (lang, defs) =
     mapM go defs
   where
     go def = do
         a <- newName "lang"
-        (pat, bod) <- mkBody dt (prefix ++ constr def) (map fst $ vars def) (content def)
+        (pat, bod) <- mkBody opts dt (prefix ++ constr def) (map fst $ vars def) (content def)
         guard <- fmap NormalG [|$(return $ VarE a) == pack $(lift $ unpack lang)|]
         return $ Clause
             [WildP, conP (mkName ":") [VarP a, WildP], pat]
             (GuardedB [(guard, bod)])
             []
 
-mkBody :: String -- ^ datatype
+mkBody :: MakeMessageOpts
+       -> String -- ^ datatype
        -> String -- ^ constructor
        -> [String] -- ^ variable names
        -> [Content]
        -> Q (Pat, Exp)
-mkBody dt cs vs ct = do
+mkBody (MkMakeMessageOpts {mmUseRecordCons = useRecord}) dt cs vs ct = do
     vp <- mapM go vs
-    let pat = RecP (mkName cs) (map (varName dt *** VarP) vp)
+    let pat = if useRecord
+            then RecP (mkName cs) (map (varName dt *** VarP) vp)
+            else ConP (mkName cs) [] (map (VarP . snd) vp)
     let ct' = map (fixVars vp) ct
     pack' <- [|Data.Text.pack|]
     tomsg <- [|toMessage|]
@@ -288,9 +318,9 @@ mkBody dt cs vs ct = do
     fixDeref _ d = d
     fixIdent vp i = maybe i nameBase (lookup i vp)
 
-sToClause :: String -> String -> SDef -> Q Clause
-sToClause prefix dt sdef = do
-    (pat, bod) <- mkBody dt (prefix ++ sconstr sdef) (map fst $ svars sdef) (scontent sdef)
+sToClause :: MakeMessageOpts -> String -> SDef -> Q Clause
+sToClause opts@(MkMakeMessageOpts {mmConPrefix = prefix}) dt sdef = do
+    (pat, bod) <- mkBody opts dt (prefix ++ sconstr sdef) (map fst $ svars sdef) (scontent sdef)
     return $ Clause
         [WildP, conP (mkName "[]") [], pat]
         (NormalB bod)
@@ -314,11 +344,15 @@ conP name = ConP name []
 conP = ConP
 #endif
 
-toCon :: String -> SDef -> Con
-toCon dt (SDef c vs _) =
-    RecC (mkName $ "Msg" ++ c) $ map go vs
-  where
-    go (n, t) = (varName dt n, notStrict, ConT $ mkName t)
+toCon :: MakeMessageOpts -> String -> SDef -> Con
+toCon (MkMakeMessageOpts {mmConPrefix = prefix, mmUseRecordCons = useRecord}) dt (SDef c vs _) =
+    if useRecord
+        then RecC nm $ map goRec vs
+        else NormalC nm $ map goNorm vs
+    where
+    goRec (n, t) = (varName dt n, notStrict, ConT $ mkName t)
+    goNorm (_, t) = (notStrict, ConT $ mkName t)
+    nm = mkName $ prefix ++ c
 
 varName :: String -> String -> Name
 varName a y =
@@ -473,3 +507,59 @@ notStrict = Bang NoSourceUnpackedness NoSourceStrictness
 
 instanceD :: Cxt -> Type -> [Dec] -> Dec
 instanceD = InstanceD Nothing
+
+-- | Opaque options type for 'mkMessage'
+-- This is used to pass options to the 'mkMessage' function.
+-- The options are not exposed directly to the user, but can be set using
+-- the 'set*' functions, and the default can be made using 'defMakeMessageOpts'.
+--
+-- @since 2.1.6
+data MakeMessageOpts = MkMakeMessageOpts
+-- don't export constructor so that we can freely manipulate internals
+    { mmGenType :: Bool
+    , mmConPrefix  :: String
+    , mmTypeSuffix :: String
+    , mmUseRecordCons :: Bool
+    }
+
+-- | Default options for 'mkMessage' are:
+--   * @mmGenType@ = @True@
+--   * @mmConPrefix@ = @\"Msg\"@
+--   * @mmTypeSuffix@ = @\"Message\"@
+--   * @mmUseRecordCons@ = @True@
+--
+-- @since 2.1.6
+defMakeMessageOpts :: MakeMessageOpts
+defMakeMessageOpts = MkMakeMessageOpts
+    { mmGenType = True
+    , mmConPrefix  = "Msg"
+    , mmTypeSuffix = "Message"
+    , mmUseRecordCons = True
+    }
+
+-- | Whether to generate a new datatype from the constructors found in the .msg
+-- files
+--
+-- @since 2.1.6
+setGenType :: Bool -> MakeMessageOpts -> MakeMessageOpts
+setGenType x opts = opts { mmGenType = x }
+
+-- | Set the prefix for the constructor names
+--
+-- @since 2.1.6
+setConPrefix :: String -> MakeMessageOpts -> MakeMessageOpts
+setConPrefix x opts = opts { mmConPrefix = x }
+
+-- | Set the suffix for the datatype name
+--
+-- @since 2.1.6
+setTypeSuffix :: String -> MakeMessageOpts -> MakeMessageOpts
+setTypeSuffix x opts = opts { mmTypeSuffix = x }
+
+-- | Set whether to use record constructors or normal constructors.
+-- If you are getting partial-fields warnings you want to remove, set this to
+-- 'False'. If you want to use record syntax, set this to 'True'.
+--
+-- @since 2.1.6
+setUseRecordCons :: Bool -> MakeMessageOpts -> MakeMessageOpts
+setUseRecordCons x opts = opts { mmUseRecordCons = x }

@@ -1,8 +1,8 @@
 # ChangeLog for shakespeare
 
-### Unreleased
+### 2.1.6
 
-* Internal change to remove record constructor for message i18n [#290](https://github.com/yesodweb/shakespeare/pull/290)
+* Introduce options type for i18n, add ability to stop using record types for messages [#290](https://github.com/yesodweb/shakespeare/pull/290)
 
 ### 2.1.5
 
