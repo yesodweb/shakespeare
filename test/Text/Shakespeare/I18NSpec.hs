@@ -9,22 +9,25 @@ module Text.Shakespeare.I18NSpec
 
 import           Data.Text             (Text)
 import           Text.Shakespeare.I18N
-import           Language.Haskell.TH.Syntax
+import           Test.Hspec
 
-class Lift master => YesodSubApp master where
+class YesodSubApp master where
 
-data SubApp master
+instance YesodSubApp ()
+
+newtype SubApp master = SubApp master
+
+instance YesodSubApp (SubApp master)
 
 data Test a b
-
-spec :: Monad m => m ()
-spec = return ()
 
 mkMessage "(YesodSubApp master) => SubApp master" "other-messages" "en" 
 
 mkMessage "Test a b" "test-messages" "en"
 
-data SubAppNoRec master
+newtype SubAppNoRec master = SubAppNoRec master
+
+instance YesodSubApp (SubAppNoRec master)
 
 data TestNoRec
 
@@ -42,3 +45,13 @@ mkMessageOpts
   "test-messages"
   "en"
 
+spec :: Spec
+spec = do
+  describe "I18N" $ do
+    it "should generate messages with record constructors" $ do
+      let msg = MsgEntryCreatedRR { subAppMessageTitle = "foo" }
+      renderMessage (SubApp ()) [] msg `shouldBe` "Your new blog post, foo, has been created"
+
+    it "should generate messages without record constructors" $ do
+      let msg = MsgNREntryCreatedRR "bar"
+      renderMessage (SubAppNoRec ()) [] msg `shouldBe` "Your new blog post, bar, has been created"
