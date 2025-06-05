@@ -1,5 +1,10 @@
 # ChangeLog for shakespeare
 
+### 2.1.3
+
+* [#292](https://github.com/yesodweb/shakespeare/pull/292)
+    * Add support for multi-line attributes. An example use of this is [here](https://github.com/yesodweb/shakespeare/issues/291).
+
 ### 2.1.2
 
 * Add support for context parsing in mkMessage function and related ones [#282](https://github.com/yesodweb/shakespeare/issues/282). Added support for building with LTS versions of 22, 21, 20 and removed older ones.
