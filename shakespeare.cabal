@@ -128,6 +128,7 @@ test-suite test
     type: exitcode-stdio-1.0
 
     ghc-options:   -Wall
+    build-tool-depends: hspec-discover:hspec-discover
     build-depends: base             >= 4.9     && < 5
                  , shakespeare
                  , time             >= 1
