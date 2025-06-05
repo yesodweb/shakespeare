@@ -1,6 +1,6 @@
 # ChangeLog for shakespeare
 
-### 2.1.3
+### 2.1.4
 
 * [#292](https://github.com/yesodweb/shakespeare/pull/292)
     * Add support for multi-line attributes. An example use of this is [here](https://github.com/yesodweb/shakespeare/issues/291).
