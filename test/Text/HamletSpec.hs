@@ -500,6 +500,25 @@ $case num
         helper "<li ng-repeat=\"addr in msgForm.new.split(/\\\\s/)\">{{addr}}</li>\n"
             [hamlet|<li ng-repeat="addr in msgForm.new.split(/\\s/)">{{addr}}|]
 
+    it "Alpine.js multi-line attribute values #291" $
+        helper "<div x-data=\"{\r\n                        search: '',\r\n\r\n                        items: ['foo', 'bar', 'baz'],\r\n\r\n                        get filteredItems() {\r\n                            return this.items.filter(\r\n                                i => i.startsWith(this.search)\r\n                            )\r\n                        }\r\n                    }\"></div>"
+            [hamlet|
+                $newline never
+                <div
+                    x-data="{
+                        search: '',
+
+                        items: ['foo', 'bar', 'baz'],
+
+                        get filteredItems() {
+                            return this.items.filter(
+                                i => i.startsWith(this.search)
+                            )
+                        }
+                    }"
+                >
+            |]
+
     it "runtime Hamlet with caret interpolation" $ do
         let toInclude render = render (5, [("hello", "world")])
         let renderer x y = pack $ show (x :: Int, y :: [(Text, Text)])
