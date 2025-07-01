@@ -177,9 +177,15 @@ mkMessageCommon genType prefix postfix master dt rawFolder lang = do
             cxt  -- Here the parsed context should be added, otherwise []
             (ConT ''RenderMessage `AppT` (if ' ' `elem` master' 
                then let (ts, us) = break (== ' ') . 
-                          filter (\x -> x /= '(' && x /= ')') $ master'  
-                        us1 = filter (/= ' ') us in ParensT (ConT (mkName ts) 
-                          `AppT` VarT (mkName us1))  
+                          filter (\x -> x /= '(' && x /= ')') $ master'
+                        combineArgs typeName p xs' = foldl1 AppT . (typeName :) . fmap (VarT . mkName) . filter (not . null) $ go xs' (id, id)
+                            where
+                            go :: String -> ([String] -> [String], String -> String) -> [String]
+                            go [] (endList, currList) = endList [currList []]
+                            go (x : xs) (endList, currList)
+                                | p x = go xs (endList . (currList [] :), id)
+                                | otherwise = go xs (endList, currList . (x :))
+                        in ParensT (combineArgs (ConT (mkName ts)) (== ' ') us)
                else ConT $ mkName master') `AppT` ConT mname)
             [ FunD (mkName "renderMessage") $ c1 ++ c2 ++ [c3]
             ]

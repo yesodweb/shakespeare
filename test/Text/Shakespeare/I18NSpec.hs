@@ -20,7 +20,7 @@ newtype SubApp master = SubApp
      getOrdering :: Ordering
   }
 
-data Test = Test
+data Test a b = Test
 
 class Testable a where
   isTestable :: a -> Bool 
@@ -33,5 +33,5 @@ spec = return ()
 
 mkMessage "(YesodSubApp master) => SubApp master" "other-messages" "en" 
 
-mkMessage "Test" "test-messages" "en"
+mkMessage "Test a b" "test-messages" "en"
 
