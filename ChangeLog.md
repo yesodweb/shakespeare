@@ -1,5 +1,10 @@
 # ChangeLog for shakespeare
 
+### 2.1.5
+
+* Add better support for `mkMessage`ing data types with params.[#295](https://github.com/yesodweb/shakespeare/pull/295)
+
+
 ### 2.1.4
 
 * [#292](https://github.com/yesodweb/shakespeare/pull/292)
