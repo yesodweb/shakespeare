@@ -68,6 +68,7 @@ module Text.Shakespeare.I18N
     , setConPrefix
     , setTypeSuffix
     , setUseRecordCons
+    , setSiteParameterName
     ) where
 
 import Language.Haskell.TH.Syntax hiding (makeRelativeToProject)
@@ -273,12 +274,15 @@ toClauses :: MakeMessageOpts -> String -> (Lang, [Def]) -> Q [Clause]
 toClauses opts@(MkMakeMessageOpts {mmConPrefix = prefix}) dt (lang, defs) =
     mapM go defs
   where
+    siteParam = case mmSiteParameterName opts of
+        Nothing -> WildP
+        Just s -> VarP $ mkName s
     go def = do
         a <- newName "lang"
         (pat, bod) <- mkBody opts dt (prefix ++ constr def) (map fst $ vars def) (content def)
         guard <- fmap NormalG [|$(return $ VarE a) == pack $(lift $ unpack lang)|]
         return $ Clause
-            [WildP, conP (mkName ":") [VarP a, WildP], pat]
+            [siteParam, conP (mkName ":") [VarP a, WildP], pat]
             (GuardedB [(guard, bod)])
             []
 
@@ -322,9 +326,13 @@ sToClause :: MakeMessageOpts -> String -> SDef -> Q Clause
 sToClause opts@(MkMakeMessageOpts {mmConPrefix = prefix}) dt sdef = do
     (pat, bod) <- mkBody opts dt (prefix ++ sconstr sdef) (map fst $ svars sdef) (scontent sdef)
     return $ Clause
-        [WildP, conP (mkName "[]") [], pat]
+        [siteParam, conP (mkName "[]") [], pat]
         (NormalB bod)
         []
+    where
+    siteParam = case mmSiteParameterName opts of
+        Nothing -> WildP
+        Just s -> VarP $ mkName s
 
 defClause :: Q Clause
 defClause = do
@@ -520,6 +528,7 @@ data MakeMessageOpts = MkMakeMessageOpts
     , mmConPrefix  :: String
     , mmTypeSuffix :: String
     , mmUseRecordCons :: Bool
+    , mmSiteParameterName :: Maybe String
     }
 
 -- | Default options for 'mkMessage' are:
@@ -527,6 +536,7 @@ data MakeMessageOpts = MkMakeMessageOpts
 --   * @mmConPrefix@ = @\"Msg\"@
 --   * @mmTypeSuffix@ = @\"Message\"@
 --   * @mmUseRecordCons@ = @True@
+--   * @mmSiteParameterName@ = @Nothing@
 --
 -- @since 2.1.6
 defMakeMessageOpts :: MakeMessageOpts
@@ -535,6 +545,7 @@ defMakeMessageOpts = MkMakeMessageOpts
     , mmConPrefix  = "Msg"
     , mmTypeSuffix = "Message"
     , mmUseRecordCons = True
+    , mmSiteParameterName = Nothing
     }
 
 -- | Whether to generate a new datatype from the constructors found in the .msg
@@ -563,3 +574,10 @@ setTypeSuffix x opts = opts { mmTypeSuffix = x }
 -- @since 2.1.6
 setUseRecordCons :: Bool -> MakeMessageOpts -> MakeMessageOpts
 setUseRecordCons x opts = opts { mmUseRecordCons = x }
+
+-- | Set the name for the parameter used in mkMessage for the site. Nothing
+-- means wild card.
+--
+-- @since 2.1.7
+setSiteParameterName :: Maybe String -> MakeMessageOpts -> MakeMessageOpts
+setSiteParameterName x opts = opts { mmSiteParameterName = x }

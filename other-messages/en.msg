@@ -27,3 +27,4 @@ PleaseCorrectCommentRR: Your submitted comment had some errors, please correct a
 HomepageTitleRR: Yesod Blog Demo
 BlogArchiveTitleRR: Blog Archive
 
+SiteMessageRR: The site has a message for you: #{getGreeting _site}

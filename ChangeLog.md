@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.1.7
+
+* Let users name and use the site parameter for renderMessage so site config can influence the messages [#296](https://github.com/yesodweb/shakespeare/pull/296)
+
 ### 2.1.6
 
 * Introduce options type for i18n, add ability to stop using record types for messages [#290](https://github.com/yesodweb/shakespeare/pull/290)
