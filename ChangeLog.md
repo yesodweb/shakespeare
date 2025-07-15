@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.1.6
+
+* Introduce options type for i18n, add ability to stop using record types for messages [#290](https://github.com/yesodweb/shakespeare/pull/290)
+
 ### 2.1.5
 
 * Add better support for `mkMessage`ing data types with params.[#295](https://github.com/yesodweb/shakespeare/pull/295)
