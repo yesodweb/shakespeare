@@ -22,11 +22,12 @@ cabal-version:   >= 1.10
 build-type:      Simple
 homepage:        http://www.yesodweb.com/book/shakespearean-templates
 extra-source-files:
+  other-messages/*.msg
+  test-messages/*.msg
   test/reload.txt
   test/texts/*.text
   test/juliuses/*.julius
   test/juliuses/*.coffee
-  test-messages/*.msg
   test/cassiuses/*.cassius
   test/cassiuses/*.lucius
   test/hamlets/*.hamlet
