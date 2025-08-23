@@ -519,6 +519,24 @@ $case num
                 >
             |]
 
+    it "supports $component" $
+        let
+            container :: String -> HtmlUrl url -> HtmlUrl url
+            container clazz x =
+                [hamlet|
+                    $newline never
+                    <div class="container #{clazz}">
+                        ^{x}
+                |]
+        in
+            helper "<div class=\"container alert\"><p>Hello world</p></div><p>outside</p>"
+                [hamlet|
+                    $newline never
+                    $component container "alert"
+                      <p>Hello world
+                    <p>outside
+                |]
+
     it "runtime Hamlet with caret interpolation" $ do
         let toInclude render = render (5, [("hello", "world")])
         let renderer x y = pack $ show (x :: Int, y :: [(Text, Text)])
