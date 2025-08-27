@@ -216,12 +216,22 @@ docToExp env hr scope (DocWith ((deref, idents):dis) inside) = do
     inside' <- docToExp env hr scope' (DocWith dis inside)
     let lam = LamE [pat] inside'
     return $ lam `AppE` deref'
-docToExp env hr scope (DocComponent deref inside) = do
+docToExp env hr scope (DocComponent mbinding deref inside) = do
     let deref' = derefToExp scope deref
-    inside' <-
-      hrWithEnv hr $ \env ->
-        docsToExp env hr scope inside
-    hrEmbed hr env $ deref' `AppE` inside'
+    case mbinding of
+        Just binding -> do
+            (pat, extraScope) <- bindingPattern binding
+            let scope' = extraScope ++ scope
+            inside' <-
+                hrWithEnv hr $ \env ->
+                    docsToExp env hr scope' inside
+            hrEmbed hr env $ deref' `AppE` LamE [pat] inside'
+        Nothing -> do
+            inside' <-
+                hrWithEnv hr $ \env ->
+                    docsToExp env hr scope inside
+            hrEmbed hr env $ deref' `AppE` inside'
+
 docToExp env hr scope (DocMaybe val idents inside mno) = do
     let val' = derefToExp scope val
     (pat, extraScope) <- bindingPattern idents

@@ -22,6 +22,11 @@ import Text.Blaze.Html (toHtml)
 import Text.Blaze.Internal (preEscapedString)
 import Text.Blaze
 
+data ExampleModal widget = ExampleModal
+    { modalHeader :: widget -> widget,
+      modalContent :: widget -> widget
+    }
+
 spec = do
     it "empty" caseEmpty
     it "static" caseStatic
@@ -519,7 +524,7 @@ $case num
                 >
             |]
 
-    it "supports $component" $
+    it "supports $component without binding" $
         let
             container :: String -> HtmlUrl url -> HtmlUrl url
             container clazz x =
@@ -534,6 +539,45 @@ $case num
                     $newline never
                     $component container "alert"
                       <p>Hello world
+                    <p>outside
+                |]
+
+    it "supports $component with binding (modal example)" $
+        let
+            modalWidget :: (ExampleModal (HtmlUrl url) -> HtmlUrl url) -> HtmlUrl url
+            modalWidget body =
+              let
+                exampleModal =
+                    ExampleModal
+                      { modalHeader = \content ->
+                            [hamlet|
+                                $newline never
+                                <div class="modal-header">
+                                    ^{content}
+                            |],
+                        modalContent = \content ->
+                            [hamlet|
+                                $newline never
+                                <div class="modal-content">
+                                    ^{content}
+                            |]
+                      }
+              in
+                [hamlet|
+                    $newline never
+                    <div class="modal">
+                        ^{body exampleModal}
+                |]
+        in
+            helper "<div class=\"modal\"><div class=\"modal-header\"><h1>This is the title</h1></div><div class=\"modal-content\"><p>This is the content</p></div></div><p>outside</p>"
+                [hamlet|
+                    $newline never
+                    $component modal <- modalWidget
+                        $component modalHeader modal
+                          <h1>This is the title
+
+                        $component modalContent modal
+                          <p>This is the content
                     <p>outside
                 |]
 
