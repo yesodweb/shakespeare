@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### x.x.x
+
+* Use ByteString’s Lift for Hamlet code generation [#298](https://github.com/yesodweb/shakespeare/pull/298)
+
 ### 2.1.6
 
 * Introduce options type for i18n, add ability to stop using record types for messages [#290](https://github.com/yesodweb/shakespeare/pull/290)
