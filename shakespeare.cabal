@@ -43,7 +43,7 @@ library
                    , text             >= 0.7
                    , process          >= 1.0
                    , ghc-prim
-                   , bytestring
+                   , bytestring       >= 0.11.2
                    , directory        >= 1.2
                    , aeson            < 3
                    , blaze-markup
