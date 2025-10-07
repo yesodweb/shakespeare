@@ -1,6 +1,6 @@
 # ChangeLog for shakespeare
 
-### x.x.x
+### 2.1.7
 
 * Use ByteString’s Lift for Hamlet code generation [#298](https://github.com/yesodweb/shakespeare/pull/298)
 
