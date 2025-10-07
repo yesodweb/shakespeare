@@ -48,6 +48,7 @@ module Text.Hamlet
     , hamletFromString
     ) where
 
+import Text.Blaze.Internal (unsafeByteString)
 import Text.Shakespeare.Base
 import Text.Hamlet.Parse
 import Language.Haskell.TH.Syntax hiding (Module)
@@ -55,6 +56,7 @@ import Language.Haskell.TH.Quote
 import Data.Char (isUpper, isDigit)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import Text.Blaze.Html (Html, toHtml)
 import Text.Blaze.Internal (preEscapedText)
@@ -263,8 +265,8 @@ docToExp env hr v (DocContent c) = contentToExp env hr v c
 
 contentToExp :: Env -> HamletRules -> Scope -> Content -> Q Exp
 contentToExp _ hr _ (ContentRaw s) = do
-    os <- [|preEscapedText . pack|]
-    let s' = LitE $ StringL s
+    os <- [|unsafeByteString|]
+    s' <- lift $ TE.encodeUtf8 (pack s)
     return $ hrFromHtml hr `AppE` (os `AppE` s')
 contentToExp _ hr scope (ContentVar d) = do
     str <- [|toHtml|]
