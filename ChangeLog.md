@@ -1,5 +1,9 @@
 # ChangeLog for shakespeare
 
+### 2.1.7.1
+
+* Add missing other-messages to shakespeare.cabal [#299](https://github.com/yesodweb/shakespeare/pull/299)
+
 ### 2.1.7
 
 * Use ByteString’s Lift for Hamlet code generation [#298](https://github.com/yesodweb/shakespeare/pull/298)
