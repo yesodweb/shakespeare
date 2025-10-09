@@ -66,6 +66,7 @@ data Line = LineForall Deref Binding
           | LineNothing
           | LineCase Deref
           | LineOf Binding
+          | LineComponent (Maybe Binding) Deref
           | LineTag
             { _lineTagName :: String
             , _lineAttr :: [(Maybe Deref, String, Maybe [Content])]
@@ -125,6 +126,7 @@ parseLine set = do
          controlWith <|>
          controlCase <|>
          controlOf <|>
+         controlComponent <|>
          angle <|>
          invalidDollar <|>
          (eol' >> return (LineContent [] True)) <|>
@@ -238,6 +240,14 @@ parseLine set = do
         _   <- spaceTabs
         eol
         return $ LineOf x
+    controlComponent = do
+        _ <- try $ string "$component"
+        spaces
+        (x, b) <- (second Just <$> try binding) <|>
+                  ((\x -> (x, Nothing)) <$> parseDeref)
+        _ <- spaceTabs
+        eol
+        return $ LineComponent b x
     content cr = do
         x <- many $ content' cr
         case cr of
@@ -450,6 +460,7 @@ data Doc = DocForall Deref Binding [Doc]
          | DocCond [(Deref, [Doc])] (Maybe [Doc])
          | DocMaybe Deref Binding [Doc] (Maybe [Doc])
          | DocCase Deref [(Binding, [Doc])]
+         | DocComponent (Maybe Binding) Deref [Doc]
          | DocContent Content
     deriving (Show, Eq, Read, Data, Typeable)
 
@@ -486,6 +497,10 @@ nestToDoc set (Nest (LineCase d) inside:rest) = do
     cases <- mapM getOf inside
     rest' <- nestToDoc set rest
     Ok $ DocCase d cases : rest'
+nestToDoc set (Nest (LineComponent b d) inside:rest) = do
+    inside' <- nestToDoc set inside
+    rest' <- nestToDoc set rest
+    Ok $ DocComponent b d inside' : rest'
 nestToDoc set (Nest (LineTag tn attrs content classes attrsD avoidNewLine) inside:rest) = do
     let attrFix (x, y, z) = (x, y, [(Nothing, z)])
     let takeClass (a, "class", b) = Just (a, fromMaybe [] b)
@@ -546,6 +561,8 @@ compressDoc (DocForall d i doc:rest) =
     DocForall d i (compressDoc doc) : compressDoc rest
 compressDoc (DocWith dis doc:rest) =
     DocWith dis (compressDoc doc) : compressDoc rest
+compressDoc (DocComponent b d i:rest) =
+    DocComponent b d i : compressDoc rest
 compressDoc (DocMaybe d i doc mnothing:rest) =
     DocMaybe d i (compressDoc doc) (fmap compressDoc mnothing)
   : compressDoc rest

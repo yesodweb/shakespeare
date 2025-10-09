@@ -1,5 +1,46 @@
 # ChangeLog for shakespeare
 
+### 2.2.0
+
+* Added $component with binding for reusable blocks
+
+You can now bind a component-producing function and reuse its sub-components within the same Hamlet block.
+
+#### Example
+
+```haskell
+data Modal = Modal
+  { modalHeader :: Widget -> Widget
+  , modalBody   :: Widget -> Widget
+  }
+
+modalWidget :: (Modal -> Widget) -> Widget
+```
+
+```hamlet
+$component modal <- modalWidget
+  $component modalHeader modal
+    <h1>This is the title
+
+  $component modalBody modal
+    <p>This is the content
+```
+
+Conceptually, this desugars to:
+
+```haskell
+^{ modalWidget $ \modal ->
+     [whamlet|
+       ^{ modalHeader modal [whamlet| <h1>This is the title |] }
+       ^{ modalBody   modal [whamlet| <p>This is the content |] }
+     |]
+ }
+<p>outside
+```
+
+Since everything here is just plain Haskell, you can freely pass additional data or parameters to your component-producing function—`modalWidget` and its subcomponents are ordinary functions.
+Only the *outermost* component (`modalWidget` in this case) needs to follow the `(Modal -> Widget) -> Widget` pattern; all nested subcomponents can have arbitrary types and arguments.
+
 ### 2.1.7.1
 
 * Add missing other-messages to shakespeare.cabal [#299](https://github.com/yesodweb/shakespeare/pull/299)

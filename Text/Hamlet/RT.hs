@@ -112,6 +112,7 @@ parseHamletRT set s =
             docs'' <- mapM convert docs'
             return (deref', docs'')
     convert DocWith{} = error "Runtime hamlet does not currently support $with"
+    convert DocComponent{} = error "Runtime hamlet does not currently support $component"
     convert DocCase{} = error "Runtime hamlet does not currently support $case"
 
 renderHamletRT :: MonadThrow m
