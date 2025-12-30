@@ -14,13 +14,13 @@ description:
     .
     Packages that use this: xml-hamlet
     .
-    Please see the documentation at <http://www.yesodweb.com/book/shakespearean-templates> for more details.
+    Please see the documentation at <https://www.yesodweb.com/book/shakespearean-templates> for more details.
 
 category:        Web, Yesod
 stability:       Stable
 cabal-version:   >= 1.10
 build-type:      Simple
-homepage:        http://www.yesodweb.com/book/shakespearean-templates
+homepage:        https://www.yesodweb.com/book/shakespearean-templates
 extra-source-files:
   other-messages/*.msg
   test-messages/*.msg
@@ -43,7 +43,6 @@ library
                    , parsec           >= 2       && < 4
                    , text             >= 0.7
                    , process          >= 1.0
-                   , ghc-prim
                    , bytestring       >= 0.11.2
                    , directory        >= 1.2
                    , aeson            < 3
