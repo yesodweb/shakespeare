@@ -74,7 +74,7 @@ data TopLevel (a :: Resolved) where
     TopBlock   :: !(Block a) -> TopLevel a
     TopAtBlock :: !String -- name e.g., media
                -> !(Str a) -- selector
-               -> ![Block a]
+               -> ![TopLevel a]
                -> TopLevel a
     TopAtDecl  :: !String -> !(Str a) -> TopLevel a
     TopVar     :: !String -> !String -> TopLevel 'Unresolved
@@ -144,10 +144,10 @@ cssUsedIdentifiers toi2b parseBlocks s' =
           : cs
          ++ ContentRaw ";"
           : rest'
-    go (TopAtBlock _ _ blocks:rest) =
+    go (TopAtBlock _ _ nested:rest) =
         (scope1 ++ scope2, rest1 ++ rest2)
       where
-        (scope1, rest1) = go (map TopBlock blocks)
+        (scope1, rest1) = go nested
         (scope2, rest2) = go rest
     go (TopBlock (BlockUnresolved x y z):rest) =
         (scope1 ++ scope2, rest0 ++ rest1 ++ rest2)
@@ -286,8 +286,8 @@ cssRuntime toi2b parseBlocks fp cd render' = unsafePerformIO $ do
     goTop scope (TopBlock b:rest) =
         map TopBlock (either error ($ []) $ blockRuntime (addScope scope) render' b) ++
         goTop scope rest
-    goTop scope (TopAtBlock name s' b:rest) =
-        TopAtBlock name s (foldr (either error id . blockRuntime (addScope scope) render') [] b) :
+    goTop scope (TopAtBlock name s' nested:rest) =
+        TopAtBlock name s (goTop scope nested) :
         goTop scope rest
       where
         s = either error mconcat $ mapM (contentToBuilderRT cd render') s'
@@ -340,7 +340,7 @@ lookupD _ _ = Nothing
 compressTopLevel :: TopLevel 'Unresolved
                  -> TopLevel 'Unresolved
 compressTopLevel (TopBlock b) = TopBlock $ compressBlock b
-compressTopLevel (TopAtBlock name s b) = TopAtBlock name s $ map compressBlock b
+compressTopLevel (TopAtBlock name s b) = TopAtBlock name s $ map compressTopLevel b
 compressTopLevel x@TopAtDecl{} = x
 compressTopLevel x@TopVar{} = x
 
@@ -459,9 +459,10 @@ topLevelsToCassius a = do
         e <- [|(++) $ map TopBlock ($(blockToCss r scope b) [])|]
         es <- go r scope rest
         return $ e : es
-    go r scope (TopAtBlock name s b:rest) = do
+    go r scope (TopAtBlock name s nested:rest) = do
         let s' = contentsToBuilder r scope s
-        e <- [|(:) $ TopAtBlock $(lift name) $(s') $(blocksToCassius r scope b)|]
+        inner <- go r scope nested
+        e <- [|(:) $ TopAtBlock $(lift name) $(s') (foldr ($) [] $(return $ ListE inner))|]
         es <- go r scope rest
         return $ e : es
     go r scope (TopAtDecl dec cs:rest) = do
@@ -485,22 +486,27 @@ renderCss css =
         case css of
             CssWhitespace x -> (True, x)
             CssNoWhitespace x -> (False, x)
-    go (TopBlock x) = renderBlock haveWhiteSpace mempty x
-    go (TopAtBlock name s x) =
-        fromText (pack $ concat ["@", name, " "]) `mappend`
-        s `mappend`
-        startBlock `mappend`
-        foldr mappend endBlock (map (renderBlock haveWhiteSpace (fromString "    ")) x)
-    go (TopAtDecl dec cs) = fromText (pack $ concat ["@", dec, " "]) `mappend`
-                      cs `mappend`
-                      endDecl
+    go = goWith mempty
+
+    goWith indent (TopBlock x) = renderBlock haveWhiteSpace indent x
+    goWith indent (TopAtBlock name s x) =
+        indent <>
+        fromText (pack $ concat ["@", name, " "]) <> s <> startBlock <>
+        foldr mappend (endBlockWith indent) (map (goWith innerIndent) x)
+      where
+        innerIndent
+            | haveWhiteSpace = indent <> fromString "    "
+            | otherwise = mempty
+    goWith indent (TopAtDecl dec cs) =
+        indent <>
+        fromText (pack $ concat ["@", dec, " "]) <> cs <> endDecl
 
     startBlock
         | haveWhiteSpace = fromString " {\n"
         | otherwise = singleton '{'
 
-    endBlock
-        | haveWhiteSpace = fromString "}\n"
+    endBlockWith indent
+        | haveWhiteSpace = indent <> fromString "}\n"
         | otherwise = singleton '}'
 
     endDecl

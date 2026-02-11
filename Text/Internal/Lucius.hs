@@ -198,7 +198,7 @@ parseTopLevels order =
             ignore = many (whiteSpace1 <|> string' "<!--" <|> string' "-->")
                         >> return ()
         ignore
-        tl <- ((charset <|> media <|> impor <|> supports <|> topAtBlock <|> var <|> fmap TopBlock (parseBlock order)) >>= \x -> go (front . (:) x))
+        tl <- ((charset <|> media <|> impor <|> supports <|> layer <|> topAtBlock <|> var <|> fmap TopBlock (parseBlock order)) >>= \x -> go (front . (:) x))
             <|> (return $ map compressTopLevel $ front [])
         ignore
         return tl
@@ -224,6 +224,25 @@ parseTopLevels order =
         _ <- char '{'
         b <- parseBlocks id
         return $ TopAtBlock "supports" selector b
+    -- | @layer has two valid CSS forms:
+    -- Block form: @layer utilities { .class { prop: val; } }
+    -- Declaration form: @layer utilities; or @layer a, b, c;
+    -- Anonymous block: @layer { .class { prop: val; } } (no name)
+    layer = do
+        try $ stringCI "@layer "
+        -- Try block form first (including anonymous), then declaration form
+        try layerBlock <|> layerDecl
+      where
+        layerBlock = do
+            -- Use many instead of many1 to allow empty selector (anonymous layer)
+            selector <- many (parseContent "{")
+            _ <- char '{'
+            b <- parseBlocks id
+            return $ TopAtBlock "layer" selector b
+        layerDecl = do
+            val <- parseContents ";"
+            _ <- char ';'
+            return $ TopAtDecl "layer" val
     var = try $ do
         _ <- char '@'
         isPage <- (try $ string "page " >> return True) <|>
@@ -249,8 +268,11 @@ parseTopLevels order =
         return $ TopAtBlock name selector b
     parseBlocks front = do
         whiteSpace
-        (char '}' >> return (map compressBlock $ front []))
-            <|> ((parseBlock order) >>= \x -> parseBlocks (front . (:) x))
+        (char '}' >> return (map compressTopLevel $ front []))
+            <|> (nestedItem >>= \x -> parseBlocks (front . (:) x))
+      where
+        nestedItem = media <|> supports <|> layer <|> topAtBlock
+                 <|> fmap TopBlock (parseBlock order)
 
 stringCI :: String -> Parser ()
 stringCI [] = return ()
@@ -291,13 +313,13 @@ luciusRTInternal order tl =
         b' <- goBlock scope b
         rest' <- go scope rest
         Right $ map TopBlock b' ++ rest'
-    go scope (TopAtBlock name m' bs:rest) = do
+    go scope (TopAtBlock name m' nested:rest) = do
         let scope' = map goScope scope
             render = error "luciusRT has no URLs"
         m <- mapM (contentToBuilderRT scope' render) m'
-        bs' <- mapM (goBlock scope) bs
+        nested' <- go scope nested
         rest' <- go scope rest
-        Right $ TopAtBlock name (mconcat m) (concat bs') : rest'
+        Right $ TopAtBlock name (mconcat m) nested' : rest'
     go scope (TopVar k v:rest) = go ((pack k, RTVRaw $ pack v):scope) rest
 
     goBlock :: [(Text, RTValue)]
